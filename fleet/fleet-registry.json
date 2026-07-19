@@ -1,0 +1,74 @@
+{
+  "fleet": {
+    "name": "Agent-SYS Fleet",
+    "hq_path": "E:/Git仓库/Agent-SYS/fleet"
+  },
+  "version": "1.0.0",
+  "updated": "2026-07-19",
+  "projects": [
+    {
+      "name": "agent-sys",
+      "display": "Agent-SYS",
+      "path": "E:/Git仓库/Agent-SYS",
+      "tier": "flagship",
+      "description": "多 Agent 编排系统本身",
+      "claude_md": "E:/Git仓库/Agent-SYS/AGENTS.md",
+      "project_memory": "E:/Git仓库/Agent-SYS/project-memory.md",
+      "repo": {
+        "remote": "origin",
+        "url": "",
+        "branch": "master",
+        "visibility": "public"
+      },
+      "runtime": {
+        "type": "config",
+        "engine": "grok-build"
+      },
+      "dependencies": {
+        "system": ["grok-build", "git", "node"]
+      },
+      "health_check": {
+        "git": true,
+        "config_sync": true
+      }
+    },
+    {
+      "name": "agent-crew",
+      "display": "agent-crew (Legacy CCB)",
+      "path": "E:/Git仓库/agent-crew",
+      "tier": "template",
+      "description": "CCB 多 Agent 团队模板（迁移源）",
+      "claude_md": "E:/Git仓库/agent-crew/CLAUDE.md",
+      "project_memory": "E:/Git仓库/agent-crew/project-memory.md",
+      "repo": {
+        "remote": "origin",
+        "url": "https://github.com/Alele496/agent-crew",
+        "branch": "master",
+        "visibility": "public"
+      },
+      "health_check": {
+        "git": true
+      }
+    }
+  ],
+  "health_check": {
+    "output_file": "docs/fleet-health.md",
+    "schedule": {
+      "quick": "every 4 hours",
+      "full": "daily at 00:00",
+      "trend_scan": "daily at 08:00"
+    },
+    "checks": {
+      "quick": ["git_status", "git_log", "git_branch"],
+      "full": ["git_status", "git_log", "git_branch", "config_validation"]
+    }
+  },
+  "cross_project_impact": {
+    "agent-crew": {
+      "type": "template",
+      "consumers": ["agent-sys"],
+      "watch": [".claude/agents/", ".claude/workflows/"],
+      "note": "agent-crew 的模板改动需同步评估对 Agent-SYS 的影响"
+    }
+  }
+}

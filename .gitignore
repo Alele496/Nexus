@@ -1,0 +1,23 @@
+# Rust build artifacts
+**/target/
+
+# Logs
+*.log
+fleet/logs/
+
+# Generated files
+fleet/docs/fleet-health.md
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
