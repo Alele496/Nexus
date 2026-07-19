@@ -1,8 +1,7 @@
 # Rust build artifacts
 **/target/
 
-# Build temp files
-.cargo-tmp/
+# Build temp files (no longer in project dir)
 
 # Logs
 *.log
