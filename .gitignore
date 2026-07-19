@@ -1,7 +1,11 @@
 # Rust build artifacts
 **/target/
 
-# Build temp files (no longer in project dir)
+# Build temp files
+.cargo-tmp/
+
+# Sage config/user data (local only)
+.grok/
 
 # Logs
 *.log
@@ -23,3 +27,6 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Stack dumps
+*.stackdump

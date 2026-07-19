@@ -20,8 +20,8 @@ CCB（Claude Code Best）是闭源工具，最终解释权在 CC 那边。安全
 ## 当前状态
 
 - **阶段**：Step 1 完成 — 项目骨架 + Agent 定义 + grok-build 编译通过
-- **grok-build 版本**：main 分支（2026-07-19 snapshot），85 个 crate 全部编译通过
-- **git 仓库**：3 个 commit，本地仓库，未推 GitHub
+- **grok-build 版本**：v0.2.105 (commit f87b219)，85 个 crate 全部编译通过
+- **git 仓库**：4 个 commit，本地仓库，未推 GitHub
 
 ## Git 历史
 
@@ -39,11 +39,18 @@ grok-build 在 Windows 下编译需要以下修复：
 3. **依赖追踪** — Windows 不支持 `--dependency_out=/dev/stdout`，已补丁跳过
 4. **Unicode 路径** — protoc 不能处理含中文的路径，TEMP 必须重定向到纯 ASCII 路径（E:/cargo-tmp）
 
+5. **MSVC link.exe PDB 限制** — `LNK1318: PDB 错误: LIMIT (12)`，257+ object files 超出 MSVC PDB 大小上限
+   - 修复：`.cargo/config.toml` 添加 `linker = "rust-lld"`（LLVM 链接器，无此限制）
+
 构建命令：
 ```bash
+# cargo check (快速验证)
 TMP="/e/cargo-tmp" TEMP="/e/cargo-tmp" cargo check -p xai-grok-pager-bin
+# release build (生成二进制)
+TMP="/e/cargo-tmp" TEMP="/e/cargo-tmp" cargo build -p xai-grok-pager-bin --release
+# 二进制位置: target/release/xai-grok-pager.exe (123MB)
 # 或使用封装脚本
-bash scripts/build-grok.sh
+bash scripts/build-grok.sh --release
 ```
 
 ## 已完成
@@ -54,13 +61,13 @@ bash scripts/build-grok.sh
 - [x] 舰队管理文档（fleet-policy, fleet-registry, spawn-protocol）
 - [x] 舰队健康巡检脚本（health-check.sh, cron-runner.sh）
 - [x] 配置完整性验证通过（validate-config.sh）
-- [x] 本地 git 仓库初始化 + 3 个 commit
+- [x] 本地 git 仓库初始化 + 4 个 commit
 - [x] grok-build 源码在 Windows 上编译通过（cargo check，85 crates，7m 46s）
 - [x] 构建脚本封装（build-grok.sh, build-grok.ps1）
+- [x] `cargo build --release` 成功生成 grok 二进制（v0.2.105, 123MB, 24m 13s）
 
 ## 待处理
 
-- [ ] `cargo build --release` 生成 grok 可执行二进制
 - [ ] 端到端验证：grok 启动 → 加载 AGENTS.md → spawn developer → reviewer 审查
 - [ ] grok-build 二次开发需求评估和技术方案
 - [ ] Agent 中台架构设计

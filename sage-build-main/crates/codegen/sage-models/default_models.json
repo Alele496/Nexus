@@ -1,0 +1,66 @@
+{
+  "default": "deepseek-v4-pro",
+  "web_search": "deepseek-v4-pro",
+  "image_description": "deepseek-v4-pro",
+  "session_summary": "deepseek-v4-pro",
+  "models": [
+    {
+      "id": "deepseek-v4-pro",
+      "model": "deepseek-v4-pro",
+      "name": "DeepSeek V4 Pro",
+      "description": "DeepSeek V4 flagship model — 1.6T params, 49B activated, 1M context",
+      "context_window": 1000000,
+      "api_backend": "chat_completions",
+      "supports_backend_search": false,
+      "system_prompt_label": "DeepSeek V4 Pro",
+      "show_model_fingerprint": true,
+      "supports_reasoning_effort": true,
+      "reasoning_effort": "high",
+      "auto_compact_threshold_percent": 80,
+      "compaction_at_tokens": true,
+      "compactions_remaining": 1,
+      "reasoning_efforts": [
+        {
+          "value": "high",
+          "label": "High",
+          "description": "Deep reasoning for complex tasks",
+          "default": true
+        },
+        {
+          "value": "xhigh",
+          "label": "Max",
+          "description": "Deepest reasoning for hardest problems"
+        }
+      ]
+    },
+    {
+      "id": "deepseek-v4-flash",
+      "model": "deepseek-v4-flash",
+      "name": "DeepSeek V4 Flash",
+      "description": "DeepSeek V4 economical model — fast, cost-effective, 1M context",
+      "context_window": 1000000,
+      "api_backend": "chat_completions",
+      "supports_backend_search": false,
+      "system_prompt_label": "DeepSeek V4 Flash",
+      "show_model_fingerprint": true,
+      "supports_reasoning_effort": true,
+      "reasoning_effort": "high",
+      "auto_compact_threshold_percent": 80,
+      "compaction_at_tokens": true,
+      "compactions_remaining": 1,
+      "reasoning_efforts": [
+        {
+          "value": "high",
+          "label": "High",
+          "description": "Standard reasoning depth",
+          "default": true
+        },
+        {
+          "value": "xhigh",
+          "label": "Max",
+          "description": "Deep reasoning for complex tasks"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+[package]
+license = "Apache-2.0"
+name = "sage-subagent-resolution"
+version = "0.1.0"
+edition.workspace = true
+description = "Subagent configuration resolution: merges persona, role, and spawn-time overrides into a resolved spec"
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+sage-sampling-types = { path = "../sage-sampling-types" }
+sage-tools = { path = "../sage-tools" }
+sage-tool-types.workspace = true
+# TODO(phase2): add these when resolve_subagent_spec() composition is implemented:
+# sage-agent = { path = "../sage-agent" }  # AgentDefinition lookup
+# sage-fast-worktree = { path = "../sage-fast-worktree" }  # worktree creation
+
+[dev-dependencies]
+tempfile = { workspace = true }
+toml = { workspace = true }
+
+[lints]
+workspace = true
