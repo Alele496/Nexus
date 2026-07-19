@@ -4,7 +4,11 @@
 //! 引导用户完成初始配置：数据目录、API Key、模型选择、思考深度。
 
 use std::io::{self, BufRead, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+
+/// 重定向文件名：保存在 OS 默认目录（`~/.sage/`）下，内容为实际的 Sage 数据目录路径。
+/// 解决无 bat 脚本直接双击 exe 时，`SAGE_HOME` 环境变量无法跨进程持久化的问题。
+const SAGE_HOME_REDIRECT_FILENAME: &str = "sage-home-path";
 
 /// 获取用户主目录，不依赖 `dirs` crate。
 fn user_home_dir() -> Option<PathBuf> {
@@ -18,13 +22,50 @@ fn user_home_dir() -> Option<PathBuf> {
     }
 }
 
-/// Sage 默认数据目录：`SAGE_HOME` 环境变量，或 `~/.sage`。
+/// OS 默认的 `.sage` 目录路径（不跟随重定向）。
+fn os_default_dot_sage() -> Option<PathBuf> {
+    user_home_dir().map(|h| h.join(".sage"))
+}
+
+/// 读取重定向文件，返回用户之前选择的 Sage 数据目录路径。
+fn read_sage_home_redirect() -> Option<PathBuf> {
+    let redirect_file = os_default_dot_sage()?.join(SAGE_HOME_REDIRECT_FILENAME);
+    let content = std::fs::read_to_string(&redirect_file).ok()?;
+    let path = content.trim();
+    if path.is_empty() {
+        return None;
+    }
+    let p = PathBuf::from(path);
+    if p.is_absolute() && p.exists() {
+        Some(p)
+    } else {
+        None
+    }
+}
+
+/// 将用户选择的 Sage 数据目录路径写入重定向文件。
+/// 这样后续启动（即使没有 `SAGE_HOME` 环境变量）也能找到正确的目录。
+fn save_sage_home_redirect(path: &Path) -> io::Result<()> {
+    if let Some(dot_sage) = os_default_dot_sage() {
+        std::fs::create_dir_all(&dot_sage)?;
+        std::fs::write(dot_sage.join(SAGE_HOME_REDIRECT_FILENAME), path.display().to_string())?;
+    }
+    Ok(())
+}
+
+/// Sage 默认数据目录：
+/// 1. `SAGE_HOME` 环境变量
+/// 2. `~/.sage/sage-home-path` 重定向文件（首次向导写入）
+/// 3. 回退到 `~/.sage`
 fn default_sage_home() -> PathBuf {
     if let Ok(sage_home) = std::env::var("SAGE_HOME") {
         let p = PathBuf::from(&sage_home);
         if p.is_absolute() || sage_home.starts_with("~") {
             return p;
         }
+    }
+    if let Some(redirected) = read_sage_home_redirect() {
+        return redirected;
     }
     if let Some(home) = user_home_dir() {
         return home.join(".sage");
@@ -158,14 +199,39 @@ fn step_data_directory() -> io::Result<PathBuf> {
     println!("  目录中。建议选一个空间充足的位置（如 F:\\sage-home）。");
     println!();
     let default = default_sage_home();
-    let answer = read_line_with_default(
-        "  请输入数据目录路径",
-        &default.display().to_string(),
-    )?;
-    let sage_home = PathBuf::from(answer);
-    std::fs::create_dir_all(&sage_home)?;
-    println!("  ✓ 使用目录: {}", sage_home.display());
-    Ok(sage_home)
+    loop {
+        let answer = read_line_with_default(
+            "  请输入数据目录路径",
+            &default.display().to_string(),
+        )?;
+        let sage_home = PathBuf::from(&answer);
+        // 尝试展开 ~ 路径
+        let sage_home = if answer.starts_with("~") {
+            if let Some(home) = user_home_dir() {
+                let stripped = answer.strip_prefix("~/").unwrap_or(&answer);
+                let stripped = stripped.strip_prefix("~").unwrap_or(stripped);
+                home.join(stripped)
+            } else {
+                sage_home
+            }
+        } else {
+            sage_home
+        };
+        match std::fs::create_dir_all(&sage_home) {
+            Ok(()) => {
+                // 持久化：写入重定向文件，下次启动无需环境变量也能找到此目录
+                if let Err(e) = save_sage_home_redirect(&sage_home) {
+                    eprintln!("  ⚠ 无法保存目录重定向文件: {e}");
+                }
+                println!("  ✓ 使用目录: {}", sage_home.display());
+                return Ok(sage_home);
+            }
+            Err(e) => {
+                println!("  ✗ 无法创建目录: {e}");
+                println!("  请检查路径是否正确，或换一个位置重试。");
+            }
+        }
+    }
 }
 
 fn step_api_key(sage_home: &std::path::Path) -> io::Result<String> {

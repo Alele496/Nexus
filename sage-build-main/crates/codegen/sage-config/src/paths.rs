@@ -1,9 +1,13 @@
 //! Filesystem locations for sage config files and binaries.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 static SAGE_HOME: OnceLock<PathBuf> = OnceLock::new();
+
+/// 重定向文件名：保存在 OS 默认 `~/.sage/` 下，内容为用户选择的 Sage 数据目录路径。
+/// 解决无 bat 脚本直接双击 exe 时 `SAGE_HOME` 环境变量无法跨进程持久化的问题。
+const SAGE_HOME_REDIRECT_FILENAME: &str = "sage-home-path";
 
 #[cfg(target_os = "macos")]
 const CLAUDE_MANAGED_SETTINGS_PATH: &str =
@@ -28,7 +32,29 @@ const CLAUDE_MANAGED_SETTINGS_PATH: &str = "/etc/claude-code/managed-settings.js
 pub fn default_sage_home() -> PathBuf {
     #[allow(deprecated)]
     let home = std::env::home_dir().unwrap_or_else(|| PathBuf::from("."));
-    dunce::canonicalize(&home).unwrap_or(home).join(".sage")
+    let dot_sage = dunce::canonicalize(&home).unwrap_or(home).join(".sage");
+
+    // Check redirect file: written by first-run wizard when user picks a
+    // custom data directory. Allows cross-process persistence without
+    // requiring SAGE_HOME env var to be set externally.
+    if let Some(redirected) = read_sage_home_redirect(&dot_sage) {
+        return redirected;
+    }
+
+    dot_sage
+}
+
+/// Read the redirect file at `dot_sage/sage-home-path`. Returns the
+/// redirected path if it exists, is absolute, and the directory exists.
+fn read_sage_home_redirect(dot_sage: &Path) -> Option<PathBuf> {
+    let redirect_file = dot_sage.join(SAGE_HOME_REDIRECT_FILENAME);
+    let content = std::fs::read_to_string(&redirect_file).ok()?;
+    let path = PathBuf::from(content.trim());
+    if path.is_absolute() && path.exists() {
+        Some(path)
+    } else {
+        None
+    }
 }
 
 /// Per-user config directory: `$SAGE_HOME` or `~/.sage`. Created if needed.
