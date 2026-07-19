@@ -113,6 +113,12 @@ impl XaiProtoBuilder {
         }
 
         // Can only process one input file when using --dependency_out=FILE.
+        // On Windows, protoc's --dependency_out=/dev/stdout is not supported.
+        // Skip dependency tracking — it's a dev convenience, not required for builds.
+        if cfg!(windows) {
+            return Ok(());
+        }
+
         for proto in protos {
             let mut command = Command::new(protoc.unwrap_or(Path::new("protoc")));
             command

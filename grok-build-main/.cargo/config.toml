@@ -79,3 +79,9 @@ AARCH64_APPLE_DARWIN_JEMALLOC_SYS_WITH_LG_PAGE = "14"
 AARCH64_UNKNOWN_LINUX_GNU_JEMALLOC_SYS_WITH_LG_PAGE = "16"
 AARCH64_UNKNOWN_LINUX_MUSL_JEMALLOC_SYS_WITH_LG_PAGE = "16"
 AARCH64_UNKNOWN_LINUX_MUSL_JEMALLOC_SYS_WITH_BACKGROUND_THREADS = "0"
+# Windows: points to local protoc.exe (downloaded separately since DotSlash is Linux-only)
+PROTOC = "E:/Git仓库/Agent-SYS/grok-build-main/bin/protoc.exe"
+# Windows: avoid Unicode path issues in protoc by setting temp to ASCII-only path
+TMP = "E:/Git仓库/Agent-SYS/.cargo-tmp"
+TEMP = "E:/Git仓库/Agent-SYS/.cargo-tmp"
+TMPDIR = "E:/Git仓库/Agent-SYS/.cargo-tmp"
