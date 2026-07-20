@@ -27,7 +27,7 @@ pub(crate) fn sample_rss_bytes() -> u64 {
     {
         unsafe {
             let mut usage: libc::rusage = std::mem::zeroed();
-            if libc::getrusage(libc::RUNEXUS_SELF, &mut usage) == 0 {
+            if libc::getrusage(libc::RUSAGE_SELF, &mut usage) == 0 {
                 let rss = (usage.ru_maxrss).max(0) as u64;
                 #[cfg(target_os = "linux")]
                 {
