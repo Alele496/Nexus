@@ -110,6 +110,18 @@ Nexus/
 - **Agent 编排**: Subagent + Skills + Personas + Plan Mode
 - **扩展协议**: ACP (Agent Client Protocol), MCP (Model Context Protocol)
 
+## 致谢
+
+Nexus 基于 [xAI grok-build](https://github.com/xai/grok-build)（Apache-2.0）分支而来，感谢 xAI 团队出色的终端 TUI 框架和 Agent 基础设施。
+
+本项目在此之上完成了以下工作：
+
+- **DeepSeek V4 原生适配** — thinking 链式推理、1M token 上下文、reasoning_effort 深度映射
+- **中文本地化** — 系统提示词、全部命令描述、TUI 界面全面汉化
+- **首次运行向导** — 自动检测配置、引导设置 API Key 和模型参数
+- **多 Agent 编排系统** — 开发/审查/运维/顾问四角色团队，Council 并行审查等五种编排模式
+- **舰队管理系统** — 多仓库健康巡检、项目注册表、定时任务调度
+
 ## License
 
 Nexus 源码：Apache-2.0
