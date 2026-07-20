@@ -13,6 +13,9 @@ jobs:
   # ── Windows: check + test ──────────────────────────────────────
   check-windows:
     runs-on: windows-2022
+    defaults:
+      run:
+        working-directory: nexus
     steps:
       - uses: actions/checkout@v4
 
@@ -33,7 +36,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: win-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: win-cargo-${{ hashFiles('nexus/Cargo.lock') }}
           restore-keys: win-cargo-
 
       - name: Set env (ASCII-only TMP + protoc)
@@ -54,6 +57,9 @@ jobs:
   # ── Linux: check + test ────────────────────────────────────────
   check-linux:
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: nexus
     steps:
       - uses: actions/checkout@v4
 
@@ -73,7 +79,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: linux-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: linux-cargo-${{ hashFiles('nexus/Cargo.lock') }}
           restore-keys: linux-cargo-
 
       - name: Cargo check

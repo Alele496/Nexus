@@ -1,8 +1,5 @@
 name: Build Release
 
-# Manual trigger — produces downloadable nexus.exe artifact.
-# Usage: GitHub repo → Actions tab → "Build Release" → Run workflow.
-
 on:
   workflow_dispatch:
     inputs:
@@ -24,6 +21,9 @@ jobs:
   build-windows:
     if: ${{ github.event.inputs.platform == 'windows' || github.event.inputs.platform == 'both' }}
     runs-on: windows-2022
+    defaults:
+      run:
+        working-directory: nexus
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +44,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: win-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: win-cargo-${{ hashFiles('nexus/Cargo.lock') }}
           restore-keys: win-cargo-
 
       - name: Set env (ASCII-only TMP + protoc)
@@ -63,13 +63,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nexus-windows-x86_64
-          path: target/release/nexus.exe
+          path: nexus/target/release/nexus.exe
           retention-days: 30
 
   # ── Linux release binary ───────────────────────────────────────
   build-linux:
     if: ${{ github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'both' }}
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: nexus
     steps:
       - uses: actions/checkout@v4
 
@@ -89,7 +92,7 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: linux-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: linux-cargo-${{ hashFiles('nexus/Cargo.lock') }}
           restore-keys: linux-cargo-
 
       - name: Build release
@@ -99,5 +102,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nexus-linux-x86_64
-          path: target/release/nexus
+          path: nexus/target/release/nexus
           retention-days: 30
