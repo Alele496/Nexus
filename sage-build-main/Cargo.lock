@@ -6315,6 +6315,1656 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
 
 [[package]]
+name = "nexus-acp-lib"
+version = "0.1.0"
+dependencies = [
+ "agent-client-protocol",
+ "async-trait",
+ "derive_more 2.1.1",
+ "futures",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-agent"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dirs 6.0.0",
+ "dunce",
+ "git2",
+ "ignore",
+ "minijinja",
+ "nexus-config",
+ "nexus-hooks",
+ "nexus-sampling-types",
+ "nexus-token-estimation",
+ "nexus-tool-types",
+ "nexus-tools",
+ "nexus-tty-utils",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "serial_test",
+ "sha2 0.10.9",
+ "strum 0.27.2",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "zeroize",
+]
+
+[[package]]
+name = "nexus-agent-lifecycle"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-announcements"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "nexus-tools",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "ts-rs",
+]
+
+[[package]]
+name = "nexus-auth"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "http 1.4.0",
+ "mockito",
+ "reqwest 0.12.24",
+ "reqwest-middleware 0.4.2",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-bin"
+version = "0.2.105"
+dependencies = [
+ "anyhow",
+ "clap",
+ "cryptify",
+ "dunce",
+ "libc",
+ "nexus-acp-lib",
+ "nexus-config",
+ "nexus-crash-handler",
+ "nexus-pager",
+ "nexus-pager-minimal",
+ "nexus-sandbox",
+ "nexus-shell",
+ "nexus-telemetry",
+ "nexus-tty-utils",
+ "nexus-update",
+ "nexus-version",
+ "nexus-workspace",
+ "obfstr",
+ "rustls",
+ "semver",
+ "serde_json",
+ "serial_test",
+ "tikv-jemalloc-ctl",
+ "tikv-jemalloc-sys",
+ "tikv-jemallocator",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "nexus-chat-state"
+version = "0.1.0"
+dependencies = [
+ "indexmap",
+ "nexus-compaction",
+ "nexus-sampling-types",
+ "nexus-token-estimation",
+ "regex",
+ "serde",
+ "serde_json",
+ "strum 0.27.2",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-circuit-breaker"
+version = "0.1.0"
+dependencies = [
+ "log",
+]
+
+[[package]]
+name = "nexus-codebase-graph"
+version = "0.1.0"
+dependencies = [
+ "ahash",
+ "clap",
+ "crossbeam",
+ "dashmap",
+ "dunce",
+ "git2",
+ "hashbrown 0.15.5",
+ "ignore",
+ "libc",
+ "mimalloc",
+ "nexus-paths",
+ "nohash-hasher",
+ "num_cpus",
+ "once_cell",
+ "petgraph 0.6.5",
+ "rayon",
+ "rustc-hash 2.1.1",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tree-sitter",
+ "tree-sitter-go",
+ "tree-sitter-javascript",
+ "tree-sitter-python",
+ "tree-sitter-rust",
+ "tree-sitter-typescript",
+]
+
+[[package]]
+name = "nexus-compaction"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-computer-hub-core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dashmap",
+ "futures",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-computer-hub-mcp-adapter"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "futures",
+ "nexus-computer-hub-sdk",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "prometheus",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-computer-hub-sdk"
+version = "0.1.0"
+dependencies = [
+ "arc-swap",
+ "async-trait",
+ "axum",
+ "base64",
+ "chrono",
+ "dashmap",
+ "fastrace",
+ "fastrace-opentelemetry",
+ "futures",
+ "http 1.4.0",
+ "indexmap",
+ "nexus-computer-hub-core",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "nexus-tracing",
+ "opentelemetry",
+ "opentelemetry-proto",
+ "opentelemetry_sdk",
+ "parking_lot",
+ "prometheus",
+ "prost",
+ "reqwest 0.12.24",
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite 0.27.0",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "nexus-config"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "blake3",
+ "core-foundation",
+ "dunce",
+ "nexus-tty-utils",
+ "nexus-version",
+ "prod-mc-cli-chat-proxy-types",
+ "ring",
+ "semver",
+ "serde",
+ "serde_json",
+ "shellexpand",
+ "tempfile",
+ "thiserror 2.0.18",
+ "toml",
+ "tracing",
+ "urlencoding",
+ "which",
+]
+
+[[package]]
+name = "nexus-config-types"
+version = "0.1.0"
+dependencies = [
+ "agent-client-protocol",
+ "indexmap",
+ "nexus-announcements",
+ "nexus-config",
+ "nexus-mcp",
+ "serde",
+ "serde_json",
+ "strum 0.27.2",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-crash-handler"
+version = "0.1.0"
+dependencies = [
+ "backtrace",
+ "libc",
+ "tempfile",
+ "tokio",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "nexus-env"
+version = "0.1.0"
+dependencies = [
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "nexus-fast-worktree"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "clap",
+ "crossbeam",
+ "dashmap",
+ "dunce",
+ "gix",
+ "gix-status",
+ "globset",
+ "ignore",
+ "libc",
+ "nexus-gix-status",
+ "nexus-sqlite-journal",
+ "nexus-test-utils",
+ "nexus-tty-utils",
+ "nix 0.30.1",
+ "num_cpus",
+ "rapidhash",
+ "reflink-copy",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "nexus-file-utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-compression",
+ "aws-config",
+ "aws-sdk-s3",
+ "aws-smithy-http-client",
+ "axum",
+ "base64",
+ "chrono",
+ "dirs 5.0.1",
+ "dunce",
+ "filetime",
+ "futures",
+ "gcloud-storage",
+ "indexmap",
+ "nexus-auth",
+ "nexus-circuit-breaker",
+ "nexus-test-utils",
+ "nexus-version",
+ "opentelemetry",
+ "opentelemetry_sdk",
+ "prod-mc-cli-chat-proxy-types",
+ "reflink-copy",
+ "reqwest 0.12.24",
+ "reqwest-middleware 0.4.2",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "strum 0.27.2",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "url",
+ "zstd",
+]
+
+[[package]]
+name = "nexus-fsnotify"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "dunce",
+ "git2",
+ "globset",
+ "ignore",
+ "nexus-tracing-macros",
+ "notify",
+ "notify-debouncer-full",
+ "serde",
+ "serial_test",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-gix-status"
+version = "0.1.0"
+dependencies = [
+ "gix",
+ "libc",
+ "nexus-test-utils",
+ "tempfile",
+]
+
+[[package]]
+name = "nexus-hooks"
+version = "0.1.0"
+dependencies = [
+ "fastrand",
+ "nexus-config",
+ "nexus-tools",
+ "regex",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "shellexpand",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "nexus-hooks-plugins-types"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-http"
+version = "0.1.0"
+dependencies = [
+ "nexus-auth",
+ "nexus-sampler",
+ "nexus-telemetry",
+ "nexus-version",
+ "nexus-workspace",
+ "reqwest 0.12.24",
+ "reqwest-middleware 0.4.2",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-hunk-tracker"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dunce",
+ "gix",
+ "nexus-gix-status",
+ "nexus-test-utils",
+ "rustc-hash 2.1.1",
+ "serde",
+ "serde_json",
+ "similar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "nexus-interjection-core"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "nexus-markdown"
+version = "0.1.0"
+dependencies = [
+ "anstyle",
+ "anstyle-lossy",
+ "anstyle-syntect",
+ "criterion",
+ "crossterm",
+ "html-escape",
+ "linkify",
+ "nexus-markdown-core",
+ "nexus-ratatui-textarea",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "ratatui",
+ "supports-color",
+ "syntect",
+ "textwrap",
+ "two-face",
+ "unicode-width 0.2.0",
+ "url",
+]
+
+[[package]]
+name = "nexus-markdown-core"
+version = "0.1.0"
+dependencies = [
+ "pulldown-cmark",
+]
+
+[[package]]
+name = "nexus-mcp"
+version = "0.1.0"
+dependencies = [
+ "agent-client-protocol",
+ "async-trait",
+ "axum",
+ "futures",
+ "http 1.4.0",
+ "libc",
+ "nexus-computer-hub-sdk",
+ "nexus-config",
+ "nexus-file-utils",
+ "nexus-telemetry",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "nexus-tools",
+ "nexus-version",
+ "nexus-workspace-types",
+ "oauth2",
+ "parking_lot",
+ "regex",
+ "reqwest 0.13.4",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "sse-stream",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "url",
+ "webbrowser",
+ "which",
+]
+
+[[package]]
+name = "nexus-memory"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-trait",
+ "blake3",
+ "chrono",
+ "dunce",
+ "filetime",
+ "flate2",
+ "git2",
+ "nexus-auth",
+ "nexus-config-types",
+ "nexus-http",
+ "nexus-sqlite-journal",
+ "nexus-telemetry",
+ "nexus-tools",
+ "nexus-version",
+ "nix 0.30.1",
+ "notify",
+ "reqwest 0.12.24",
+ "reqwest-middleware 0.4.2",
+ "rusqlite",
+ "serde_json",
+ "sqlite-vec",
+ "tar",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "windows 0.61.3",
+]
+
+[[package]]
+name = "nexus-mermaid"
+version = "0.1.0"
+dependencies = [
+ "fontdb",
+ "image",
+ "libc",
+ "mermaid-to-svg",
+ "nexus-tty-utils",
+ "resvg",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tiny-skia",
+ "tracing",
+ "wait-timeout",
+ "which",
+]
+
+[[package]]
+name = "nexus-models"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-pager"
+version = "0.2.105"
+dependencies = [
+ "agent-client-protocol",
+ "ansi-to-tui",
+ "anyhow",
+ "backon",
+ "base64",
+ "blake3",
+ "chrono",
+ "clap",
+ "clap_complete",
+ "core-foundation",
+ "criterion",
+ "crossterm",
+ "derive_more 2.1.1",
+ "dirs 5.0.1",
+ "dunce",
+ "enum_delegate",
+ "flate2",
+ "git2",
+ "image",
+ "indexmap",
+ "insta",
+ "libc",
+ "nexus-acp-lib",
+ "nexus-agent",
+ "nexus-announcements",
+ "nexus-config",
+ "nexus-crash-handler",
+ "nexus-fast-worktree",
+ "nexus-file-utils",
+ "nexus-hooks-plugins-types",
+ "nexus-markdown",
+ "nexus-mermaid",
+ "nexus-pager-pty-harness",
+ "nexus-pager-render",
+ "nexus-plugin-marketplace",
+ "nexus-prompt-queue",
+ "nexus-ratatui-inline",
+ "nexus-ratatui-textarea",
+ "nexus-sandbox",
+ "nexus-shell",
+ "nexus-telemetry",
+ "nexus-test-support",
+ "nexus-token-estimation",
+ "nexus-tools",
+ "nexus-tty-utils",
+ "nexus-update",
+ "nexus-version",
+ "nexus-voice",
+ "nexus-workspace",
+ "nix 0.30.1",
+ "nucleo",
+ "obfstr",
+ "parking_lot",
+ "portable-pty",
+ "pretty_assertions",
+ "rand 0.9.2",
+ "ratatui",
+ "regex",
+ "rustls",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "shellexpand",
+ "signal-hook 0.3.18",
+ "similar",
+ "strip-ansi-escapes",
+ "syntect",
+ "tar",
+ "tempfile",
+ "textwrap",
+ "tokio",
+ "tokio-util",
+ "toml",
+ "toml_edit 0.22.27",
+ "tracing",
+ "tracing-subscriber",
+ "unicode-segmentation",
+ "unicode-width 0.2.0",
+ "url",
+ "urlencoding",
+ "uuid",
+ "wait-timeout",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "nexus-pager-minimal"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "crossterm",
+ "nexus-pager",
+ "nexus-ratatui-inline",
+ "nexus-shell",
+ "nexus-token-estimation",
+ "nexus-version",
+ "ratatui",
+ "similar",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "nexus-pager-pty-harness"
+version = "0.1.0"
+dependencies = [
+ "alacritty_terminal",
+ "anyhow",
+ "base64",
+ "clap",
+ "dunce",
+ "image",
+ "libc",
+ "nexus-test-support",
+ "nexus-tty-utils",
+ "portable-pty",
+ "ptyctl",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "nexus-pager-render"
+version = "0.1.0"
+dependencies = [
+ "agent-client-protocol",
+ "anstyle",
+ "anyhow",
+ "base64",
+ "crossterm",
+ "dark-light",
+ "dirs 5.0.1",
+ "documented",
+ "dunce",
+ "image",
+ "libc",
+ "linkify",
+ "nexus-config",
+ "nexus-markdown",
+ "nexus-paths",
+ "nexus-ratatui-inline",
+ "nexus-ratatui-textarea",
+ "nexus-shared",
+ "nexus-telemetry",
+ "nexus-tools",
+ "nexus-tty-utils",
+ "nexus-workspace",
+ "notify",
+ "pretty_assertions",
+ "ratatui",
+ "ratatui-core",
+ "regex",
+ "serde",
+ "serial_test",
+ "shellexpand",
+ "strum 0.27.2",
+ "supports-color",
+ "syntect",
+ "tempfile",
+ "textwrap",
+ "tokio",
+ "toml",
+ "toml_edit 0.22.27",
+ "tracing",
+ "tui-scrollbar",
+ "unicode-segmentation",
+ "unicode-width 0.2.0",
+ "url",
+ "uuid",
+ "vte 0.15.0",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "nexus-paths"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "nexus-plugin-marketplace"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "dirs 5.0.1",
+ "dunce",
+ "fs2",
+ "git2",
+ "nexus-agent",
+ "nexus-config",
+ "nexus-hooks-plugins-types",
+ "nexus-tty-utils",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "toml",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-prompt-queue"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-proto-build"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "pbjson-build",
+ "prost-build",
+ "tempfile",
+ "tonic-prost-build",
+]
+
+[[package]]
+name = "nexus-ratatui-inline"
+version = "0.1.0"
+dependencies = [
+ "ansi-width",
+ "anstyle-parse",
+ "anyhow",
+ "colored_json",
+ "criterion",
+ "crossterm",
+ "lipsum",
+ "ratatui",
+ "serde_json",
+ "termwiz",
+ "unicode-width 0.2.0",
+]
+
+[[package]]
+name = "nexus-ratatui-textarea"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "chrono",
+ "crossterm",
+ "fuzzy-matcher",
+ "ignore",
+ "itertools 0.14.0",
+ "pretty_assertions",
+ "rand 0.9.2",
+ "ratatui",
+ "ratatui-core",
+ "textwrap",
+ "tracing",
+ "tui-scrollbar",
+ "unicode-segmentation",
+ "unicode-width 0.2.0",
+]
+
+[[package]]
+name = "nexus-sampler"
+version = "0.1.0"
+dependencies = [
+ "async-openai",
+ "async-stream",
+ "axum",
+ "chrono",
+ "eventsource-stream",
+ "futures-util",
+ "indexmap",
+ "nexus-sampling-types",
+ "nexus-test-support",
+ "nexus-version",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "nexus-sampling-types"
+version = "0.1.0"
+dependencies = [
+ "assert_matches",
+ "async-openai",
+ "indexmap",
+ "nexus-compaction",
+ "nexus-tools",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-sandbox"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "dirs 5.0.1",
+ "dunce",
+ "globset",
+ "ignore",
+ "libc",
+ "nexus-config",
+ "nono",
+ "regex",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "sha2 0.10.9",
+ "thiserror 2.0.18",
+ "toml",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "nexus-secrets"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde_json",
+ "url",
+]
+
+[[package]]
+name = "nexus-shared"
+version = "0.0.0"
+dependencies = [
+ "agent-client-protocol",
+ "anyhow",
+ "arboard",
+ "base64",
+ "dirs 6.0.0",
+ "dunce",
+ "image",
+ "libc",
+ "nexus-config-types",
+ "nexus-models",
+ "nexus-tools",
+ "nexus-tty-utils",
+ "objc2 0.6.3",
+ "parking_lot",
+ "prod-mc-cli-chat-proxy-types",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tracing",
+ "urlencoding",
+ "uuid",
+ "wl-clipboard-rs",
+]
+
+[[package]]
+name = "nexus-shell"
+version = "0.2.105"
+dependencies = [
+ "agent-client-protocol",
+ "anyhow",
+ "arc-swap",
+ "async-openai",
+ "async-trait",
+ "axum",
+ "backon",
+ "base64",
+ "blake3",
+ "bm25",
+ "bytes",
+ "chrono",
+ "clap",
+ "criterion",
+ "dashmap",
+ "dhat",
+ "dirs 6.0.0",
+ "dunce",
+ "filetime",
+ "flate2",
+ "fs2",
+ "futures",
+ "futures-util",
+ "gcloud-storage",
+ "gethostname",
+ "git2",
+ "glob",
+ "globset",
+ "ignore",
+ "image",
+ "indexmap",
+ "infer 0.15.0",
+ "jsonschema",
+ "jsonwebtoken",
+ "kanal",
+ "libc",
+ "moka",
+ "nexus-acp-lib",
+ "nexus-agent",
+ "nexus-agent-lifecycle",
+ "nexus-announcements",
+ "nexus-auth",
+ "nexus-chat-state",
+ "nexus-codebase-graph",
+ "nexus-compaction",
+ "nexus-computer-hub-sdk",
+ "nexus-config",
+ "nexus-config-types",
+ "nexus-fast-worktree",
+ "nexus-file-utils",
+ "nexus-fsnotify",
+ "nexus-hooks",
+ "nexus-hooks-plugins-types",
+ "nexus-http",
+ "nexus-hunk-tracker",
+ "nexus-interjection-core",
+ "nexus-mcp",
+ "nexus-memory",
+ "nexus-models",
+ "nexus-paths",
+ "nexus-plugin-marketplace",
+ "nexus-prompt-queue",
+ "nexus-sampler",
+ "nexus-sampling-types",
+ "nexus-sandbox",
+ "nexus-shared",
+ "nexus-shell-base",
+ "nexus-shell-session-support",
+ "nexus-sqlite-journal",
+ "nexus-subagent-resolution",
+ "nexus-system-power",
+ "nexus-telemetry",
+ "nexus-test-support",
+ "nexus-test-utils",
+ "nexus-token-estimation",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "nexus-tools",
+ "nexus-tracing-macros",
+ "nexus-tty-utils",
+ "nexus-version",
+ "nexus-workspace",
+ "nix 0.30.1",
+ "notify",
+ "notify-debouncer-mini",
+ "nucleo",
+ "obfstr",
+ "parking_lot",
+ "portable-pty",
+ "process-wrap",
+ "prod-mc-cli-chat-proxy-types",
+ "prost",
+ "rand 0.9.2",
+ "regex",
+ "reqwest 0.12.24",
+ "reqwest-middleware 0.4.2",
+ "ring",
+ "rsa",
+ "rusqlite",
+ "rustls",
+ "rustls-native-certs",
+ "semver",
+ "serde",
+ "serde_ignored",
+ "serde_json",
+ "serial_test",
+ "sha2 0.10.9",
+ "shlex",
+ "similar",
+ "siphasher",
+ "strum 0.27.2",
+ "tar",
+ "tdigests",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-retry",
+ "tokio-rustls",
+ "tokio-stream",
+ "tokio-tungstenite 0.27.0",
+ "tokio-util",
+ "toml",
+ "toml_edit 0.22.27",
+ "tonic",
+ "tonic-prost",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "urlencoding",
+ "uuid",
+ "walkdir",
+ "webbrowser",
+ "windows 0.61.3",
+ "zstd",
+]
+
+[[package]]
+name = "nexus-shell-base"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "libc",
+ "nexus-config",
+ "nexus-env",
+ "nexus-shared",
+ "nexus-tty-utils",
+ "nexus-version",
+ "nix 0.30.1",
+ "pprof",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "url",
+ "windows 0.61.3",
+]
+
+[[package]]
+name = "nexus-shell-session-support"
+version = "0.1.0"
+dependencies = [
+ "agent-client-protocol",
+ "axum",
+ "chrono",
+ "nexus-file-utils",
+ "nexus-http",
+ "nexus-shell-base",
+ "nexus-version",
+ "nexus-workspace",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-sqlite-journal"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "rusqlite",
+ "tempfile",
+ "tracing",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
+name = "nexus-subagent-resolution"
+version = "0.1.0"
+dependencies = [
+ "nexus-sampling-types",
+ "nexus-tool-types",
+ "nexus-tools",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "toml",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-system-power"
+version = "0.1.0"
+dependencies = [
+ "windows-sys 0.59.0",
+ "zbus",
+]
+
+[[package]]
+name = "nexus-telemetry"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "bytes",
+ "chrono",
+ "dirs 5.0.1",
+ "filetime",
+ "futures-executor",
+ "git2",
+ "http 1.4.0",
+ "mid",
+ "nexus-auth",
+ "nexus-config",
+ "nexus-env",
+ "nexus-file-utils",
+ "nexus-sampler",
+ "nexus-secrets",
+ "nexus-token-estimation",
+ "obfstr",
+ "opentelemetry",
+ "opentelemetry-http",
+ "opentelemetry-otlp",
+ "opentelemetry-proto",
+ "opentelemetry_sdk",
+ "parking_lot",
+ "prost",
+ "reqwest 0.12.24",
+ "sentry",
+ "serde",
+ "serde_json",
+ "strum 0.27.2",
+ "tempfile",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tracing",
+ "tracing-appender",
+ "tracing-chrome",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "whoami",
+]
+
+[[package]]
+name = "nexus-test-support"
+version = "0.1.0"
+dependencies = [
+ "agent-client-protocol",
+ "anyhow",
+ "async-trait",
+ "axum",
+ "clap",
+ "futures-util",
+ "libc",
+ "nexus-acp-lib",
+ "reqwest 0.12.24",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tokio-tungstenite 0.27.0",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "nexus-test-utils"
+version = "0.1.0"
+dependencies = [
+ "runfiles",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "nexus-token-estimation"
+version = "0.1.0"
+
+[[package]]
+name = "nexus-tool-protocol"
+version = "0.1.0"
+dependencies = [
+ "nexus-tool-types",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "uuid",
+]
+
+[[package]]
+name = "nexus-tool-runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "futures",
+ "nexus-tool-protocol",
+ "nexus-tool-types",
+ "nexus-tools-api",
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "nexus-tool-types"
+version = "0.1.0"
+dependencies = [
+ "minijinja",
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "nexus-tools"
+version = "0.1.220-alpha.4"
+dependencies = [
+ "anyhow",
+ "arc-swap",
+ "async-lsp",
+ "async-openai",
+ "async-stream",
+ "async-trait",
+ "base64",
+ "chrono",
+ "command-fds",
+ "crc32fast",
+ "derive_more 2.1.1",
+ "dirs 5.0.1",
+ "dunce",
+ "educe",
+ "flate2",
+ "fs2",
+ "futures",
+ "futures-util",
+ "globset",
+ "htmd",
+ "ignore",
+ "image",
+ "indexmap",
+ "infer 0.19.0",
+ "libc",
+ "minijinja",
+ "nexus-computer-hub-core",
+ "nexus-computer-hub-sdk",
+ "nexus-config",
+ "nexus-env",
+ "nexus-file-utils",
+ "nexus-interjection-core",
+ "nexus-sandbox",
+ "nexus-test-utils",
+ "nexus-token-estimation",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "nexus-tools-api",
+ "nexus-tty-utils",
+ "nexus-version",
+ "nexus-workspace-types",
+ "nix 0.30.1",
+ "parking_lot",
+ "pdf_oxide",
+ "pulldown-cmark",
+ "quick-xml 0.38.3",
+ "regex",
+ "reqwest 0.12.24",
+ "schemars 1.0.4",
+ "scraper",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "serde_yaml",
+ "shellexpand",
+ "similar",
+ "strip-ansi-escapes",
+ "strum 0.26.3",
+ "tar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-util",
+ "tonic",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+ "uuid",
+ "which",
+ "windows 0.61.3",
+ "wiremock",
+ "zip",
+]
+
+[[package]]
+name = "nexus-tools-api"
+version = "0.1.220-alpha.4"
+dependencies = [
+ "nexus-proto-build",
+ "nexus-tool-protocol",
+ "prost",
+ "serde",
+ "serde_json",
+ "tonic",
+ "tonic-prost",
+]
+
+[[package]]
+name = "nexus-tracing"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes",
+ "fastrace",
+ "fastrace-opentelemetry",
+ "fastrace-reqwest",
+ "fastrace-tonic",
+ "http 1.4.0",
+ "http-body-util",
+ "log",
+ "opentelemetry",
+ "opentelemetry-http",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "reqwest 0.12.24",
+ "reqwest-middleware 0.4.2",
+ "tokio",
+ "tonic",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
+name = "nexus-tracing-macros"
+version = "0.1.0"
+
+[[package]]
+name = "nexus-tty-utils"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "nix 0.30.1",
+ "tokio",
+ "windows 0.61.3",
+]
+
+[[package]]
+name = "nexus-update"
+version = "0.1.220-alpha.4"
+dependencies = [
+ "anyhow",
+ "dunce",
+ "futures",
+ "indicatif",
+ "nexus-shell",
+ "nexus-tools",
+ "nexus-version",
+ "reqwest 0.12.24",
+ "semver",
+ "serde",
+ "serde_json",
+ "serial_test",
+ "tempfile",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
+ "tracing",
+ "wiremock",
+]
+
+[[package]]
+name = "nexus-version"
+version = "0.2.105"
+dependencies = [
+ "semver",
+]
+
+[[package]]
+name = "nexus-voice"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "cpal",
+ "futures-util",
+ "rustls",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite 0.27.0",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
+name = "nexus-workspace"
+version = "0.1.220-alpha.4"
+dependencies = [
+ "agent-client-protocol",
+ "anyhow",
+ "arc-swap",
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64",
+ "bstr",
+ "chrono",
+ "clap",
+ "dashmap",
+ "dirs 6.0.0",
+ "dunce",
+ "fastrace",
+ "filetime",
+ "flate2",
+ "fs2",
+ "futures",
+ "git2",
+ "glob",
+ "hashbrown 0.16.1",
+ "humantime-serde",
+ "ignore",
+ "indexmap",
+ "infer 0.19.0",
+ "libc",
+ "md5",
+ "nexus-acp-lib",
+ "nexus-agent",
+ "nexus-auth",
+ "nexus-codebase-graph",
+ "nexus-computer-hub-mcp-adapter",
+ "nexus-computer-hub-sdk",
+ "nexus-config",
+ "nexus-config-types",
+ "nexus-env",
+ "nexus-fast-worktree",
+ "nexus-file-utils",
+ "nexus-fsnotify",
+ "nexus-hooks",
+ "nexus-hunk-tracker",
+ "nexus-mcp",
+ "nexus-paths",
+ "nexus-sandbox",
+ "nexus-sqlite-journal",
+ "nexus-telemetry",
+ "nexus-test-utils",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "nexus-tools",
+ "nexus-tools-api",
+ "nexus-tracing",
+ "nexus-tty-utils",
+ "nexus-version",
+ "nexus-workspace-client",
+ "nexus-workspace-types",
+ "nohash-hasher",
+ "nucleo",
+ "parking_lot",
+ "prometheus",
+ "regex",
+ "reqwest 0.12.24",
+ "rusqlite",
+ "rustc-hash 2.1.1",
+ "rustls",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "smallvec",
+ "tar",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-tungstenite 0.27.0",
+ "tokio-util",
+ "toml",
+ "tonic",
+ "tracing",
+ "tracing-subscriber",
+ "tree-sitter",
+ "tree-sitter-bash",
+ "url",
+ "urlencoding",
+ "uuid",
+ "windows 0.61.3",
+ "zstd",
+]
+
+[[package]]
+name = "nexus-workspace-client"
+version = "0.1.0"
+dependencies = [
+ "nexus-computer-hub-sdk",
+ "nexus-tool-protocol",
+ "nexus-tool-runtime",
+ "nexus-tool-types",
+ "nexus-workspace-types",
+ "schemars 1.0.4",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "nexus-workspace-types"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "chrono",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "nix"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8878,1656 +10528,6 @@ name = "ryu-js"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd29631678d6fb0903b69223673e122c32e9ae559d0960a38d574695ebc0ea15"
-
-[[package]]
-name = "sage-acp-lib"
-version = "0.1.0"
-dependencies = [
- "agent-client-protocol",
- "async-trait",
- "derive_more 2.1.1",
- "futures",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "sage-agent"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dirs 6.0.0",
- "dunce",
- "git2",
- "ignore",
- "minijinja",
- "regex",
- "sage-config",
- "sage-hooks",
- "sage-sampling-types",
- "sage-token-estimation",
- "sage-tool-types",
- "sage-tools",
- "sage-tty-utils",
- "serde",
- "serde_json",
- "serde_yaml",
- "serial_test",
- "sha2 0.10.9",
- "strum 0.27.2",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "zeroize",
-]
-
-[[package]]
-name = "sage-agent-lifecycle"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "sage-announcements"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "sage-tools",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "ts-rs",
-]
-
-[[package]]
-name = "sage-auth"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "http 1.4.0",
- "mockito",
- "reqwest 0.12.24",
- "reqwest-middleware 0.4.2",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "sage-bin"
-version = "0.2.105"
-dependencies = [
- "anyhow",
- "clap",
- "cryptify",
- "dunce",
- "libc",
- "obfstr",
- "rustls",
- "sage-acp-lib",
- "sage-config",
- "sage-crash-handler",
- "sage-pager",
- "sage-pager-minimal",
- "sage-sandbox",
- "sage-shell",
- "sage-telemetry",
- "sage-tty-utils",
- "sage-update",
- "sage-version",
- "sage-workspace",
- "semver",
- "serde_json",
- "serial_test",
- "tikv-jemalloc-ctl",
- "tikv-jemalloc-sys",
- "tikv-jemallocator",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "sage-chat-state"
-version = "0.1.0"
-dependencies = [
- "indexmap",
- "regex",
- "sage-compaction",
- "sage-sampling-types",
- "sage-token-estimation",
- "serde",
- "serde_json",
- "strum 0.27.2",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
-name = "sage-circuit-breaker"
-version = "0.1.0"
-dependencies = [
- "log",
-]
-
-[[package]]
-name = "sage-codebase-graph"
-version = "0.1.0"
-dependencies = [
- "ahash",
- "clap",
- "crossbeam",
- "dashmap",
- "dunce",
- "git2",
- "hashbrown 0.15.5",
- "ignore",
- "libc",
- "mimalloc",
- "nohash-hasher",
- "num_cpus",
- "once_cell",
- "petgraph 0.6.5",
- "rayon",
- "rustc-hash 2.1.1",
- "sage-paths",
- "serde",
- "serde_json",
- "smallvec",
- "tempfile",
- "tokio",
- "tracing",
- "tree-sitter",
- "tree-sitter-go",
- "tree-sitter-javascript",
- "tree-sitter-python",
- "tree-sitter-rust",
- "tree-sitter-typescript",
-]
-
-[[package]]
-name = "sage-compaction"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "sage-computer-hub-core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "dashmap",
- "futures",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "sage-computer-hub-mcp-adapter"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "futures",
- "prometheus",
- "sage-computer-hub-sdk",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "sage-computer-hub-sdk"
-version = "0.1.0"
-dependencies = [
- "arc-swap",
- "async-trait",
- "axum",
- "base64",
- "chrono",
- "dashmap",
- "fastrace",
- "fastrace-opentelemetry",
- "futures",
- "http 1.4.0",
- "indexmap",
- "opentelemetry",
- "opentelemetry-proto",
- "opentelemetry_sdk",
- "parking_lot",
- "prometheus",
- "prost",
- "reqwest 0.12.24",
- "sage-computer-hub-core",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "sage-tracing",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite 0.27.0",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "sage-config"
-version = "0.1.0"
-dependencies = [
- "base64",
- "blake3",
- "core-foundation",
- "dunce",
- "prod-mc-cli-chat-proxy-types",
- "ring",
- "sage-tty-utils",
- "sage-version",
- "semver",
- "serde",
- "serde_json",
- "shellexpand",
- "tempfile",
- "thiserror 2.0.18",
- "toml",
- "tracing",
- "urlencoding",
- "which",
-]
-
-[[package]]
-name = "sage-config-types"
-version = "0.1.0"
-dependencies = [
- "agent-client-protocol",
- "indexmap",
- "sage-announcements",
- "sage-config",
- "sage-mcp",
- "serde",
- "serde_json",
- "strum 0.27.2",
- "tracing",
-]
-
-[[package]]
-name = "sage-crash-handler"
-version = "0.1.0"
-dependencies = [
- "backtrace",
- "libc",
- "tempfile",
- "tokio",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "sage-env"
-version = "0.1.0"
-dependencies = [
- "tracing",
- "url",
-]
-
-[[package]]
-name = "sage-fast-worktree"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bytes",
- "clap",
- "crossbeam",
- "dashmap",
- "dunce",
- "gix",
- "gix-status",
- "globset",
- "ignore",
- "libc",
- "nix 0.30.1",
- "num_cpus",
- "rapidhash",
- "reflink-copy",
- "rusqlite",
- "sage-gix-status",
- "sage-sqlite-journal",
- "sage-test-utils",
- "sage-tty-utils",
- "serde",
- "serde_json",
- "tempfile",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "sage-file-utils"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-compression",
- "aws-config",
- "aws-sdk-s3",
- "aws-smithy-http-client",
- "axum",
- "base64",
- "chrono",
- "dirs 5.0.1",
- "dunce",
- "filetime",
- "futures",
- "gcloud-storage",
- "indexmap",
- "opentelemetry",
- "opentelemetry_sdk",
- "prod-mc-cli-chat-proxy-types",
- "reflink-copy",
- "reqwest 0.12.24",
- "reqwest-middleware 0.4.2",
- "sage-auth",
- "sage-circuit-breaker",
- "sage-test-utils",
- "sage-version",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "strum 0.27.2",
- "tempfile",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
- "zstd",
-]
-
-[[package]]
-name = "sage-fsnotify"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "dunce",
- "git2",
- "globset",
- "ignore",
- "notify",
- "notify-debouncer-full",
- "sage-tracing-macros",
- "serde",
- "serial_test",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
-name = "sage-gix-status"
-version = "0.1.0"
-dependencies = [
- "gix",
- "libc",
- "sage-test-utils",
- "tempfile",
-]
-
-[[package]]
-name = "sage-hooks"
-version = "0.1.0"
-dependencies = [
- "fastrand",
- "regex",
- "reqwest 0.12.24",
- "sage-config",
- "sage-tools",
- "serde",
- "serde_json",
- "shellexpand",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "sage-hooks-plugins-types"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "sage-http"
-version = "0.1.0"
-dependencies = [
- "reqwest 0.12.24",
- "reqwest-middleware 0.4.2",
- "sage-auth",
- "sage-sampler",
- "sage-telemetry",
- "sage-version",
- "sage-workspace",
- "serde_json",
- "tracing",
-]
-
-[[package]]
-name = "sage-hunk-tracker"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dunce",
- "gix",
- "rustc-hash 2.1.1",
- "sage-gix-status",
- "sage-test-utils",
- "serde",
- "serde_json",
- "similar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "sage-interjection-core"
-version = "0.1.0"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "sage-markdown"
-version = "0.1.0"
-dependencies = [
- "anstyle",
- "anstyle-lossy",
- "anstyle-syntect",
- "criterion",
- "crossterm",
- "html-escape",
- "linkify",
- "pretty_assertions",
- "pulldown-cmark",
- "ratatui",
- "sage-markdown-core",
- "sage-ratatui-textarea",
- "supports-color",
- "syntect",
- "textwrap",
- "two-face",
- "unicode-width 0.2.0",
- "url",
-]
-
-[[package]]
-name = "sage-markdown-core"
-version = "0.1.0"
-dependencies = [
- "pulldown-cmark",
-]
-
-[[package]]
-name = "sage-mcp"
-version = "0.1.0"
-dependencies = [
- "agent-client-protocol",
- "async-trait",
- "axum",
- "futures",
- "http 1.4.0",
- "libc",
- "oauth2",
- "parking_lot",
- "regex",
- "reqwest 0.13.4",
- "rmcp",
- "sage-computer-hub-sdk",
- "sage-config",
- "sage-file-utils",
- "sage-telemetry",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "sage-tools",
- "sage-version",
- "sage-workspace-types",
- "serde",
- "serde_json",
- "sse-stream",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
- "url",
- "webbrowser",
- "which",
-]
-
-[[package]]
-name = "sage-memory"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-trait",
- "blake3",
- "chrono",
- "dunce",
- "filetime",
- "flate2",
- "git2",
- "nix 0.30.1",
- "notify",
- "reqwest 0.12.24",
- "reqwest-middleware 0.4.2",
- "rusqlite",
- "sage-auth",
- "sage-config-types",
- "sage-http",
- "sage-sqlite-journal",
- "sage-telemetry",
- "sage-tools",
- "sage-version",
- "serde_json",
- "sqlite-vec",
- "tar",
- "tempfile",
- "tokio",
- "tracing",
- "windows 0.61.3",
-]
-
-[[package]]
-name = "sage-mermaid"
-version = "0.1.0"
-dependencies = [
- "fontdb",
- "image",
- "libc",
- "mermaid-to-svg",
- "resvg",
- "sage-tty-utils",
- "tempfile",
- "thiserror 2.0.18",
- "tiny-skia",
- "tracing",
- "wait-timeout",
- "which",
-]
-
-[[package]]
-name = "sage-models"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "sage-pager"
-version = "0.2.105"
-dependencies = [
- "agent-client-protocol",
- "ansi-to-tui",
- "anyhow",
- "backon",
- "base64",
- "blake3",
- "chrono",
- "clap",
- "clap_complete",
- "core-foundation",
- "criterion",
- "crossterm",
- "derive_more 2.1.1",
- "dirs 5.0.1",
- "dunce",
- "enum_delegate",
- "flate2",
- "git2",
- "image",
- "indexmap",
- "insta",
- "libc",
- "nix 0.30.1",
- "nucleo",
- "obfstr",
- "parking_lot",
- "portable-pty",
- "pretty_assertions",
- "rand 0.9.2",
- "ratatui",
- "regex",
- "rustls",
- "sage-acp-lib",
- "sage-agent",
- "sage-announcements",
- "sage-config",
- "sage-crash-handler",
- "sage-fast-worktree",
- "sage-file-utils",
- "sage-hooks-plugins-types",
- "sage-markdown",
- "sage-mermaid",
- "sage-pager-pty-harness",
- "sage-pager-render",
- "sage-plugin-marketplace",
- "sage-prompt-queue",
- "sage-ratatui-inline",
- "sage-ratatui-textarea",
- "sage-sandbox",
- "sage-shell",
- "sage-telemetry",
- "sage-test-support",
- "sage-token-estimation",
- "sage-tools",
- "sage-tty-utils",
- "sage-update",
- "sage-version",
- "sage-voice",
- "sage-workspace",
- "serde",
- "serde_json",
- "serial_test",
- "shellexpand",
- "signal-hook 0.3.18",
- "similar",
- "strip-ansi-escapes",
- "syntect",
- "tar",
- "tempfile",
- "textwrap",
- "tokio",
- "tokio-util",
- "toml",
- "toml_edit 0.22.27",
- "tracing",
- "tracing-subscriber",
- "unicode-segmentation",
- "unicode-width 0.2.0",
- "url",
- "urlencoding",
- "uuid",
- "wait-timeout",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "sage-pager-minimal"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "crossterm",
- "ratatui",
- "sage-pager",
- "sage-ratatui-inline",
- "sage-shell",
- "sage-token-estimation",
- "sage-version",
- "similar",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "sage-pager-pty-harness"
-version = "0.1.0"
-dependencies = [
- "alacritty_terminal",
- "anyhow",
- "base64",
- "clap",
- "dunce",
- "image",
- "libc",
- "portable-pty",
- "ptyctl",
- "reqwest 0.12.24",
- "sage-test-support",
- "sage-tty-utils",
- "serde",
- "serde_json",
- "serde_yaml",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "sage-pager-render"
-version = "0.1.0"
-dependencies = [
- "agent-client-protocol",
- "anstyle",
- "anyhow",
- "base64",
- "crossterm",
- "dark-light",
- "dirs 5.0.1",
- "documented",
- "dunce",
- "image",
- "libc",
- "linkify",
- "notify",
- "pretty_assertions",
- "ratatui",
- "ratatui-core",
- "regex",
- "sage-config",
- "sage-markdown",
- "sage-paths",
- "sage-ratatui-inline",
- "sage-ratatui-textarea",
- "sage-shared",
- "sage-telemetry",
- "sage-tools",
- "sage-tty-utils",
- "sage-workspace",
- "serde",
- "serial_test",
- "shellexpand",
- "strum 0.27.2",
- "supports-color",
- "syntect",
- "tempfile",
- "textwrap",
- "tokio",
- "toml",
- "toml_edit 0.22.27",
- "tracing",
- "tui-scrollbar",
- "unicode-segmentation",
- "unicode-width 0.2.0",
- "url",
- "uuid",
- "vte 0.15.0",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "sage-paths"
-version = "0.1.0"
-dependencies = [
- "camino",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "sage-plugin-marketplace"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "dirs 5.0.1",
- "dunce",
- "fs2",
- "git2",
- "sage-agent",
- "sage-config",
- "sage-hooks-plugins-types",
- "sage-tty-utils",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "sage-prompt-queue"
-version = "0.1.0"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "sage-proto-build"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "pbjson-build",
- "prost-build",
- "tempfile",
- "tonic-prost-build",
-]
-
-[[package]]
-name = "sage-ratatui-inline"
-version = "0.1.0"
-dependencies = [
- "ansi-width",
- "anstyle-parse",
- "anyhow",
- "colored_json",
- "criterion",
- "crossterm",
- "lipsum",
- "ratatui",
- "serde_json",
- "termwiz",
- "unicode-width 0.2.0",
-]
-
-[[package]]
-name = "sage-ratatui-textarea"
-version = "0.1.0"
-dependencies = [
- "arboard",
- "chrono",
- "crossterm",
- "fuzzy-matcher",
- "ignore",
- "itertools 0.14.0",
- "pretty_assertions",
- "rand 0.9.2",
- "ratatui",
- "ratatui-core",
- "textwrap",
- "tracing",
- "tui-scrollbar",
- "unicode-segmentation",
- "unicode-width 0.2.0",
-]
-
-[[package]]
-name = "sage-sampler"
-version = "0.1.0"
-dependencies = [
- "async-openai",
- "async-stream",
- "axum",
- "chrono",
- "eventsource-stream",
- "futures-util",
- "indexmap",
- "reqwest 0.12.24",
- "sage-sampling-types",
- "sage-test-support",
- "sage-version",
- "serde",
- "serde_json",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "sage-sampling-types"
-version = "0.1.0"
-dependencies = [
- "assert_matches",
- "async-openai",
- "indexmap",
- "reqwest 0.12.24",
- "sage-compaction",
- "sage-tools",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tracing",
-]
-
-[[package]]
-name = "sage-sandbox"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "dirs 5.0.1",
- "dunce",
- "globset",
- "ignore",
- "libc",
- "nono",
- "regex",
- "sage-config",
- "serde",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "thiserror 2.0.18",
- "toml",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "sage-secrets"
-version = "0.1.0"
-dependencies = [
- "regex",
- "serde_json",
- "url",
-]
-
-[[package]]
-name = "sage-shared"
-version = "0.0.0"
-dependencies = [
- "agent-client-protocol",
- "anyhow",
- "arboard",
- "base64",
- "dirs 6.0.0",
- "dunce",
- "image",
- "libc",
- "objc2 0.6.3",
- "parking_lot",
- "prod-mc-cli-chat-proxy-types",
- "regex",
- "sage-config-types",
- "sage-models",
- "sage-tools",
- "sage-tty-utils",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tracing",
- "urlencoding",
- "uuid",
- "wl-clipboard-rs",
-]
-
-[[package]]
-name = "sage-shell"
-version = "0.2.105"
-dependencies = [
- "agent-client-protocol",
- "anyhow",
- "arc-swap",
- "async-openai",
- "async-trait",
- "axum",
- "backon",
- "base64",
- "blake3",
- "bm25",
- "bytes",
- "chrono",
- "clap",
- "criterion",
- "dashmap",
- "dhat",
- "dirs 6.0.0",
- "dunce",
- "filetime",
- "flate2",
- "fs2",
- "futures",
- "futures-util",
- "gcloud-storage",
- "gethostname",
- "git2",
- "glob",
- "globset",
- "ignore",
- "image",
- "indexmap",
- "infer 0.15.0",
- "jsonschema",
- "jsonwebtoken",
- "kanal",
- "libc",
- "moka",
- "nix 0.30.1",
- "notify",
- "notify-debouncer-mini",
- "nucleo",
- "obfstr",
- "parking_lot",
- "portable-pty",
- "process-wrap",
- "prod-mc-cli-chat-proxy-types",
- "prost",
- "rand 0.9.2",
- "regex",
- "reqwest 0.12.24",
- "reqwest-middleware 0.4.2",
- "ring",
- "rsa",
- "rusqlite",
- "rustls",
- "rustls-native-certs",
- "sage-acp-lib",
- "sage-agent",
- "sage-agent-lifecycle",
- "sage-announcements",
- "sage-auth",
- "sage-chat-state",
- "sage-codebase-graph",
- "sage-compaction",
- "sage-computer-hub-sdk",
- "sage-config",
- "sage-config-types",
- "sage-fast-worktree",
- "sage-file-utils",
- "sage-fsnotify",
- "sage-hooks",
- "sage-hooks-plugins-types",
- "sage-http",
- "sage-hunk-tracker",
- "sage-interjection-core",
- "sage-mcp",
- "sage-memory",
- "sage-models",
- "sage-paths",
- "sage-plugin-marketplace",
- "sage-prompt-queue",
- "sage-sampler",
- "sage-sampling-types",
- "sage-sandbox",
- "sage-shared",
- "sage-shell-base",
- "sage-shell-session-support",
- "sage-sqlite-journal",
- "sage-subagent-resolution",
- "sage-system-power",
- "sage-telemetry",
- "sage-test-support",
- "sage-test-utils",
- "sage-token-estimation",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "sage-tools",
- "sage-tracing-macros",
- "sage-tty-utils",
- "sage-version",
- "sage-workspace",
- "semver",
- "serde",
- "serde_ignored",
- "serde_json",
- "serial_test",
- "sha2 0.10.9",
- "shlex",
- "similar",
- "siphasher",
- "strum 0.27.2",
- "tar",
- "tdigests",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-retry",
- "tokio-rustls",
- "tokio-stream",
- "tokio-tungstenite 0.27.0",
- "tokio-util",
- "toml",
- "toml_edit 0.22.27",
- "tonic",
- "tonic-prost",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "url",
- "urlencoding",
- "uuid",
- "walkdir",
- "webbrowser",
- "windows 0.61.3",
- "zstd",
-]
-
-[[package]]
-name = "sage-shell-base"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "libc",
- "nix 0.30.1",
- "pprof",
- "reqwest 0.12.24",
- "sage-config",
- "sage-env",
- "sage-shared",
- "sage-tty-utils",
- "sage-version",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "url",
- "windows 0.61.3",
-]
-
-[[package]]
-name = "sage-shell-session-support"
-version = "0.1.0"
-dependencies = [
- "agent-client-protocol",
- "axum",
- "chrono",
- "reqwest 0.12.24",
- "sage-file-utils",
- "sage-http",
- "sage-shell-base",
- "sage-version",
- "sage-workspace",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
-name = "sage-sqlite-journal"
-version = "0.1.0"
-dependencies = [
- "libc",
- "rusqlite",
- "tempfile",
- "tracing",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "sage-subagent-resolution"
-version = "0.1.0"
-dependencies = [
- "sage-sampling-types",
- "sage-tool-types",
- "sage-tools",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.18",
- "toml",
- "tracing",
-]
-
-[[package]]
-name = "sage-system-power"
-version = "0.1.0"
-dependencies = [
- "windows-sys 0.59.0",
- "zbus",
-]
-
-[[package]]
-name = "sage-telemetry"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "bytes",
- "chrono",
- "dirs 5.0.1",
- "filetime",
- "futures-executor",
- "git2",
- "http 1.4.0",
- "mid",
- "obfstr",
- "opentelemetry",
- "opentelemetry-http",
- "opentelemetry-otlp",
- "opentelemetry-proto",
- "opentelemetry_sdk",
- "parking_lot",
- "prost",
- "reqwest 0.12.24",
- "sage-auth",
- "sage-config",
- "sage-env",
- "sage-file-utils",
- "sage-sampler",
- "sage-secrets",
- "sage-token-estimation",
- "sentry",
- "serde",
- "serde_json",
- "strum 0.27.2",
- "tempfile",
- "tokio",
- "tokio-stream",
- "tonic",
- "tracing",
- "tracing-appender",
- "tracing-chrome",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "url",
- "uuid",
- "whoami",
-]
-
-[[package]]
-name = "sage-test-support"
-version = "0.1.0"
-dependencies = [
- "agent-client-protocol",
- "anyhow",
- "async-trait",
- "axum",
- "clap",
- "futures-util",
- "libc",
- "reqwest 0.12.24",
- "sage-acp-lib",
- "serde",
- "serde_json",
- "tempfile",
- "tokio",
- "tokio-tungstenite 0.27.0",
- "tokio-util",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "sage-test-utils"
-version = "0.1.0"
-dependencies = [
- "runfiles",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "sage-token-estimation"
-version = "0.1.0"
-
-[[package]]
-name = "sage-tool-protocol"
-version = "0.1.0"
-dependencies = [
- "sage-tool-types",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "uuid",
-]
-
-[[package]]
-name = "sage-tool-runtime"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "futures",
- "sage-tool-protocol",
- "sage-tool-types",
- "sage-tools-api",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
-name = "sage-tool-types"
-version = "0.1.0"
-dependencies = [
- "minijinja",
- "schemars 1.0.4",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "sage-tools"
-version = "0.1.220-alpha.4"
-dependencies = [
- "anyhow",
- "arc-swap",
- "async-lsp",
- "async-openai",
- "async-stream",
- "async-trait",
- "base64",
- "chrono",
- "command-fds",
- "crc32fast",
- "derive_more 2.1.1",
- "dirs 5.0.1",
- "dunce",
- "educe",
- "flate2",
- "fs2",
- "futures",
- "futures-util",
- "globset",
- "htmd",
- "ignore",
- "image",
- "indexmap",
- "infer 0.19.0",
- "libc",
- "minijinja",
- "nix 0.30.1",
- "parking_lot",
- "pdf_oxide",
- "pulldown-cmark",
- "quick-xml 0.38.3",
- "regex",
- "reqwest 0.12.24",
- "sage-computer-hub-core",
- "sage-computer-hub-sdk",
- "sage-config",
- "sage-env",
- "sage-file-utils",
- "sage-interjection-core",
- "sage-sandbox",
- "sage-test-utils",
- "sage-token-estimation",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "sage-tools-api",
- "sage-tty-utils",
- "sage-version",
- "sage-workspace-types",
- "schemars 1.0.4",
- "scraper",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "serde_yaml",
- "shellexpand",
- "similar",
- "strip-ansi-escapes",
- "strum 0.26.3",
- "tar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-util",
- "tonic",
- "tracing",
- "tracing-subscriber",
- "url",
- "uuid",
- "which",
- "windows 0.61.3",
- "wiremock",
- "zip",
-]
-
-[[package]]
-name = "sage-tools-api"
-version = "0.1.220-alpha.4"
-dependencies = [
- "prost",
- "sage-proto-build",
- "sage-tool-protocol",
- "serde",
- "serde_json",
- "tonic",
- "tonic-prost",
-]
-
-[[package]]
-name = "sage-tracing"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "bytes",
- "fastrace",
- "fastrace-opentelemetry",
- "fastrace-reqwest",
- "fastrace-tonic",
- "http 1.4.0",
- "http-body-util",
- "log",
- "opentelemetry",
- "opentelemetry-http",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "reqwest 0.12.24",
- "reqwest-middleware 0.4.2",
- "tokio",
- "tonic",
- "tower",
- "tower-http",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "uuid",
- "wiremock",
-]
-
-[[package]]
-name = "sage-tracing-macros"
-version = "0.1.0"
-
-[[package]]
-name = "sage-tty-utils"
-version = "0.1.0"
-dependencies = [
- "libc",
- "nix 0.30.1",
- "tokio",
- "windows 0.61.3",
-]
-
-[[package]]
-name = "sage-update"
-version = "0.1.220-alpha.4"
-dependencies = [
- "anyhow",
- "dunce",
- "futures",
- "indicatif",
- "reqwest 0.12.24",
- "sage-shell",
- "sage-tools",
- "sage-version",
- "semver",
- "serde",
- "serde_json",
- "serial_test",
- "tempfile",
- "thiserror 2.0.18",
- "time",
- "tokio",
- "tracing",
- "wiremock",
-]
-
-[[package]]
-name = "sage-version"
-version = "0.2.105"
-dependencies = [
- "semver",
-]
-
-[[package]]
-name = "sage-voice"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "cpal",
- "futures-util",
- "rustls",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite 0.27.0",
- "toml",
- "tracing",
- "tracing-subscriber",
- "url",
-]
-
-[[package]]
-name = "sage-workspace"
-version = "0.1.220-alpha.4"
-dependencies = [
- "agent-client-protocol",
- "anyhow",
- "arc-swap",
- "async-stream",
- "async-trait",
- "axum",
- "base64",
- "bstr",
- "chrono",
- "clap",
- "dashmap",
- "dirs 6.0.0",
- "dunce",
- "fastrace",
- "filetime",
- "flate2",
- "fs2",
- "futures",
- "git2",
- "glob",
- "hashbrown 0.16.1",
- "humantime-serde",
- "ignore",
- "indexmap",
- "infer 0.19.0",
- "libc",
- "md5",
- "nohash-hasher",
- "nucleo",
- "parking_lot",
- "prometheus",
- "regex",
- "reqwest 0.12.24",
- "rusqlite",
- "rustc-hash 2.1.1",
- "rustls",
- "sage-acp-lib",
- "sage-agent",
- "sage-auth",
- "sage-codebase-graph",
- "sage-computer-hub-mcp-adapter",
- "sage-computer-hub-sdk",
- "sage-config",
- "sage-config-types",
- "sage-env",
- "sage-fast-worktree",
- "sage-file-utils",
- "sage-fsnotify",
- "sage-hooks",
- "sage-hunk-tracker",
- "sage-mcp",
- "sage-paths",
- "sage-sandbox",
- "sage-sqlite-journal",
- "sage-telemetry",
- "sage-test-utils",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "sage-tools",
- "sage-tools-api",
- "sage-tracing",
- "sage-tty-utils",
- "sage-version",
- "sage-workspace-client",
- "sage-workspace-types",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "smallvec",
- "tar",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "tokio-tungstenite 0.27.0",
- "tokio-util",
- "toml",
- "tonic",
- "tracing",
- "tracing-subscriber",
- "tree-sitter",
- "tree-sitter-bash",
- "url",
- "urlencoding",
- "uuid",
- "windows 0.61.3",
- "zstd",
-]
-
-[[package]]
-name = "sage-workspace-client"
-version = "0.1.0"
-dependencies = [
- "sage-computer-hub-sdk",
- "sage-tool-protocol",
- "sage-tool-runtime",
- "sage-tool-types",
- "sage-workspace-types",
- "schemars 1.0.4",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "sage-workspace-types"
-version = "0.1.0"
-dependencies = [
- "base64",
- "chrono",
- "serde",
- "serde_json",
- "thiserror 2.0.18",
-]
 
 [[package]]
 name = "same-file"

@@ -3,79 +3,79 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/build/sage-proto-build",
+    "crates/build/nexus-proto-build",
     "crates/codegen/ptyctl",
     "crates/codegen/ptyctl-cli",
-    "crates/codegen/sage-acp-lib",
-    "crates/codegen/sage-agent-lifecycle",
-    "crates/codegen/sage-chat-state",
-    "crates/codegen/sage-codebase-graph",
-    "crates/codegen/sage-crash-handler",
-    "crates/codegen/sage-fast-worktree",
-    "crates/codegen/sage-file-utils",
-    "crates/codegen/sage-fsnotify",
-    "crates/codegen/sage-gix-status",
-    "crates/codegen/sage-agent",
-    "crates/codegen/sage-announcements",
-    "crates/codegen/sage-auth",
-    "crates/codegen/sage-config",
-    "crates/codegen/sage-config-types",
-    "crates/codegen/sage-env",
-    "crates/codegen/sage-hooks",
-    "crates/codegen/sage-http",
-    "crates/codegen/sage-markdown",
-    "crates/codegen/sage-markdown-core",
-    "crates/codegen/sage-mcp",
-    "crates/codegen/sage-memory",
-    "crates/codegen/sage-mermaid",
-    "crates/codegen/sage-models",
-    "crates/codegen/sage-pager",
-    "crates/codegen/sage-bin",
-    "crates/codegen/sage-pager-minimal",
-    "crates/codegen/sage-pager-pty-harness",
-    "crates/codegen/sage-pager-render",
-    "crates/codegen/sage-paths",
-    "crates/codegen/sage-plugin-marketplace",
-    "crates/codegen/sage-sampler",
-    "crates/codegen/sage-sampling-types",
-    "crates/codegen/sage-sandbox",
-    "crates/codegen/sage-secrets",
-    "crates/codegen/sage-shared",
-    "crates/codegen/sage-shell",
-    "crates/codegen/sage-shell-base",
-    "crates/codegen/sage-shell-session-support",
-    "crates/codegen/sage-subagent-resolution",
-    "crates/codegen/sage-telemetry",
-    "crates/codegen/sage-test-support",
-    "crates/codegen/sage-tools",
-    "crates/codegen/sage-tools-api",
-    "crates/codegen/sage-update",
-    "crates/codegen/sage-version",
-    "crates/codegen/sage-voice",
-    "crates/codegen/sage-workspace",
-    "crates/codegen/sage-workspace-client",
-    "crates/codegen/sage-workspace-types",
-    "crates/codegen/sage-hooks-plugins-types",
-    "crates/codegen/sage-hunk-tracker",
-    "crates/codegen/sage-prompt-queue",
-    "crates/codegen/sage-ratatui-inline",
-    "crates/codegen/sage-ratatui-textarea",
-    "crates/codegen/sage-sqlite-journal",
-    "crates/codegen/sage-system-power",
-    "crates/codegen/sage-token-estimation",
-    "crates/codegen/sage-tracing-macros",
-    "crates/codegen/sage-tty-utils",
-    "crates/common/sage-circuit-breaker",
-    "crates/common/sage-computer-hub-core",
-    "crates/common/sage-computer-hub-mcp-adapter",
-    "crates/common/sage-computer-hub-sdk",
-    "crates/common/sage-compaction",
-    "crates/common/sage-interjection-core",
-    "crates/common/sage-test-utils",
-    "crates/common/sage-tool-protocol",
-    "crates/common/sage-tool-runtime",
-    "crates/common/sage-tool-types",
-    "crates/common/sage-tracing",
+    "crates/codegen/nexus-acp-lib",
+    "crates/codegen/nexus-agent-lifecycle",
+    "crates/codegen/nexus-chat-state",
+    "crates/codegen/nexus-codebase-graph",
+    "crates/codegen/nexus-crash-handler",
+    "crates/codegen/nexus-fast-worktree",
+    "crates/codegen/nexus-file-utils",
+    "crates/codegen/nexus-fsnotify",
+    "crates/codegen/nexus-gix-status",
+    "crates/codegen/nexus-agent",
+    "crates/codegen/nexus-announcements",
+    "crates/codegen/nexus-auth",
+    "crates/codegen/nexus-config",
+    "crates/codegen/nexus-config-types",
+    "crates/codegen/nexus-env",
+    "crates/codegen/nexus-hooks",
+    "crates/codegen/nexus-http",
+    "crates/codegen/nexus-markdown",
+    "crates/codegen/nexus-markdown-core",
+    "crates/codegen/nexus-mcp",
+    "crates/codegen/nexus-memory",
+    "crates/codegen/nexus-mermaid",
+    "crates/codegen/nexus-models",
+    "crates/codegen/nexus-pager",
+    "crates/codegen/nexus-bin",
+    "crates/codegen/nexus-pager-minimal",
+    "crates/codegen/nexus-pager-pty-harness",
+    "crates/codegen/nexus-pager-render",
+    "crates/codegen/nexus-paths",
+    "crates/codegen/nexus-plugin-marketplace",
+    "crates/codegen/nexus-sampler",
+    "crates/codegen/nexus-sampling-types",
+    "crates/codegen/nexus-sandbox",
+    "crates/codegen/nexus-secrets",
+    "crates/codegen/nexus-shared",
+    "crates/codegen/nexus-shell",
+    "crates/codegen/nexus-shell-base",
+    "crates/codegen/nexus-shell-session-support",
+    "crates/codegen/nexus-subagent-resolution",
+    "crates/codegen/nexus-telemetry",
+    "crates/codegen/nexus-test-support",
+    "crates/codegen/nexus-tools",
+    "crates/codegen/nexus-tools-api",
+    "crates/codegen/nexus-update",
+    "crates/codegen/nexus-version",
+    "crates/codegen/nexus-voice",
+    "crates/codegen/nexus-workspace",
+    "crates/codegen/nexus-workspace-client",
+    "crates/codegen/nexus-workspace-types",
+    "crates/codegen/nexus-hooks-plugins-types",
+    "crates/codegen/nexus-hunk-tracker",
+    "crates/codegen/nexus-prompt-queue",
+    "crates/codegen/nexus-ratatui-inline",
+    "crates/codegen/nexus-ratatui-textarea",
+    "crates/codegen/nexus-sqlite-journal",
+    "crates/codegen/nexus-system-power",
+    "crates/codegen/nexus-token-estimation",
+    "crates/codegen/nexus-tracing-macros",
+    "crates/codegen/nexus-tty-utils",
+    "crates/common/nexus-circuit-breaker",
+    "crates/common/nexus-computer-hub-core",
+    "crates/common/nexus-computer-hub-mcp-adapter",
+    "crates/common/nexus-computer-hub-sdk",
+    "crates/common/nexus-compaction",
+    "crates/common/nexus-interjection-core",
+    "crates/common/nexus-test-utils",
+    "crates/common/nexus-tool-protocol",
+    "crates/common/nexus-tool-runtime",
+    "crates/common/nexus-tool-types",
+    "crates/common/nexus-tracing",
     "prod/mc/cli-chat-proxy-types",
     "third_party/dagre_rust",
     "third_party/graphlib_rust",
@@ -270,53 +270,53 @@ whoami = "1.4"
 windows = { version = "0.61", features = ["Win32_Security", "Win32_Security_Authorization", "Win32_Foundation", "Win32_System_Threading", "Win32_System_JobObjects", "Win32_System_Console", "Win32_System_Pipes"] }
 wiremock = "0.6"
 wl-clipboard-rs = "0.9"
-sage-acp-lib = { path = "crates/codegen/sage-acp-lib" }
-sage-agent-lifecycle = { path = "crates/codegen/sage-agent-lifecycle" }
-sage-circuit-breaker = { path = "crates/common/sage-circuit-breaker" }
-sage-computer-hub-core = { path = "crates/common/sage-computer-hub-core" }
-sage-computer-hub-sdk = { path = "crates/common/sage-computer-hub-sdk" }
-sage-gix-status = { path = "crates/codegen/sage-gix-status" }
-sage-agent = { path = "crates/codegen/sage-agent" }
-sage-announcements = { path = "crates/codegen/sage-announcements" }
-sage-auth = { path = "crates/codegen/sage-auth" }
-sage-config = { path = "crates/codegen/sage-config" }
-sage-config-types = { path = "crates/codegen/sage-config-types" }
-sage-env = { path = "crates/codegen/sage-env" }
-sage-http = { path = "crates/codegen/sage-http" }
-sage-markdown = { path = "crates/codegen/sage-markdown" }
-sage-markdown-core = { path = "crates/codegen/sage-markdown-core" }
-sage-mcp = { path = "crates/codegen/sage-mcp" }
-sage-memory = { path = "crates/codegen/sage-memory" }
-sage-mermaid = { path = "crates/codegen/sage-mermaid" }
-sage-models = { path = "crates/codegen/sage-models" }
-sage-sampler = { path = "crates/codegen/sage-sampler" }
-sage-secrets = { path = "crates/codegen/sage-secrets" }
-sage-shared = { path = "crates/codegen/sage-shared" }
-sage-shell = { path = "crates/codegen/sage-shell" }
-sage-shell-base = { path = "crates/codegen/sage-shell-base" }
-sage-shell-session-support = { path = "crates/codegen/sage-shell-session-support" }
-sage-telemetry = { path = "crates/codegen/sage-telemetry" }
-sage-test-support = { path = "crates/codegen/sage-test-support" }
-sage-tools = { path = "crates/codegen/sage-tools" }
-sage-tools-api = { path = "crates/codegen/sage-tools-api" }
-sage-version = { path = "crates/codegen/sage-version" }
-sage-workspace = { path = "crates/codegen/sage-workspace" }
-sage-workspace-types = { path = "crates/codegen/sage-workspace-types" }
-sage-hooks-plugins-types = { path = "crates/codegen/sage-hooks-plugins-types" }
-sage-interjection-core = { path = "crates/common/sage-interjection-core" }
-sage-prompt-queue = { path = "crates/codegen/sage-prompt-queue" }
-sage-proto-build = { path = "crates/build/sage-proto-build" }
-sage-ratatui-inline = { path = "crates/codegen/sage-ratatui-inline" }
-sage-ratatui-textarea = { path = "crates/codegen/sage-ratatui-textarea" }
-sage-sqlite-journal = { path = "crates/codegen/sage-sqlite-journal" }
-sage-system-power = { path = "crates/codegen/sage-system-power" }
-sage-test-utils = { path = "crates/common/sage-test-utils" }
-sage-token-estimation = { path = "crates/codegen/sage-token-estimation" }
-sage-tool-protocol = { path = "crates/common/sage-tool-protocol" }
-sage-tool-runtime = { path = "crates/common/sage-tool-runtime" }
-sage-tool-types = { path = "crates/common/sage-tool-types" }
-sage-tracing = { path = "crates/common/sage-tracing" }
-sage-tty-utils = { path = "crates/codegen/sage-tty-utils" }
+nexus-acp-lib = { path = "crates/codegen/nexus-acp-lib" }
+nexus-agent-lifecycle = { path = "crates/codegen/nexus-agent-lifecycle" }
+nexus-circuit-breaker = { path = "crates/common/nexus-circuit-breaker" }
+nexus-computer-hub-core = { path = "crates/common/nexus-computer-hub-core" }
+nexus-computer-hub-sdk = { path = "crates/common/nexus-computer-hub-sdk" }
+nexus-gix-status = { path = "crates/codegen/nexus-gix-status" }
+nexus-agent = { path = "crates/codegen/nexus-agent" }
+nexus-announcements = { path = "crates/codegen/nexus-announcements" }
+nexus-auth = { path = "crates/codegen/nexus-auth" }
+nexus-config = { path = "crates/codegen/nexus-config" }
+nexus-config-types = { path = "crates/codegen/nexus-config-types" }
+nexus-env = { path = "crates/codegen/nexus-env" }
+nexus-http = { path = "crates/codegen/nexus-http" }
+nexus-markdown = { path = "crates/codegen/nexus-markdown" }
+nexus-markdown-core = { path = "crates/codegen/nexus-markdown-core" }
+nexus-mcp = { path = "crates/codegen/nexus-mcp" }
+nexus-memory = { path = "crates/codegen/nexus-memory" }
+nexus-mermaid = { path = "crates/codegen/nexus-mermaid" }
+nexus-models = { path = "crates/codegen/nexus-models" }
+nexus-sampler = { path = "crates/codegen/nexus-sampler" }
+nexus-secrets = { path = "crates/codegen/nexus-secrets" }
+nexus-shared = { path = "crates/codegen/nexus-shared" }
+nexus-shell = { path = "crates/codegen/nexus-shell" }
+nexus-shell-base = { path = "crates/codegen/nexus-shell-base" }
+nexus-shell-session-support = { path = "crates/codegen/nexus-shell-session-support" }
+nexus-telemetry = { path = "crates/codegen/nexus-telemetry" }
+nexus-test-support = { path = "crates/codegen/nexus-test-support" }
+nexus-tools = { path = "crates/codegen/nexus-tools" }
+nexus-tools-api = { path = "crates/codegen/nexus-tools-api" }
+nexus-version = { path = "crates/codegen/nexus-version" }
+nexus-workspace = { path = "crates/codegen/nexus-workspace" }
+nexus-workspace-types = { path = "crates/codegen/nexus-workspace-types" }
+nexus-hooks-plugins-types = { path = "crates/codegen/nexus-hooks-plugins-types" }
+nexus-interjection-core = { path = "crates/common/nexus-interjection-core" }
+nexus-prompt-queue = { path = "crates/codegen/nexus-prompt-queue" }
+nexus-proto-build = { path = "crates/build/nexus-proto-build" }
+nexus-ratatui-inline = { path = "crates/codegen/nexus-ratatui-inline" }
+nexus-ratatui-textarea = { path = "crates/codegen/nexus-ratatui-textarea" }
+nexus-sqlite-journal = { path = "crates/codegen/nexus-sqlite-journal" }
+nexus-system-power = { path = "crates/codegen/nexus-system-power" }
+nexus-test-utils = { path = "crates/common/nexus-test-utils" }
+nexus-token-estimation = { path = "crates/codegen/nexus-token-estimation" }
+nexus-tool-protocol = { path = "crates/common/nexus-tool-protocol" }
+nexus-tool-runtime = { path = "crates/common/nexus-tool-runtime" }
+nexus-tool-types = { path = "crates/common/nexus-tool-types" }
+nexus-tracing = { path = "crates/common/nexus-tracing" }
+nexus-tty-utils = { path = "crates/codegen/nexus-tty-utils" }
 zbus = { version = "5" }
 zstd = "0.13"
 

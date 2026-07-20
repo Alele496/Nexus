@@ -12,7 +12,7 @@ const DEFAULT_HEIGHT: f64 = 60.0;
 const C4_SHAPE_IN_ROW: usize = 4;
 const FONT_SIZE: f64 = 14.0;
 const FONT_FAMILY: &str = "'Open Sans', sans-serif";
-const MESSAGE_FONT_SIZE: f64 = 12.0;
+const MESNEXUS_FONT_SIZE: f64 = 12.0;
 
 const PERSON_IMG: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAIAAADYYG7QAAACD0lEQVR4Xu2YoU4EMRCGT+4j8Ai8AhaH4QHgAUjQuFMECUgMIUgwJAgMhgQsAYUiJCiQIBBY+EITsjfTdme6V24v4c8vyGbb+ZjOtN0bNcvjQXmkH83WvYBWto6PLm6v7p7uH1/w2fXD+PBycX1Pv2l3IdDm/vn7x+dXQiAubRzoURa7gRZWd0iGRIiJbOnhnfYBQZNJjNbuyY2eJG8fkDE3bbG4ep6MHUAsgYxmE3nVs6VsBWJSGccsOlFPmLIViMzLOB7pCVO2AtHJMohH7Fh6zqitQK7m0rJvAVYgGcEpe//PLdDz65sM4pF9N7ICcXDKIB5Nv6j7tD0NoSdM2QrU9Gg0ewE1LqBhHR3BBdvj2vapnidjHxD/q6vd7Pvhr31AwcY8eXMTXAKECZZJFXuEq27aLgQK5uLMohCenGGuGewOxSjBvYBqeG6B+Nqiblggdjnc+ZXDy+FNFpFzw76O3UBAROuXh6FoiAcf5g9eTvUgzy0nWg6I8cXHRUpg5bOVBCo+KDpFajOf23GgPme7RSQ+lacIENUgJ6gg1k6HjgOlqnLqip4tEuhv0hNEMXUD0clyXE3p6pZA0S2nnvTlXwLJEZWlb7cTQH1+USgTN4VhAenm/wea1OCAOmqo6fE1WCb9WSKBah+rbUWPWAmE2Rvk0ApiB45eOyNAzU8xcTvj8KvkKEoOaIYeHNA3ZuygAvFMUO0AAAAASUVORK5CYII=";
 
@@ -1183,16 +1183,16 @@ fn render_rels(svg: &mut String, rels: &[C4Rel], shapes: &[C4Shape], c4_type: &s
         let mid_y = start.1.min(end.1) + (end.1 - start.1).abs() / 2.0;
 
         svg.push_str(&format!(
-            "<text x=\"{mid_x}\" y=\"{mid_y}\" dominant-baseline=\"middle\" fill=\"{text_color}\" style=\"text-anchor: middle; font-size: {MESSAGE_FONT_SIZE}px; font-weight: normal; font-family: {FONT_FAMILY};\"><tspan dy=\"0\" alignment-baseline=\"mathematical\">{text}</tspan></text>",
+            "<text x=\"{mid_x}\" y=\"{mid_y}\" dominant-baseline=\"middle\" fill=\"{text_color}\" style=\"text-anchor: middle; font-size: {MESNEXUS_FONT_SIZE}px; font-weight: normal; font-family: {FONT_FAMILY};\"><tspan dy=\"0\" alignment-baseline=\"mathematical\">{text}</tspan></text>",
             text = escape_xml(&label),
         ));
 
         // Techn text (italic, below label)
         if !rel.techn.is_empty() {
             let techn_display = format!("[{}]", rel.techn);
-            let techn_y = mid_y + MESSAGE_FONT_SIZE + 5.0;
+            let techn_y = mid_y + MESNEXUS_FONT_SIZE + 5.0;
             svg.push_str(&format!(
-                "<text x=\"{mid_x}\" y=\"{techn_y}\" dominant-baseline=\"middle\" fill=\"{text_color}\" style=\"text-anchor: middle; font-size: {MESSAGE_FONT_SIZE}px; font-weight: normal; font-style: italic; font-family: {FONT_FAMILY};\"><tspan dy=\"0\" alignment-baseline=\"mathematical\">{text}</tspan></text>",
+                "<text x=\"{mid_x}\" y=\"{techn_y}\" dominant-baseline=\"middle\" fill=\"{text_color}\" style=\"text-anchor: middle; font-size: {MESNEXUS_FONT_SIZE}px; font-weight: normal; font-style: italic; font-family: {FONT_FAMILY};\"><tspan dy=\"0\" alignment-baseline=\"mathematical\">{text}</tspan></text>",
                 text = escape_xml(&techn_display),
             ));
         }
