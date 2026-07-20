@@ -21,6 +21,8 @@ jobs:
   build-windows:
     if: ${{ github.event.inputs.platform == 'windows' || github.event.inputs.platform == 'both' }}
     runs-on: windows-2022
+    env:
+      RULES_RUST_RUNFILES_WORKSPACE_NAME: Nexus
     defaults:
       run:
         working-directory: nexus
@@ -70,6 +72,8 @@ jobs:
   build-linux:
     if: ${{ github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'both' }}
     runs-on: ubuntu-24.04
+    env:
+      RULES_RUST_RUNFILES_WORKSPACE_NAME: Nexus
     defaults:
       run:
         working-directory: nexus
