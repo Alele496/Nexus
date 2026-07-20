@@ -758,11 +758,29 @@ pub struct SubagentListActiveRequest {
 /// Tracks nesting depth. Injected into child's Resources with depth+1.
 ///
 /// Top-level sessions start at depth 0. Each child increments by 1.
-/// `TaskTool` rejects spawns when `depth >= MAX_SUBAGENT_DEPTH`.
+/// `TaskTool` rejects spawns when `depth >= max_subagent_depth` (read from
+/// [`MaxSubagentDepthResource`], which defaults to 1).
 #[derive(Debug, Clone)]
 pub struct SubagentDepthCounter(pub u32);
 
 register_resource!("nexus_build", "SubagentDepthCounter", SubagentDepthCounter);
+
+/// Maximum allowed subagent nesting depth.
+///
+/// Defaults to 1 (no recursive spawning). Coordinator sessions can set this
+/// higher (e.g. 5) to allow multi-level agent trees.
+///
+/// `TaskTool` compares [`SubagentDepthCounter`] against this value at spawn time.
+#[derive(Debug, Clone)]
+pub struct MaxSubagentDepthResource(pub u32);
+
+impl Default for MaxSubagentDepthResource {
+    fn default() -> Self {
+        Self(1)
+    }
+}
+
+register_resource!("nexus_build", "MaxSubagentDepthResource", MaxSubagentDepthResource);
 
 /// Session-scoped validator for model-facing `Task.model` arguments.
 ///

@@ -55,6 +55,10 @@ pub struct ToolContext {
     /// Current subagent nesting depth for this session.
     /// Top-level sessions start at 0; child sessions are parent_depth + 1.
     pub subagent_depth: u32,
+    /// Maximum allowed subagent nesting depth for this session.
+    /// Defaults to 1 (no recursive spawning). Coordinator sessions set this
+    /// higher to allow multi-level agent trees.
+    pub max_subagent_depth: u32,
     /// Unified subagent event sender — carries spawn, query, cancel,
     /// list-active, completions, and outstanding messages to the coordinator.
     /// `None` if subagent support is not enabled.
@@ -138,6 +142,7 @@ impl ToolContext {
             hunk_tracking_enabled: true,
             prompt_index: Arc::new(tokio::sync::Mutex::new(0)),
             subagent_depth: 0,
+            max_subagent_depth: 1,
             subagent_event_tx: None,
             lsp: None,
             lsp_server_names: Vec::new(),
@@ -175,6 +180,7 @@ impl ToolContext {
             hunk_tracking_enabled: true,
             prompt_index: Arc::new(tokio::sync::Mutex::new(0)),
             subagent_depth: 0,
+            max_subagent_depth: 1,
             subagent_event_tx: None,
             lsp: None,
             lsp_server_names: Vec::new(),
@@ -232,6 +238,7 @@ mod tests {
                 hunk_tracking_enabled: true,
                 prompt_index: Arc::new(tokio::sync::Mutex::new(0)),
                 subagent_depth: 0,
+                max_subagent_depth: 1,
                 subagent_event_tx: None,
                 lsp: None,
                 lsp_server_names: Vec::new(),

@@ -867,6 +867,7 @@ pub(crate) async fn spawn_session_actor(
         monitor_event_buffer: tool_context.monitor_event_buffer.clone(),
         user_question_tx: user_question_tx.clone(),
         subagent_depth: tool_context.subagent_depth,
+        max_subagent_depth: tool_context.max_subagent_depth,
         session_id_str: session_info.id.0.to_string(),
         respect_gitignore,
         path_not_found_hints,

@@ -26,9 +26,11 @@ use crate::types::resources::SharedResources;
 use crate::types::tool::{ToolKind, ToolNamespace};
 use nexus_tool_types::{SubagentCompletedOutput, SubagentIsolationMode, TaskToolInput};
 
-/// Maximum nesting depth for subagents. A top-level session is depth 0;
-/// the first subagent is depth 1. Subagents cannot spawn further subagents.
-pub const MAX_SUBAGENT_DEPTH: u32 = 1;
+/// Default maximum nesting depth for subagents. A top-level session is
+/// depth 0; the first subagent is depth 1. Subagents cannot spawn further
+/// subagents unless a coordinator elevates the limit via
+/// [`MaxSubagentDepthResource`].
+pub const DEFAULT_MAX_SUBAGENT_DEPTH: u32 = 1;
 
 // ───────────────────────────────────────────────────────────────────────────
 // Tool implementation
@@ -118,10 +120,14 @@ impl nexus_tool_runtime::Tool for TaskTool {
         let resources = shared_resources(&ctx)?;
 
         // 1. Depth check
-        let (depth, backend, model_validator, parent_session_id, parent_prompt_id) = {
+        let (depth, max_depth, backend, model_validator, parent_session_id, parent_prompt_id) = {
             let res = resources.lock().await;
 
             let depth = res.get::<SubagentDepthCounter>().map(|d| d.0).unwrap_or(0);
+            let max_depth = res
+                .get::<MaxSubagentDepthResource>()
+                .map(|m| m.0)
+                .unwrap_or(DEFAULT_MAX_SUBAGENT_DEPTH);
 
             let backend = res
                 .get::<SubagentBackendResource>()
@@ -147,6 +153,7 @@ impl nexus_tool_runtime::Tool for TaskTool {
 
             (
                 depth,
+                max_depth,
                 backend,
                 model_validator,
                 parent_session_id,
@@ -154,9 +161,9 @@ impl nexus_tool_runtime::Tool for TaskTool {
             )
         };
 
-        if depth >= MAX_SUBAGENT_DEPTH {
+        if depth >= max_depth {
             return Err(nexus_tool_runtime::ToolError::invalid_arguments(format!(
-                "Subagent depth limit exceeded (current depth: {depth}, max: {MAX_SUBAGENT_DEPTH}). \
+                "Subagent depth limit exceeded (current depth: {depth}, max: {max_depth}). \
                  Cannot spawn further nested subagents."
             )));
         }
@@ -500,7 +507,8 @@ mod tests {
         let (backend, _rx) = make_backend();
         let mut resources = Resources::new();
         resources.insert(backend);
-        resources.insert(SubagentDepthCounter(MAX_SUBAGENT_DEPTH)); // at limit
+        resources.insert(SubagentDepthCounter(DEFAULT_MAX_SUBAGENT_DEPTH)); // at limit
+        resources.insert(MaxSubagentDepthResource(DEFAULT_MAX_SUBAGENT_DEPTH));
         resources.insert(SessionIdResource("test-session".to_string()));
         resources.insert(CurrentPromptIdResource("prompt-123".to_string()));
 

@@ -10,6 +10,7 @@ pub mod btw;
 pub mod cd;
 pub mod compact;
 pub mod compact_mode;
+pub mod coordinator;
 pub mod config_agents;
 pub mod context;
 pub mod copy;
@@ -21,6 +22,7 @@ pub mod effort_levels;
 pub mod exit;
 pub mod expand;
 pub mod export;
+pub mod fleet;
 pub mod feedback;
 pub mod find;
 pub mod fork;
@@ -42,6 +44,7 @@ pub mod new;
 pub mod personas;
 pub mod plan;
 pub mod plugin;
+pub mod project;
 pub mod privacy;
 pub mod queue;
 pub mod recap;
@@ -66,6 +69,7 @@ pub mod usage;
 pub mod view_plan;
 pub mod vim_mode;
 pub mod voice;
+pub mod workflow;
 use super::command::SlashCommand;
 use std::sync::Arc;
 /// All pager-local builtin commands, in display order.
@@ -107,6 +111,10 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         Arc::new(rename::RenameCommand),
         Arc::new(dashboard::DashboardCommand),
         Arc::new(cd::CdCommand),
+        Arc::new(project::ProjectCommand),
+        Arc::new(fleet::FleetCommand),
+        Arc::new(workflow::WorkflowCommand),
+        Arc::new(coordinator::CoordinatorCommand),
         Arc::new(theme::ThemeCommand),
         Arc::new(feedback::FeedbackCommand),
         Arc::new(announcements::AnnouncementsCommand),

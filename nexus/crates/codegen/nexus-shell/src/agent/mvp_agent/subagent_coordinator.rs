@@ -316,6 +316,7 @@ impl MvpAgent {
             parent_cwd,
             yolo_mode,
             parent_depth,
+            max_subagent_depth,
             hunk_tracker_handle,
             hunk_tracking_enabled,
             fs,
@@ -336,6 +337,7 @@ impl MvpAgent {
                     .unwrap_or_default(),
                 ps.map(|h| h.yolo_mode).unwrap_or(self.default_yolo_mode),
                 ps.map(|h| h.tool_context.subagent_depth).unwrap_or(0),
+                ps.map(|h| h.tool_context.max_subagent_depth).unwrap_or(1),
                 ps.map(|h| h.tool_context.hunk_tracker_handle.clone())
                     .unwrap_or_else(nexus_hunk_tracker::HunkTrackerHandle::noop),
                 ps.map(|h| h.tool_context.hunk_tracking_enabled)
@@ -474,6 +476,7 @@ impl MvpAgent {
             yolo_mode,
             subagent_event_tx: self.subagent_event_tx.clone(),
             parent_depth,
+            max_subagent_depth,
             inference_idle_timeout_secs,
             auto_compact_threshold_tiers:
                 crate::agent::subagent::AutoCompactThresholdTiers::capture(&self.cfg.borrow()),

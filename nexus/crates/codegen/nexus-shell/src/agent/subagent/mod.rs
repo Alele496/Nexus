@@ -168,6 +168,9 @@ pub(crate) struct SubagentSpawnContext {
     pub yolo_mode: bool,
     pub subagent_event_tx: mpsc::UnboundedSender<SubagentEvent>,
     pub parent_depth: u32,
+    /// Maximum subagent depth allowed for the child (inherited from parent).
+    /// Coordinator sessions set this higher to allow multi-level agent trees.
+    pub max_subagent_depth: u32,
     /// Inference idle timeout (secs), resolved from the parent's model config at spawn-context creation time.
     pub inference_idle_timeout_secs: u64,
     /// Tier inputs for resolving `auto_compact_threshold_percent` at

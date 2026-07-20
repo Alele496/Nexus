@@ -402,16 +402,15 @@ pub(crate) async fn handle_subagent_request(
         );
     }
     {
-        use nexus_tools::implementations::nexus_build::task::MAX_SUBAGENT_DEPTH;
         use nexus_tools::types::tool::ToolKind;
         let child_depth = ctx.parent_depth + 1;
-        if child_depth >= MAX_SUBAGENT_DEPTH {
+        if child_depth >= ctx.max_subagent_depth {
             let before = definition.tool_config.tools.len();
             definition.tool_config.tools.retain(|tc| tc.kind != Some(ToolKind::Task));
             if definition.tool_config.tools.len() < before {
                 tracing::info!(
                     subagent_id = % request.id, child_depth, max_depth =
-                    MAX_SUBAGENT_DEPTH, "Stripped task tool from child at max depth"
+                    ctx.max_subagent_depth, "Stripped task tool from child at max depth"
                 );
             }
             prune_orphaned_background_task_tools(&mut definition.tool_config);
@@ -749,6 +748,7 @@ pub(crate) async fn handle_subagent_request(
     tool_ctx.subagent_event_tx = Some(ctx.subagent_event_tx.clone());
     tool_ctx.monitor_event_buffer = Some(MonitorEventBuffer::default());
     tool_ctx.subagent_depth = ctx.parent_depth + 1;
+    tool_ctx.max_subagent_depth = ctx.max_subagent_depth;
     tool_ctx.lsp = ctx.lsp.clone();
     let parent_traceparent = nexus_file_utils::trace_context::current_traceparent();
     let tracker_child_cwd = child_session_info.cwd.clone();

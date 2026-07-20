@@ -121,6 +121,7 @@ pub(crate) struct AgentRebuildSpec {
     pub monitor_event_buffer: Option<MonitorEventBuffer>,
     pub user_question_tx: UnboundedSender<UserQuestionRequest>,
     pub subagent_depth: u32,
+    pub max_subagent_depth: u32,
     pub session_id_str: String,
     pub respect_gitignore: bool,
     pub path_not_found_hints: bool,
@@ -215,6 +216,7 @@ impl AgentRebuildSpec {
             monitor_event_buffer,
             user_question_tx,
             subagent_depth,
+            max_subagent_depth,
             session_id_str,
             respect_gitignore,
             path_not_found_hints,
@@ -320,13 +322,18 @@ impl AgentRebuildSpec {
                 ChannelBackend, SubagentBackendResource,
             };
             use nexus_tools::implementations::nexus_build::task::types::{
-                SessionIdResource, SubagentDepthCounter, SubagentEventSender,
+                MaxSubagentDepthResource, SessionIdResource, SubagentDepthCounter,
+                SubagentEventSender,
             };
             let backend = SubagentBackendResource(Arc::new(ChannelBackend::new(event_tx.clone())));
             agent.tool_bridge().update_resource(backend).await;
             agent
                 .tool_bridge()
                 .update_resource(SubagentDepthCounter(*subagent_depth))
+                .await;
+            agent
+                .tool_bridge()
+                .update_resource(MaxSubagentDepthResource(*max_subagent_depth))
                 .await;
             agent
                 .tool_bridge()
@@ -417,6 +424,7 @@ pub(crate) fn test_rebuild_spec_default() -> Arc<AgentRebuildSpec> {
         monitor_event_buffer: None,
         user_question_tx: uq_tx,
         subagent_depth: 0,
+        max_subagent_depth: 1,
         session_id_str: "test-session".to_string(),
         respect_gitignore: false,
         path_not_found_hints: false,
