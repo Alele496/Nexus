@@ -1,6 +1,6 @@
 # Fleet Management — 多仓库舰队管理
 
-基于 grok-build 的多项目管理方案。由于 grok-build 是单会话工具，舰队管理通过以下方式实现：
+基于 Nexus 的多项目管理方案。由于 Nexus 是单会话工具，舰队管理通过以下方式实现：
 
 ## 架构
 
@@ -20,8 +20,8 @@ fleet/                        ← 舰队 HQ 配置目录
 
 | CCB Fleet | Agent-SYS Fleet |
 |---|---|
-| Steward 在 CCB 内路由 | 无中心 Steward——每个项目独立运行 grok |
-| Cron 通过 CCB 内置 | 通过系统 crontab + grok headless mode |
+| Steward 在 CCB 内路由 | 无中心 Steward——每个项目独立运行 Nexus |
+| Cron 通过 CCB 内置 | 通过系统 crontab + nexus headless mode |
 | 路由表在 CLAUDE.md | 路由信息在 fleet-registry.json |
 | Steward 只输出文本指令 | 用户可以自己判断去哪 |
 
@@ -33,7 +33,7 @@ fleet/                        ← 舰队 HQ 配置目录
 
 ### 2. 部署 Agent 团队
 
-在每个项目下复制 Agent-SYS 的 `.grok/` 和 `AGENTS.md`。
+在每个项目下复制 Agent-SYS 的 `.sage/` 和 `AGENTS.md`。
 
 ### 3. 健康巡检
 
@@ -50,12 +50,12 @@ cd fleet/ && ./scripts/health-check.sh
 
 当需要操作某个项目时：
 1. 查 `fleet-registry.json` 确认项目路径
-2. `cd <项目路径> && grok` 启动该项目的独立会话
+2. `cd <项目路径> && nexus` 启动该项目的独立会话
 3. 该项目的 AGENTS.md 自动加载为 Project Lead
 
 ## 未来计划
 
-- [ ] `grok agent headless` 模式下的集中式舰队管理服务
+- [ ] `nexus agent headless` 模式下的集中式舰队管理服务
 - [ ] ACP 协议实现跨项目 Agent 通信
 - [ ] Web Dashboard 查看舰队状态
 - [ ] 模板同步机制（agent-crew 模板更新 → 下游项目自动提示）

@@ -1,94 +1,116 @@
-# Agent-SYS — 开源多 Agent 编排系统
+# Nexus — 开源 AI 编程助手
 
-基于 [grok-build](https://github.com/xai-org/grok-build)（Apache-2.0）的多 Agent 团队协作系统。
+Nexus 是一个终端原生的 AI 编程助手 TUI，专为 DeepSeek V4 适配，提供 1M token 上下文窗口和链式推理能力。
 
-## 为什么做
+## 为什么选择 Nexus
 
-CCB（Claude Code Best）是闭源工具，多 Agent 编排受限于安全分类器和闭源许可。Agent-SYS 用开源框架 grok-build 重建完整的 Agent 团队协作能力——从单仓库开发到多仓库舰队管理。
+- **终端原生 TUI** — 流畅的键盘驱动界面，支持多会话管理、分屏、代码高亮
+- **DeepSeek V4 深度集成** — 原生 thinking 链式推理，1M token 超长上下文
+- **多 Agent 编排** — 开发/审查/运维/顾问四角色团队，Council 并行审查，Workflow 固定流水线，Supervisor 动态调度
+- **扩展生态** — MCP 协议服务器、Hooks 生命周期钩子、Skills 可复用技能包、Plugins 插件系统
+- **完全开源** — Apache-2.0 协议，源码开放，自由定制
 
-## 目录结构
+## 多 Agent 团队
 
-```
-Agent-SYS/
-├── AGENTS.md                     # 主 Agent 身份定义（= Project Lead）
-├── project-memory.md             # 跨会话持久化记忆
-├── .grok/
-│   ├── config.toml               # grok-build 配置（角色/Personas）
-│   ├── agents/                   # 子 Agent 定义
-│   │   ├── developer.md          # 代码开发者
-│   │   ├── reviewer.md           # 代码审查员
-│   │   ├── operator.md           # 运维操作员
-│   │   └── advisor.md            # 战略顾问
-│   ├── skills/                   # 可复用技能
-│   │   ├── dispatch/SKILL.md     # 自适应任务调度
-│   │   ├── ship/SKILL.md         # 完整交付流程（五阶段）
-│   │   └── council-review/SKILL.md # 三维并行审查
-│   ├── personas/                 # 未使用（Personas 定义在 config.toml 中）
-│   ├── hooks/                    # 生命周期安全钩子
-│   │   └── safety-gates.json     # PreToolUse 安全检查
-│   └── rules/                    # 项目约定
-│       └── project-conventions.md
-├── fleet/                        # 多仓库舰队管理
-│   ├── README.md
-│   └── docs/
-│       ├── fleet-policy.md       # 跨项目架构原则
-│       ├── fleet-registry.json   # 项目注册表
-│       └── spawn-protocol.md     # Agent spawn 行为规范
-└── grok-build-main/              # grok-build 源码（可二次开发）
-```
+| 角色 | 能力 | 权限 |
+|------|------|------|
+| Developer | 写代码、修 bug、加功能、文档 | 读写文件 + 终端 |
+| Reviewer | 安全审查、性能审查、可读性审查（三维并行） | 只读 |
+| Operator | 代码推送、发布、打 tag | 只读 + 终端 |
+| Advisor | 深度分析、技术趋势、可行性评估 | 只读 + 网络搜索 |
+
+## 五种编排模式
+
+- **Workflow** — 固定步骤流水线，适合确定性任务（如"推送代码"）
+- **Council** — 多 Agent 并行审查，结果汇总裁决
+- **Supervisor** — 动态调度，主 Agent 在每步运行时决定下一步
+- **Handoff** — 先分类问题领域，再移交给对应专家
+- **Hybrid** — 复杂多阶段任务，不同阶段用不同模式
 
 ## 快速开始
 
-### 1. 安装 grok-build
+### 1. 构建
 
 ```bash
-# 从源码编译（推荐，支持二次开发）
-cd grok-build-main/
-cargo build -p xai-grok-pager-bin --release
-
-# 或从 xAI 安装预编译版本
-# curl -fsSL https://x.ai/cli/install.sh | bash
+cd nexus/
+cargo build -p nexus-bin --release
+# 输出: target/release/nexus.exe (Windows) / nexus (Linux/macOS)
 ```
 
-### 2. 配置 Agent-SYS
+### 2. 配置
 
-Agent-SYS 是一个 grok-build **项目**，不是独立工具。在任意项目目录下，复制 `.grok/` 目录和 `AGENTS.md` 即可获得多 Agent 能力：
+首次运行自动弹出设置向导，或手动编辑 `~/.sage/config.toml`：
 
-```bash
-cp -r Agent-SYS/.grok/ <你的项目>/
-cp Agent-SYS/AGENTS.md <你的项目>/
+```toml
+default_model = "deepseek-v4-pro"
+
+[model.deepseek-v4-pro]
+model = "deepseek-v4-pro"
+base_url = "https://api.deepseek.com/v1"
+api_key = "sk-xxx"
+context_window = 1000000
+reasoning_effort = "high"
+supports_reasoning_effort = true
 ```
 
 ### 3. 启动
 
 ```bash
-cd <你的项目>/
-grok    # 启动 grok-build TUI，自动加载 AGENTS.md 作为系统提示
+./target/release/nexus
 ```
 
-### 4. 使用 Skills
+## 常用命令
+
+| 命令 | 说明 |
+|------|------|
+| `/new` | 新建会话 |
+| `/model` | 切换模型 |
+| `/effort` | 调整推理深度 (high/max) |
+| `/fork` | 当前会话分支为并行 Agent |
+| `/resume` | 恢复历史会话 |
+| `/compact` | 压缩对话历史以节省上下文 |
+| `/settings` | 打开设置面板 |
+| `/theme` | 切换主题 |
+| `/help` | 浏览命令和键盘快捷键 |
+
+## 目录结构
 
 ```
-/dispatch 修复登录页面的bug
-/ship 实现用户权限管理功能
-/council-review 审查最近的代码改动
+Nexus/
+├── nexus/                         # Nexus TUI 源码（Rust workspace）
+│   ├── crates/codegen/
+│   │   ├── nexus-bin/             # 入口 → nexus.exe
+│   │   ├── nexus-pager/           # TUI 界面
+│   │   ├── nexus-shell/           # Agent 运行时
+│   │   ├── nexus-agent/           # 系统提示词 & 模板
+│   │   └── ...
+│   ├── Cargo.toml                 # Workspace 清单
+│   └── README.md                  # Nexus 源码文档
+├── fleet/                         # 多仓库舰队管理
+│   ├── README.md
+│   ├── fleet-registry.json        # 项目注册表
+│   └── docs/                      # 舰队策略和 Spawn 协议
+├── .sage/                         # Nexus 项目配置（本地，不提交）
+│   ├── config.toml
+│   ├── agents/                    # 子 Agent 定义
+│   ├── skills/                    # 可复用技能
+│   ├── personas/
+│   ├── hooks/
+│   └── rules/
+├── AGENTS.md                      # 主 Agent 身份和行为规范
+├── scripts/                       # 构建和验证脚本
+└── README.md                      # 本文件
 ```
-
-## 与 agent-crew 的关系
-
-Agent-SYS 是 agent-crew 的 grok-build 移植版本：
-- Agent 定义、编排模式、审查闸门等核心概念保持一致
-- Workflow 脚本（JS）→ Skills（Markdown）+
-- CCB 专属特性（TeamCreate、Cron）→ grok-build 原生特性（Subagent、Worktree）
 
 ## 技术栈
 
-- **运行时**：grok-build (Rust, Apache-2.0)
-- **Agent 编排**：grok-build Subagent + Skills + Personas + Plan Mode
-- **安全策略**：grok-build Hooks + capability_mode
-- **舰队管理**：待开发（基于 grok-build headless mode + ACP）
+- **语言**: Rust
+- **TUI 框架**: ratatui
+- **默认模型**: DeepSeek V4 Pro（1M token 上下文）
+- **Agent 编排**: Subagent + Skills + Personas + Plan Mode
+- **扩展协议**: ACP (Agent Client Protocol), MCP (Model Context Protocol)
 
 ## License
 
-Agent-SYS 配置文件和文档：MIT
-grok-build：Apache-2.0
+Nexus 源码：Apache-2.0
+项目配置文件和文档：MIT

@@ -4,8 +4,11 @@
 # Build temp files
 .cargo-tmp/
 
-# Sage config/user data (local only)
-.grok/
+# Sage/Nexus config/user data (local only)
+.sage/
+
+# Project memory (local only, not for sharing)
+project-memory.md
 
 # Logs
 *.log

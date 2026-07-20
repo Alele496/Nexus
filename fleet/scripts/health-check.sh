@@ -96,15 +96,15 @@ check_config_integrity() {
         issues="$issues;missing_entry_point"
     fi
 
-    # Check .grok/ directory
-    if [ -d "$project_path/.grok" ]; then
-        if [ -d "$project_path/.grok/agents" ] && [ "$(ls -1 "$project_path/.grok/agents/"*.md 2>/dev/null | wc -l)" -gt 0 ]; then
+    # Check .sage/ directory
+    if [ -d "$project_path/.sage" ]; then
+        if [ -d "$project_path/.sage/agents" ] && [ "$(ls -1 "$project_path/.sage/agents/"*.md 2>/dev/null | wc -l)" -gt 0 ]; then
             :
         else
             issues="$issues;no_agents"
         fi
     else
-        issues="$issues;no_grok_dir"
+        issues="$issues;no_sage_dir"
     fi
 
     if [ -z "$issues" ]; then
@@ -218,9 +218,9 @@ if [ "$JSON_OUT" = false ]; then
         echo "## Actions Needed"
         echo ""
         echo "Unhealthy projects should be checked manually:"
-        echo "1. cd <project-path> && grok — open project session"
+        echo "1. cd <project-path> && nexus — open project session"
         echo "2. Check git status and resolve uncommitted changes"
-        echo "3. Verify .grok/ configuration is intact"
+        echo "3. Verify .sage/ configuration is intact"
     fi
 
     if [ "$FULL" = false ]; then

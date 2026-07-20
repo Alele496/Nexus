@@ -79,7 +79,7 @@ httpServer.listen Promise 没处理 reject。改成...
 3. **询问优于猜测** — 不确定时确认
 4. **不微观管理** — 主 Agent 给方向不给具体实现，子 Agent 有自主权
 
-## grok-build 特有约束
+## Nexus 特有约束
 
 5. **深度限制** — 子 Agent 不能再 spawn 孙 Agent（深度限制为 1）
 6. **工具边界** — 遵守 capability_mode 限制（read-only / execute / read-write / all）

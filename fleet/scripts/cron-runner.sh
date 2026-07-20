@@ -1,5 +1,5 @@
 #!/bin/bash
-# Cron Runner — grok-build 无头模式定时任务调度器
+# Cron Runner — Nexus 无头模式定时任务调度器
 # 通过系统 crontab 调用，替代 CCB 的内置 Cron
 #
 # 设置方法:
@@ -46,19 +46,19 @@ case "$MODE" in
 
     trend)
         log "Running trend scan..."
-        # For trend scanning, we'd use grok-build headless mode:
-        # grok agent headless -p "分析当前技术趋势，生成舰队趋势报告" --output-format markdown
-        # But grok must be installed first
-        if command -v grok &> /dev/null; then
-            log "grok CLI found, running trend scan..."
-            # grok agent headless -p "Run advisor analysis: scan tech trends and generate fleet trend report" \
+        # For trend scanning, we'd use Nexus headless mode:
+        # nexus agent headless -p "分析当前技术趋势，生成舰队趋势报告" --output-format markdown
+        # But nexus must be installed first
+        if command -v nexus &> /dev/null; then
+            log "nexus CLI found, running trend scan..."
+            # nexus agent headless -p "Run advisor analysis: scan tech trends and generate fleet trend report" \
             #   --cwd "$FLEET_DIR/.." \
             #   --output "$FLEET_DIR/docs/fleet-trends.md" 2>> "$LOG_FILE"
-            log "(grok headless mode integration pending — grok binary path confirmation needed)"
+            log "(nexus headless mode integration pending — nexus binary path confirmation needed)"
         else
-            log "WARNING: grok CLI not found. Install grok-build first:"
-            log "  cd ../grok-build-main && cargo build -p xai-grok-pager-bin --release"
-            log "  cp target/release/xai-grok-pager /usr/local/bin/grok"
+            log "WARNING: nexus CLI not found. Install Nexus first:"
+            log "  cd ../nexus && cargo build -p nexus-bin --release"
+            log "  cp target/release/nexus /usr/local/bin/nexus"
         fi
         ;;
 

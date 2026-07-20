@@ -22,10 +22,10 @@
       },
       "runtime": {
         "type": "config",
-        "engine": "grok-build"
+        "engine": "nexus"
       },
       "dependencies": {
-        "system": ["grok-build", "git", "node"]
+        "system": ["nexus", "git", "node"]
       },
       "health_check": {
         "git": true,

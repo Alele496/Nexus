@@ -1,0 +1,19 @@
+{
+    "name": "@nexus/nexus-win32-arm64",
+    "version": "0.2.0-dev",
+    "description": "win32-arm64 binary for @nexus/nexus. Do not install directly; install @nexus/nexus instead.",
+    "license": "Apache-2.0",
+    "files": [
+        "bin/",
+        "THIRD_PARTY_NOTICES.md"
+    ],
+    "os": [
+        "win32"
+    ],
+    "cpu": [
+        "arm64"
+    ],
+    "publishConfig": {
+        "access": "public"
+    }
+}
