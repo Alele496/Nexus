@@ -1,0 +1,103 @@
+name: Build Release
+
+# Manual trigger — produces downloadable nexus.exe artifact.
+# Usage: GitHub repo → Actions tab → "Build Release" → Run workflow.
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target platform'
+        type: choice
+        default: 'windows'
+        options:
+          - windows
+          - linux
+          - both
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  # ── Windows release binary ─────────────────────────────────────
+  build-windows:
+    if: ${{ github.event.inputs.platform == 'windows' || github.event.inputs.platform == 'both' }}
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.2"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache cargo home (registry + git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: win-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: win-cargo-
+
+      - name: Set env (ASCII-only TMP + protoc)
+        shell: bash
+        run: |
+          echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
+          echo "TMP=C:/tmp" >> $GITHUB_ENV
+          echo "TEMP=C:/tmp" >> $GITHUB_ENV
+          echo "TMPDIR=C:/tmp" >> $GITHUB_ENV
+          mkdir -p C:/tmp
+
+      - name: Build release
+        run: cargo build -p nexus-bin --release
+
+      - name: Upload nexus.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-windows-x86_64
+          path: target/release/nexus.exe
+          retention-days: 30
+
+  # ── Linux release binary ───────────────────────────────────────
+  build-linux:
+    if: ${{ github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'both' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq protobuf-compiler libssl-dev
+
+      - name: Cache cargo home (registry + git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: linux-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-cargo-
+
+      - name: Build release
+        run: cargo build -p nexus-bin --release
+
+      - name: Upload nexus (linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-linux-x86_64
+          path: target/release/nexus
+          retention-days: 30

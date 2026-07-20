@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, agent-dev]
+  pull_request:
+    branches: [main, master]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ── Windows: check + test ──────────────────────────────────────
+  check-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.2"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache cargo home (registry + git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: win-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: win-cargo-
+
+      - name: Set env (ASCII-only TMP + protoc)
+        shell: bash
+        run: |
+          echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
+          echo "TMP=C:/tmp" >> $GITHUB_ENV
+          echo "TEMP=C:/tmp" >> $GITHUB_ENV
+          echo "TMPDIR=C:/tmp" >> $GITHUB_ENV
+          mkdir -p C:/tmp
+
+      - name: Cargo check
+        run: cargo check --workspace --all-features
+
+      - name: Cargo test (lib only)
+        run: cargo test --workspace --lib --no-fail-fast
+
+  # ── Linux: check + test ────────────────────────────────────────
+  check-linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq protobuf-compiler libssl-dev
+
+      - name: Cache cargo home (registry + git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: linux-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: linux-cargo-
+
+      - name: Cargo check
+        run: cargo check --workspace --all-features
+
+      - name: Cargo test (lib only)
+        run: cargo test --workspace --lib --no-fail-fast
