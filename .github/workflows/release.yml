@@ -1,0 +1,106 @@
+name: Release
+
+# CD: triggered by version tags (v*), builds and publishes GitHub Release.
+# Usage: git tag v0.3.0 && git push --tags
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  # ── Windows release ────────────────────────────────────────────
+  release-windows:
+    runs-on: windows-2022
+    env:
+      TMP: C:/tmp
+      TEMP: C:/tmp
+      TMPDIR: C:/tmp
+    defaults:
+      run:
+        working-directory: nexus
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "27.2"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache cargo home (registry + git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: win-cargo-${{ hashFiles('nexus/Cargo.lock') }}
+          restore-keys: win-cargo-
+
+      - name: Set env
+        shell: bash
+        run: |
+          mkdir -p C:/tmp
+          echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
+
+      - name: Build release
+        run: cargo build -p nexus-bin --release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Nexus ${{ github.ref_name }}
+          files: nexus/target/release/nexus.exe
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # ── Linux release ──────────────────────────────────────────────
+  release-linux:
+    runs-on: ubuntu-24.04
+    env:
+      TMP: /tmp
+      TEMP: /tmp
+      TMPDIR: /tmp
+    defaults:
+      run:
+        working-directory: nexus
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq protobuf-compiler libssl-dev
+
+      - name: Cache cargo home (registry + git)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: linux-cargo-${{ hashFiles('nexus/Cargo.lock') }}
+          restore-keys: linux-cargo-
+
+      - name: Build release
+        run: cargo build -p nexus-bin --release
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Nexus ${{ github.ref_name }}
+          files: nexus/target/release/nexus
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

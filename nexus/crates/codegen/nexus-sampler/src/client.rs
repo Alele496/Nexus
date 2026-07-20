@@ -1952,6 +1952,7 @@ mod tests {
             search_parameters: None,
             response_format: None,
             reasoning_effort: None,
+            thinking: None,
             x_nexus_conv_id: None,
             x_nexus_req_id: None,
             x_nexus_session_id: None,
