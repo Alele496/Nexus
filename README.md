@@ -1,63 +1,68 @@
-# Nexus — 开源 AI 编程助手
+# Nexus
 
-Nexus 是一个终端原生的 AI 编程助手 TUI，专为 DeepSeek V4 适配，提供 1M token 上下文窗口和链式推理能力。
+> 终端原生的 AI 编程助手。DeepSeek V4 驱动，多 Agent 协作，键盘即一切。
 
-## 为什么选择 Nexus
+Nexus 在你的终端里提供一个完整的 AI 编程环境——不只是聊天，而是让多个 AI Agent 并行审查代码、自动推送、分析架构。没有浏览器标签页，没有鼠标操作，全部由键盘驱动。
 
-- **终端原生 TUI** — 流畅的键盘驱动界面，支持多会话管理、分屏、代码高亮
-- **DeepSeek V4 深度集成** — 原生 thinking 链式推理，1M token 超长上下文
-- **多 Agent 编排** — 开发/审查/运维/顾问四角色团队，Council 并行审查，Workflow 固定流水线，Supervisor 动态调度
-- **扩展生态** — MCP 协议服务器、Hooks 生命周期钩子、Skills 可复用技能包、Plugins 插件系统
-- **完全开源** — Apache-2.0 协议，源码开放，自由定制
+## 快速上手
 
-## 多 Agent 团队
+### 下载二进制（Windows）
 
-| 角色 | 能力 | 权限 |
-|------|------|------|
-| Developer | 写代码、修 bug、加功能、文档 | 读写文件 + 终端 |
-| Reviewer | 安全审查、性能审查、可读性审查（三维并行） | 只读 |
-| Operator | 代码推送、发布、打 tag | 只读 + 终端 |
-| Advisor | 深度分析、技术趋势、可行性评估 | 只读 + 网络搜索 |
+从 [Releases](https://github.com/Alele496/Nexus/releases) 下载 `nexus-v0.2.105-windows-x64.zip`，解压后双击运行。首次启动会自动弹出设置向导，引导你配置 DeepSeek API Key。
 
-## 五种编排模式
+### 从源码构建
 
-- **Workflow** — 固定步骤流水线，适合确定性任务（如"推送代码"）
-- **Council** — 多 Agent 并行审查，结果汇总裁决
-- **Supervisor** — 动态调度，主 Agent 在每步运行时决定下一步
-- **Handoff** — 先分类问题领域，再移交给对应专家
-- **Hybrid** — 复杂多阶段任务，不同阶段用不同模式
-
-## 快速开始
-
-### 1. 构建
+**前置依赖：**
+- [Rust](https://rustup.rs) 1.80+
+- Windows SDK（Windows 用户需要）
 
 ```bash
-cd nexus/
+git clone https://github.com/Alele496/Nexus.git
+cd Nexus/nexus
+
+# 编译检查
+cargo check -p nexus-bin
+
+# Release 构建
 cargo build -p nexus-bin --release
-# 输出: target/release/nexus.exe (Windows) / nexus (Linux/macOS)
+
+# 二进制输出位置：
+#   Windows: target/release/nexus.exe
+#   Linux/macOS: target/release/nexus
 ```
 
-### 2. 配置
+> **Windows 用户注意：** 如果遇到 `rc.exe` 找不到的错误，需要安装 [Windows SDK](https://developer.microsoft.com/windows/downloads/windows-sdk/)。
 
-首次运行自动弹出设置向导，或手动编辑 `~/.sage/config.toml`：
+## 功能亮点
 
-```toml
-default_model = "deepseek-v4-pro"
+**超长上下文，不会忘**
+1M token 上下文窗口，整个项目丢进去都撑不满。支持 thinking 链式推理，复杂问题自动深度思考。
 
-[model.deepseek-v4-pro]
-model = "deepseek-v4-pro"
-base_url = "https://api.deepseek.com/v1"
-api_key = "sk-xxx"
-context_window = 1000000
-reasoning_effort = "high"
-supports_reasoning_effort = true
-```
+**终端原生，快且美**
+Rust + ratatui 构建，启动秒开，键盘驱动。语法高亮、多会话切换、主题切换，全程不用离开终端。
 
-### 3. 启动
+**多 Agent 团队协作**
+一个 Project Lead + 四个角色（Developer、Reviewer、Operator、Advisor）组成你的 AI 开发团队。不是单打独斗，是团队作战。
 
-```bash
-./target/release/nexus
-```
+**代码审查闸门**
+代码推送前必须经过安全、性能、可读性三维并行审查。任一维度不通过就打回重做，确保不会把问题代码推上去。
+
+**可扩展**
+MCP 协议连接外部工具，Hooks 在关键节点触发自动化脚本，Skills 把重复任务封装成可复用技能包。
+
+**舰队管理**
+同时管理多个代码仓库，一键健康巡检，项目注册表记录所有依赖关系。
+
+## 多 Agent 协作
+
+| 角色 | 做什么 |
+|------|--------|
+| **Developer** | 写代码、修 bug、实现功能 |
+| **Reviewer** | 安全 / 性能 / 可读性 三维并行审查 |
+| **Operator** | 代码推送、发布、打 tag |
+| **Advisor** | 技术趋势分析、方案可行性评估 |
+
+五种编排模式——Workflow 固定流水线、Council 并行审查、Supervisor 动态调度、Handoff 分类移交、Hybrid 嵌套组合——根据任务复杂度灵活选择。
 
 ## 常用命令
 
@@ -65,50 +70,39 @@ supports_reasoning_effort = true
 |------|------|
 | `/new` | 新建会话 |
 | `/model` | 切换模型 |
-| `/effort` | 调整推理深度 (high/max) |
-| `/fork` | 当前会话分支为并行 Agent |
+| `/effort` | 调整推理深度 |
+| `/review` | 触发代码审查 |
 | `/resume` | 恢复历史会话 |
-| `/compact` | 压缩对话历史以节省上下文 |
-| `/settings` | 打开设置面板 |
+| `/compact` | 压缩上下文，节省窗口 |
 | `/theme` | 切换主题 |
-| `/help` | 浏览命令和键盘快捷键 |
+| `/help` | 命令和快捷键一览 |
 
-## 目录结构
+## 项目结构
 
 ```
 Nexus/
-├── nexus/                         # Nexus TUI 源码（Rust workspace）
+├── nexus/                         # 核心源码（Rust workspace，~85 个 crate）
 │   ├── crates/codegen/
-│   │   ├── nexus-bin/             # 入口 → nexus.exe
-│   │   ├── nexus-pager/           # TUI 界面
-│   │   ├── nexus-shell/           # Agent 运行时
-│   │   ├── nexus-agent/           # 系统提示词 & 模板
+│   │   ├── nexus-bin/             # 程序入口，CLI 参数解析
+│   │   ├── nexus-pager/           # TUI 渲染引擎，全屏终端界面
+│   │   ├── nexus-shell/           # Agent 运行时，会话管理、工具调度
+│   │   ├── nexus-agent/           # 系统提示词模板、Agent 发现与注册
+│   │   ├── nexus-config/          # 配置文件加载、合并、热更新
+│   │   ├── nexus-mcp/             # MCP 协议客户端，连接外部工具服务
+│   │   ├── nexus-hooks/           # 生命周期钩子系统，事件驱动脚本
+│   │   ├── nexus-tools/           # 内置工具集（文件读写、终端、Git 等）
 │   │   └── ...
-│   ├── Cargo.toml                 # Workspace 清单
-│   └── README.md                  # Nexus 源码文档
+│   └── Cargo.toml                 # Workspace 清单，定义所有 crate 依赖
 ├── fleet/                         # 多仓库舰队管理
-│   ├── README.md
-│   ├── fleet-registry.json        # 项目注册表
-│   └── docs/                      # 舰队策略和 Spawn 协议
-├── .sage/                         # Nexus 项目配置（本地，不提交）
-│   ├── config.toml
-│   ├── agents/                    # 子 Agent 定义
-│   ├── skills/                    # 可复用技能
-│   ├── personas/
-│   ├── hooks/
-│   └── rules/
-├── AGENTS.md                      # 主 Agent 身份和行为规范
-├── scripts/                       # 构建和验证脚本
-└── README.md                      # 本文件
+│   ├── fleet-registry.json        # 项目注册表（路径、端口、依赖关系）
+│   ├── docs/                      # 舰队策略文档和 Spawn 协议
+│   └── scripts/                   # 健康巡检、Cron 调度脚本
+├── scripts/                       # 构建脚本（build-nexus.sh/.ps1）
+├── AGENTS.md                      # Project Lead 身份定义和行为规范
+└── README.md
 ```
 
-## 技术栈
-
-- **语言**: Rust
-- **TUI 框架**: ratatui
-- **默认模型**: DeepSeek V4 Pro（1M token 上下文）
-- **Agent 编排**: Subagent + Skills + Personas + Plan Mode
-- **扩展协议**: ACP (Agent Client Protocol), MCP (Model Context Protocol)
+> `.sage/` 目录是本地配置（Agent 定义、Skills、Hooks），通过 `.gitignore` 忽略，不会提交到仓库。
 
 ## 致谢
 
