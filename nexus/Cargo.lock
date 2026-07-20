@@ -6710,6 +6710,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-fleet-types"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "chrono",
+ "git2",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "nexus-fsnotify"
 version = "0.1.0"
 dependencies = [
@@ -6972,12 +6985,14 @@ dependencies = [
  "nexus-crash-handler",
  "nexus-fast-worktree",
  "nexus-file-utils",
+ "nexus-fleet-types",
  "nexus-hooks-plugins-types",
  "nexus-markdown",
  "nexus-mermaid",
  "nexus-pager-pty-harness",
  "nexus-pager-render",
  "nexus-plugin-marketplace",
+ "nexus-project",
  "nexus-prompt-queue",
  "nexus-ratatui-inline",
  "nexus-ratatui-textarea",
@@ -6991,6 +7006,7 @@ dependencies = [
  "nexus-update",
  "nexus-version",
  "nexus-voice",
+ "nexus-workflow",
  "nexus-workspace",
  "nix 0.30.1",
  "nucleo",
@@ -7151,6 +7167,19 @@ dependencies = [
  "thiserror 2.0.18",
  "toml",
  "tracing",
+]
+
+[[package]]
+name = "nexus-project"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "nexus-agent",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "toml",
 ]
 
 [[package]]
@@ -7841,6 +7870,21 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+]
+
+[[package]]
+name = "nexus-workflow"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

@@ -13,6 +13,7 @@ members = [
     "crates/codegen/nexus-crash-handler",
     "crates/codegen/nexus-fast-worktree",
     "crates/codegen/nexus-file-utils",
+    "crates/codegen/nexus-fleet-types",
     "crates/codegen/nexus-fsnotify",
     "crates/codegen/nexus-gix-status",
     "crates/codegen/nexus-agent",
@@ -32,6 +33,7 @@ members = [
     "crates/codegen/nexus-pager",
     "crates/codegen/nexus-bin",
     "crates/codegen/nexus-pager-minimal",
+    "crates/codegen/nexus-project",
     "crates/codegen/nexus-pager-pty-harness",
     "crates/codegen/nexus-pager-render",
     "crates/codegen/nexus-paths",
@@ -52,6 +54,7 @@ members = [
     "crates/codegen/nexus-update",
     "crates/codegen/nexus-version",
     "crates/codegen/nexus-voice",
+    "crates/codegen/nexus-workflow",
     "crates/codegen/nexus-workspace",
     "crates/codegen/nexus-workspace-client",
     "crates/codegen/nexus-workspace-types",
@@ -275,6 +278,7 @@ nexus-agent-lifecycle = { path = "crates/codegen/nexus-agent-lifecycle" }
 nexus-circuit-breaker = { path = "crates/common/nexus-circuit-breaker" }
 nexus-computer-hub-core = { path = "crates/common/nexus-computer-hub-core" }
 nexus-computer-hub-sdk = { path = "crates/common/nexus-computer-hub-sdk" }
+nexus-fleet-types = { path = "crates/codegen/nexus-fleet-types" }
 nexus-gix-status = { path = "crates/codegen/nexus-gix-status" }
 nexus-agent = { path = "crates/codegen/nexus-agent" }
 nexus-announcements = { path = "crates/codegen/nexus-announcements" }
@@ -300,10 +304,12 @@ nexus-test-support = { path = "crates/codegen/nexus-test-support" }
 nexus-tools = { path = "crates/codegen/nexus-tools" }
 nexus-tools-api = { path = "crates/codegen/nexus-tools-api" }
 nexus-version = { path = "crates/codegen/nexus-version" }
+nexus-workflow = { path = "crates/codegen/nexus-workflow" }
 nexus-workspace = { path = "crates/codegen/nexus-workspace" }
 nexus-workspace-types = { path = "crates/codegen/nexus-workspace-types" }
 nexus-hooks-plugins-types = { path = "crates/codegen/nexus-hooks-plugins-types" }
 nexus-interjection-core = { path = "crates/common/nexus-interjection-core" }
+nexus-project = { path = "crates/codegen/nexus-project" }
 nexus-prompt-queue = { path = "crates/codegen/nexus-prompt-queue" }
 nexus-proto-build = { path = "crates/build/nexus-proto-build" }
 nexus-ratatui-inline = { path = "crates/codegen/nexus-ratatui-inline" }

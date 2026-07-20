@@ -106,6 +106,9 @@ flate2 = { workspace = true }
 tar = { workspace = true }
 nexus-tools = { workspace = true }
 nexus-agent = { workspace = true }
+nexus-fleet-types = { workspace = true }
+nexus-project = { workspace = true }
+nexus-workflow = { workspace = true }
 nexus-plugin-marketplace = { path = "../nexus-plugin-marketplace" }
 nexus-hooks-plugins-types = { path = "../nexus-hooks-plugins-types" }
 wait-timeout = { workspace = true }

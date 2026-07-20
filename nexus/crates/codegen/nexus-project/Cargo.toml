@@ -1,0 +1,20 @@
+[package]
+license = "Apache-2.0"
+edition.workspace = true
+name = "nexus-project"
+version = "0.1.0"
+description = "Single-repo project detection, configuration, and context generation for Nexus"
+
+[dependencies]
+camino = { workspace = true }
+nexus-agent = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+toml = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
+[lints]
+workspace = true
