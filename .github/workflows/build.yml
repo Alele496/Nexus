@@ -22,7 +22,9 @@ jobs:
     if: ${{ github.event.inputs.platform == 'windows' || github.event.inputs.platform == 'both' }}
     runs-on: windows-2022
     env:
-      RULES_RUST_RUNFILES_WORKSPACE_NAME: Nexus
+      TMP: C:/tmp
+      TEMP: C:/tmp
+      TMPDIR: C:/tmp
     defaults:
       run:
         working-directory: nexus
@@ -49,14 +51,11 @@ jobs:
           key: win-cargo-${{ hashFiles('nexus/Cargo.lock') }}
           restore-keys: win-cargo-
 
-      - name: Set env (ASCII-only TMP + protoc)
+      - name: Create TMP dir + set PROTOC
         shell: bash
         run: |
-          echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
-          echo "TMP=C:/tmp" >> $GITHUB_ENV
-          echo "TEMP=C:/tmp" >> $GITHUB_ENV
-          echo "TMPDIR=C:/tmp" >> $GITHUB_ENV
           mkdir -p C:/tmp
+          echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
 
       - name: Build release
         run: cargo build -p nexus-bin --release
@@ -73,7 +72,9 @@ jobs:
     if: ${{ github.event.inputs.platform == 'linux' || github.event.inputs.platform == 'both' }}
     runs-on: ubuntu-24.04
     env:
-      RULES_RUST_RUNFILES_WORKSPACE_NAME: Nexus
+      TMP: /tmp
+      TEMP: /tmp
+      TMPDIR: /tmp
     defaults:
       run:
         working-directory: nexus

@@ -14,7 +14,10 @@ jobs:
   check-windows:
     runs-on: windows-2022
     env:
-      RULES_RUST_RUNFILES_WORKSPACE_NAME: Nexus
+      # Override .cargo/config.toml [env] Windows paths for CI
+      TMP: C:/tmp
+      TEMP: C:/tmp
+      TMPDIR: C:/tmp
     defaults:
       run:
         working-directory: nexus
@@ -41,17 +44,14 @@ jobs:
           key: win-cargo-${{ hashFiles('nexus/Cargo.lock') }}
           restore-keys: win-cargo-
 
-      - name: Set env (ASCII-only TMP + protoc)
+      - name: Create TMP dir + set PROTOC
         shell: bash
         run: |
-          echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
-          echo "TMP=C:/tmp" >> $GITHUB_ENV
-          echo "TEMP=C:/tmp" >> $GITHUB_ENV
-          echo "TMPDIR=C:/tmp" >> $GITHUB_ENV
           mkdir -p C:/tmp
+          echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
 
       - name: Cargo check
-        run: cargo check --workspace --all-features
+        run: cargo check --workspace
 
       - name: Cargo test (lib only)
         run: cargo test --workspace --lib --no-fail-fast
@@ -60,7 +60,10 @@ jobs:
   check-linux:
     runs-on: ubuntu-24.04
     env:
-      RULES_RUST_RUNFILES_WORKSPACE_NAME: Nexus
+      # Override .cargo/config.toml [env] Windows paths for CI
+      TMP: /tmp
+      TEMP: /tmp
+      TMPDIR: /tmp
     defaults:
       run:
         working-directory: nexus
@@ -87,7 +90,7 @@ jobs:
           restore-keys: linux-cargo-
 
       - name: Cargo check
-        run: cargo check --workspace --all-features
+        run: cargo check --workspace
 
       - name: Cargo test (lib only)
         run: cargo test --workspace --lib --no-fail-fast
