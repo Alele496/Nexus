@@ -390,25 +390,29 @@ pub(crate) fn render_scrolled_entries_with_selection_boundaries(
             let end = group_spans
                 .and_then(|(spans, base)| {
                     let span = span_containing(spans, base + i)?;
-                    Some(span.range.end.saturating_sub(base))
+                    let rel_end = span.range.end.saturating_sub(base);
+                    // When the paint window is capped, the group may extend
+                    // past the available entries. Skip the detailed label and
+                    // let EntryRenderer fall back to group_header_count.
+                    (rel_end <= entries.len()).then_some(rel_end)
                 })
                 .unwrap_or(entries.len());
-            Some(GroupHeaderLabel::VerbRun(verb_group_header_label(
-                entries,
-                i,
-                end,
-                show_thinking,
-                theme,
-            )))
+            let end = end.min(entries.len());
+            if end <= i {
+                // Empty or invalid span — fall back to group_header_count.
+                None
+            } else {
+                Some(GroupHeaderLabel::VerbRun(verb_group_header_label(
+                    entries,
+                    i,
+                    end,
+                    show_thinking,
+                    theme,
+                )))
+            }
         } else if entry_layout_info.is_group_header()
             && crate::appearance::cache::load_group_tool_verbs()
         {
-            // Truncation headers get the same aggregated vocabulary over the
-            // rows they hide (prefix only while collapsed; the whole run when
-            // expanded), gated on the "Group tool calls" setting that owns
-            // this vocabulary. Falls back to the renderer's plain "N more"
-            // count when the setting is off, spans are absent, or the walk
-            // declines (pure thoughts, or hidden rows it cannot name).
             let show_thinking = crate::appearance::cache::load_show_thinking_blocks();
             group_spans
                 .and_then(|(spans, base)| {
@@ -418,13 +422,17 @@ pub(crate) fn render_scrolled_entries_with_selection_boundaries(
                     };
                     let start = span.range.start.saturating_sub(base);
                     let end = span.range.end.saturating_sub(base);
-                    truncation_header_label(
-                        entries,
-                        start..end,
-                        (!span.expanded).then_some(hidden),
-                        show_thinking,
-                        theme,
-                    )
+                    // When the paint window is capped and the group extends
+                    // past the available entries, skip detailed label.
+                    (end <= entries.len()).then(|| {
+                        truncation_header_label(
+                            entries,
+                            start..end,
+                            (!span.expanded).then_some(hidden),
+                            show_thinking,
+                            theme,
+                        )
+                    })?
                 })
                 .map(GroupHeaderLabel::Truncation)
         } else {

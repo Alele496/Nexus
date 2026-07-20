@@ -1670,14 +1670,23 @@ pub fn compute_paint_window(
     }
     let paint_start = visible_range.start + first_rel;
     let mut paint_end = visible_range.start + range_vy.partition_point(|&y| y < vp_end);
+    /// Maximum number of extra entries a group header can extend the paint
+    /// window past the viewport. Prevents O(group_size) paint windows when
+    /// scrolling near large verb groups (e.g. 500+ tool calls).
+    /// Entries beyond this limit are not walked for aggregated header labels;
+    /// the header falls back to the plain count from [`EntryLayoutInfo::group_header_count`].
+    const MAX_GROUP_HEADER_EXTEND: usize = 50;
+
     let mut i = paint_start;
     while i < paint_end {
         // Any group header row (verb or truncation) aggregates entries that
         // can sit past the viewport edge; extend so the label walks see them.
+        // Capped by MAX_GROUP_HEADER_EXTEND to avoid blowing up the paint window
+        // for very large groups (e.g. hundreds of tool calls in one run).
         if layouts[i].height > 0 && layouts[i].is_group_header() {
-            // The run walk is range-agnostic; keep the window inside the
-            // visible range so index remapping downstream stays valid.
-            paint_end = paint_end.max(run_end(i).min(visible_range.end));
+            let run_end = run_end(i).min(visible_range.end);
+            let capped_end = (paint_end + MAX_GROUP_HEADER_EXTEND).min(run_end);
+            paint_end = paint_end.max(capped_end);
         }
         i += 1;
     }

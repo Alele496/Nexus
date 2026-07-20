@@ -915,6 +915,7 @@ mod tests {
             // login (no enterprise OIDC).
             has_cached_token: false,
             has_enterprise_oidc: false,
+            has_oauth2: false,
             enterprise_oidc_issuer: None,
             login_label: None,
             has_auth_provider_command: false,
