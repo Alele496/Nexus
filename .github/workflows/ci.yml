@@ -51,13 +51,16 @@ jobs:
           echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
 
       - name: Install ripgrep
-        shell: bash
+        shell: pwsh
         run: |
-          mkdir -p C:/tmp/rg
-          curl -fsSL -o C:/tmp/rg/ripgrep.zip "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"
-          unzip -o C:/tmp/rg/ripgrep.zip -d C:/tmp/rg
-          cp C:/tmp/rg/ripgrep-*/rg.exe C:/tmp/rg/
-          echo "C:/tmp/rg" >> $GITHUB_PATH
+          $rgDir = "C:/tmp/rg"
+          New-Item -ItemType Directory -Force -Path $rgDir | Out-Null
+          $zipPath = "$rgDir/ripgrep.zip"
+          Invoke-WebRequest -Uri "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip" -OutFile $zipPath
+          Expand-Archive -Path $zipPath -DestinationPath $rgDir -Force
+          $extractedDir = Get-ChildItem -Directory -Path $rgDir | Where-Object { $_.Name -like "ripgrep-*" } | Select-Object -First 1
+          Copy-Item -Path "$($extractedDir.FullName)/rg.exe" -Destination "$rgDir/rg.exe"
+          Add-Content -Path $env:GITHUB_PATH -Value "C:/tmp/rg"
 
       - name: Cargo check
         run: cargo check --workspace
