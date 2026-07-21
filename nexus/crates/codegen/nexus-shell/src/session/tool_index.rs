@@ -1186,7 +1186,7 @@ mod tests {
     fn split_mixed_formats() {
         assert_eq!(
             split_identifier("nexus_com_slack__slack_send_message"),
-            vec!["sage", "com", "slack", "slack", "send", "message"]
+            vec!["nexus", "com", "slack", "slack", "send", "message"]
         );
     }
 

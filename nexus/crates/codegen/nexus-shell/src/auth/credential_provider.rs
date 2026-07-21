@@ -605,7 +605,7 @@ mod tests {
             );
         }
         let resolved = embedding_session_credentials(
-            "https://api.deepseek.com/v1",
+            "https://api.x.ai/v1",
             Some(&mgr),
             Some(api_key_provider),
         );

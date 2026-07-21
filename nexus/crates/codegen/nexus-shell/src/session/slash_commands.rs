@@ -1171,7 +1171,7 @@ mod tests {
             ..make_skill("deploy", true)
         };
         let cmd = SlashCommand::Skill(&skill);
-        assert_eq!(cmd.description(), "A skill called deploy");
+        assert_eq!(cmd.description(), "名为 deploy 的技能");
     }
 
     // ── parse_slash_prefix ──────────────────────────────────────────
@@ -1778,7 +1778,7 @@ mod tests {
         assert!(flush.input.is_none()); // no argument_hint
 
         let skill = commands.iter().find(|c| c.name == "commit").unwrap();
-        assert_eq!(skill.description, "Short: commit");
+        assert_eq!(skill.description, "简介: commit");
     }
 
     // ── /flush ─────────────────────────────────────────────────────

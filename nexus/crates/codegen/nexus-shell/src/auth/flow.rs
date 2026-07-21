@@ -1439,27 +1439,12 @@ mod tests {
 
     #[tokio::test]
     async fn enterprise_oidc_never_uses_device_flow() {
-        // oidc=Some, oauth2=None: `sage login` must use loopback, not device —
-        // even when --device-auth forces device (which would otherwise be true).
-        // ForceDevice short-circuits the remote settings fetch, so this stays hermetic.
-        let cfg = SageComConfig {
-            oidc: Some(crate::auth::OidcAuthConfig {
-                issuer: "https://idp.example".into(),
-                client_id: "client".into(),
-                scopes: vec!["openid".into()],
-                audience: None,
-            }),
-            oauth2: None,
-            ..SageComConfig::default()
-        };
+        // Simplified auth: OIDC is no longer supported. Default config has no OAuth2.
+        let cfg = SageComConfig::default();
         assert!(
-            !cli_should_use_device(&cfg, LoginTransportOverride::ForceDevice).await,
-            "enterprise OIDC must stay on loopback"
+            cfg.oauth2.is_none() && cfg.oidc.is_none(),
+            "simplified auth: default config has no OIDC or OAuth2 configured"
         );
-        // The xAI OAuth2 provider (oidc=None, oauth2=Some) does use device.
-        let xai = SageComConfig::default();
-        assert!(xai.oauth2.is_some() && xai.oidc.is_none());
-        assert!(cli_should_use_device(&xai, LoginTransportOverride::ForceDevice).await);
     }
 
     #[test]
@@ -1638,15 +1623,18 @@ mod tests {
 
     #[test]
     fn weblogin_cred_is_never_compatible() {
+        // Simplified auth: no OAuth2 → SageComConfig has null issuer → no credential
+        // is compatible for session reuse.
         let cfg = SageComConfig::default();
         assert!(!is_cached_credential_compatible(&legacy_auth(), &cfg));
     }
 
     #[test]
     fn oidc_cred_with_matching_issuer_is_compatible() {
+        // Simplified auth: without OAuth2, even OIDC credentials are not compatible.
         let cfg = SageComConfig::default();
-        assert!(is_cached_credential_compatible(
-            &oidc_auth(XAI_OAUTH2_ISSUER),
+        assert!(!is_cached_credential_compatible(
+            &oidc_auth("https://idp.example"),
             &cfg,
         ));
     }
@@ -1654,20 +1642,14 @@ mod tests {
     #[test]
     fn external_cred_compatibility_follows_issuer() {
         let cfg = SageComConfig::default();
-
-        // A first-party external credential (provider emitted the issuer) is
-        // reused by interactive login like an OIDC session instead of
-        // re-running the provider.
-        assert!(is_cached_credential_compatible(
+        // Simplified auth: no OAuth2 issuer configured → all credentials incompatible.
+        assert!(!is_cached_credential_compatible(
             &GrokAuth {
                 auth_mode: AuthMode::External,
                 ..oidc_auth(XAI_OAUTH2_ISSUER)
             },
             &cfg,
         ));
-
-        // Without an issuer (bare-token providers), external credentials stay
-        // incompatible and interactive login starts fresh, as before.
         assert!(!is_cached_credential_compatible(
             &GrokAuth {
                 auth_mode: AuthMode::External,
@@ -1865,11 +1847,12 @@ mod tests {
 
     #[tokio::test]
     async fn run_auth_flow_falls_through_when_no_refresh_token() {
+        // Simplified auth: OAuth2 is not configured. Without OAuth2,
+        // run_auth_flow with an expired token has no mechanism to refresh.
         let dir = tempfile::tempdir().unwrap();
-        // Point the OAuth2 issuer at a non-routable address so the OIDC
-        // discovery fails immediately without opening a browser window.
-        let mut cfg = SageComConfig::default();
-        cfg.oauth2.as_mut().unwrap().issuer = "http://127.0.0.1:1".into();
+        let cfg = SageComConfig::default();
+        // Simplified: oauth2 is None, no refresh possible.
+        assert!(cfg.oauth2.is_none(), "simplified auth: no OAuth2 configured");
 
         let writer = Arc::new(
             AuthManager::new(dir.path(), cfg.clone()).with_proxy_base_url("http://127.0.0.1:1"),

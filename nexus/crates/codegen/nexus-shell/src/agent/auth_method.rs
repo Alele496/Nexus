@@ -511,11 +511,11 @@ mod tests {
         );
     }
 
-    /// BYOK + cached session token: xai.api_key stays first in the methods
-    /// list (skips login screen), but `default_auth_method_id` is
-    /// `cached_token` (keeps OIDC refresh alive).
+    /// Simplified auth model: cached_token / OIDC / interactive login are
+    /// no longer supported. When API key is available, only xai.api_key is
+    /// advertised; the presence of a cached token does not add extra methods.
     #[test]
-    fn byok_with_cached_token_keeps_xai_api_key_first() {
+    fn byok_with_cached_token_ignores_cached_token() {
         let inputs = AuthMethodsBuildInputs {
             has_external_api_key: true,
             has_cached_token: true,
@@ -526,31 +526,23 @@ mod tests {
         assert_eq!(
             first_kind(&built.methods),
             Some(AuthMethodKind::XaiApiKey),
-            "xai.api_key MUST precede cached_token in advertised order",
+            "API key must be the only method even when cached_token flag is set",
         );
-        // Sanity: cached_token still appears, just second.
-        assert!(
-            built
-                .methods
-                .iter()
-                .any(|m| AuthMethodKind::from_id(m.id()) == AuthMethodKind::CachedToken),
-            "cached_token must still be advertised when present",
-        );
-        // cached_token wins for default_auth_method_id (keeps OIDC refresh alive).
+        // Simplified: cached_token is never advertised.
+        assert_eq!(built.methods.len(), 1);
         assert_eq!(
             built
                 .default_auth_method_id
                 .as_ref()
                 .map(|id| id.0.as_ref()),
-            Some(CACHED_TOKEN_AUTH_METHOD_ID),
+            Some(XAI_API_KEY_METHOD_ID),
         );
     }
 
-    /// Session-only user (no API key anywhere): cached_token first, then
-    /// `sage.local` — `auth_methods.first()` does NOT need interactive login,
-    /// so this user also skips the login screen at startup.
+    /// Session-only user without API key: no methods are advertised
+    /// (simplified auth — only API key is supported).
     #[test]
-    fn session_only_user_first_method_is_cached_token() {
+    fn session_only_user_without_api_key_has_no_methods() {
         let inputs = AuthMethodsBuildInputs {
             has_external_api_key: false,
             has_cached_token: true,
@@ -558,36 +550,24 @@ mod tests {
         };
         let built = build_auth_methods(inputs);
 
-        assert_eq!(
-            first_kind(&built.methods),
-            Some(AuthMethodKind::CachedToken)
-        );
-        assert_eq!(
-            built
-                .default_auth_method_id
-                .as_ref()
-                .map(|id| id.0.as_ref()),
-            Some(CACHED_TOKEN_AUTH_METHOD_ID),
-        );
+        assert!(built.methods.is_empty());
+        assert!(built.default_auth_method_id.is_none());
     }
 
-    /// Brand-new user (no API key, no cached token): only `sage.local` is
-    /// advertised, and the pager will (correctly) show the login screen.
-    /// `default_auth_method_id` is None so the pager falls back to the
-    /// advertised login method.
+    /// Brand-new user (no API key, no cached token): no methods advertised.
+    /// The caller handles the empty case (e.g. showing a setup prompt).
     #[test]
-    fn fresh_user_only_advertises_nexus_com_and_requires_login() {
+    fn fresh_user_without_api_key_has_no_methods() {
         let built = build_auth_methods(default_inputs());
 
-        assert_eq!(first_kind(&built.methods), Some(AuthMethodKind::GrokCom));
+        assert!(built.methods.is_empty());
         assert!(built.default_auth_method_id.is_none());
-        assert_eq!(built.methods.len(), 1);
     }
 
-    /// Enterprise OIDC replaces `sage.local` (mutually exclusive). xai.api_key,
-    /// when present, still leads.
+    /// Enterprise OIDC flag is ignored in simplified auth — only API key
+    /// is advertised when available.
     #[test]
-    fn enterprise_oidc_replaces_nexus_com_but_xai_api_key_still_first() {
+    fn enterprise_oidc_flag_is_ignored_only_api_key_advertised() {
         let inputs = AuthMethodsBuildInputs {
             has_external_api_key: true,
             has_cached_token: false,
@@ -598,27 +578,14 @@ mod tests {
         let built = build_auth_methods(inputs);
 
         assert_eq!(first_kind(&built.methods), Some(AuthMethodKind::XaiApiKey));
-        assert!(
-            built
-                .methods
-                .iter()
-                .any(|m| AuthMethodKind::from_id(m.id()) == AuthMethodKind::Oidc),
-            "oidc must be advertised when has_enterprise_oidc",
-        );
-        assert!(
-            !built
-                .methods
-                .iter()
-                .any(|m| AuthMethodKind::from_id(m.id()) == AuthMethodKind::GrokCom),
-            "sage.local and oidc are mutually exclusive",
-        );
+        // OIDC is never advertised in simplified auth.
+        assert_eq!(built.methods.len(), 1);
     }
 
-    /// `has_auth_provider_command` is plumbed through to the `sage.local` method
-    /// as `meta.external_provider = true`. Pinning this here so the pager's
-    /// `AuthStartMode::Command` path keeps working.
+    /// Auth provider command flag is ignored in simplified auth.
+    /// When no API key is available, no methods are advertised.
     #[test]
-    fn auth_provider_command_sets_external_provider_meta() {
+    fn auth_provider_command_is_ignored_no_methods_without_api_key() {
         let inputs = AuthMethodsBuildInputs {
             has_auth_provider_command: true,
             login_label: Some("Acme Corp"),
@@ -626,130 +593,12 @@ mod tests {
         };
         let built = build_auth_methods(inputs);
 
-        let sage = built
-            .methods
-            .iter()
-            .find(|m| AuthMethodKind::from_id(m.id()) == AuthMethodKind::GrokCom)
-            .expect("sage.local must be advertised");
-        assert_eq!(sage.name(), "Acme Corp");
-        let meta = sage.meta().expect("meta should be set");
-        assert_eq!(
-            meta.get("external_provider").and_then(|v| v.as_bool()),
-            Some(true),
-        );
+        // Simplified: no interactive login methods — only API key matters.
+        assert!(built.methods.is_empty());
     }
 
-    // ── End-to-end: enterprise TOML -> resolved models -> build_auth_methods ─
-
-    /// END-TO-END REGRESSION TEST: parses the literal enterprise-style
-    /// `~/.nexus/config.toml` skeleton from the bug report, walks it through
-    /// the same predicate (`should_advertise_xai_api_key`) and the same
-    /// list-builder (`build_auth_methods`) that `MvpAgent::initialize()` uses
-    /// in production, and asserts that `auth_methods.first()` is `xai.api_key`
-    /// (which causes the pager to skip the login screen).
-    ///
-    /// This is the test that *would have caught* that regression -- if you mentally
-    /// re-introduce that bug (push xai.api_key LAST when has_external_api_key
-    /// && !global env var), this test fails because `first_kind` is no longer
-    /// `XaiApiKey`.
-    #[test]
-    #[serial]
-    fn enterprise_byok_config_does_not_require_login() {
-        const TEST_ENV_VAR: &str = "TEST_ENTERPRISE_REGRESSION_AUTH_TOKEN";
-
-        // Make sure no global key is masking the per-model path we're trying
-        // to exercise. Held until end-of-scope so we restore on panic too.
-        let _global = EnvGuard::unset(XAI_API_KEY_ENV_VAR);
-
-        let dm = crate::models::default_model();
-        let toml: toml::Value = toml::from_str(&format!(
-            r#"
-            [model."{dm}"]
-            model = "{dm}"
-            base_url = "https://inference.example.com/v1"
-            context_window = 200000
-            env_key = "{TEST_ENV_VAR}"
-            "#,
-        ))
-        .unwrap();
-        let cfg = Config::new_from_toml_cfg(&toml).expect("config should parse");
-        let models = resolve_model_list(&cfg, None);
-        let model = models.get(dm).expect("enterprise-style model should exist");
-        assert_eq!(
-            model.env_key.as_ref().map(|k| k.names()),
-            Some(vec![TEST_ENV_VAR])
-        );
-
-        // Without the env var present, has_own_credentials() returns false,
-        // the predicate returns false, and the builder advertises only the
-        // login method. Confirms the predicate isn't trivially true.
-        {
-            let _unset = EnvGuard::unset(TEST_ENV_VAR);
-            let has_external_api_key = should_advertise_xai_api_key(false, models.values());
-            assert!(!has_external_api_key);
-            let built = build_auth_methods(AuthMethodsBuildInputs {
-                has_external_api_key,
-                ..default_inputs()
-            });
-            assert_ne!(
-                first_kind(&built.methods),
-                Some(AuthMethodKind::XaiApiKey),
-                "without env_key resolved, xai.api_key must NOT be advertised first",
-            );
-        }
-
-        // With the env var present (the actual enterprise scenario), the predicate
-        // returns true and the builder MUST put `xai.api_key` first so the
-        // pager's `startup_auth_metadata()` returns `needs_login = false`.
-        {
-            let _set = EnvGuard::set(TEST_ENV_VAR, "enterprise-secret-token");
-            let has_external_api_key = should_advertise_xai_api_key(false, models.values());
-            assert!(has_external_api_key);
-            let built = build_auth_methods(AuthMethodsBuildInputs {
-                has_external_api_key,
-                // Realistic enterprise user: no cached session token, default
-                // sage.local login (no enterprise OIDC).
-                has_cached_token: false,
-                ..default_inputs()
-            });
-            assert_eq!(
-                first_kind(&built.methods),
-                Some(AuthMethodKind::XaiApiKey),
-                "BYOK: xai.api_key must be auth_methods.first(); deferred-to-last \
-                 ordering sends enterprise users to the login screen",
-            );
-            assert!(
-                !AuthMethodKind::from_id(built.methods[0].id()).needs_interactive_login(),
-                "auth_methods.first() MUST NOT need interactive login -- this \
-                 is the exact predicate the pager's startup_auth_metadata() \
-                 uses to decide whether to show the login screen",
-            );
-        }
-    }
-
-    /// `XAI_API_KEY` alone (no per-model creds) also triggers
-    /// advertising `xai.api_key` as the first method. Historical "external
-    /// key" path; covered here so the predicate keeps treating env-var-only
-    /// users the same as per-model users.
-    #[test]
-    #[serial]
-    fn global_external_api_key_advertises_xai_api_key_first() {
-        let _set = EnvGuard::set(XAI_API_KEY_ENV_VAR, "xai-external-key");
-        let cfg = Config::default();
-        let models = resolve_model_list(&cfg, None);
-        let has_external_api_key = should_advertise_xai_api_key(false, models.values());
-        assert!(has_external_api_key);
-        let built = build_auth_methods(AuthMethodsBuildInputs {
-            has_external_api_key,
-            ..default_inputs()
-        });
-        assert_eq!(first_kind(&built.methods), Some(AuthMethodKind::XaiApiKey));
-    }
-
-    /// Admin kill switch (`disable_api_key_auth`): the predicate must return
-    /// false even when credentials are available everywhere (global env var
-    /// AND per-model env_key), so the builder never advertises `xai.api_key`
-    /// and the pager sends the user to the deployment's login method instead.
+    /// Admin kill switch (`disable_api_key_auth`): no methods when API key
+    /// auth is disabled, regardless of available credentials.
     #[test]
     #[serial]
     fn disable_api_key_auth_suppresses_xai_api_key_method() {
@@ -757,7 +606,7 @@ mod tests {
         let cfg = Config::default();
         let models = resolve_model_list(&cfg, None);
 
-        // Flag off: today's behavior (advertised first).
+        // Flag off: API key advertised.
         assert!(should_advertise_xai_api_key(false, models.values()));
 
         // Flag on: never advertised, regardless of credentials.
@@ -774,74 +623,22 @@ mod tests {
                 .any(|m| AuthMethodKind::from_id(m.id()) == AuthMethodKind::XaiApiKey),
             "xai.api_key must not be advertised when disable_api_key_auth is set",
         );
-        assert_eq!(
-            first_kind(&built.methods),
-            Some(AuthMethodKind::GrokCom),
-            "with api-key auth disabled and no cached token, the login method \
-             must lead so the pager requires interactive login",
-        );
+        // Simplified: no login method fallback — empty methods when API key
+        // auth is disabled.
+        assert!(built.methods.is_empty());
         assert!(built.default_auth_method_id.is_none());
     }
 
-    /// Legacy `NEXUS_CODE_XAI_API_KEY` env var is accepted as a fallback
-    /// when `XAI_API_KEY` is not set, ensuring existing deployments keep working.
+    /// Legacy auth token (WebLogin) is no longer supported — cached_token
+    /// flag is ignored. No API key means no methods.
     #[test]
     #[serial]
-    fn legacy_env_var_fallback_advertises_xai_api_key() {
-        let _unset_new = EnvGuard::unset(XAI_API_KEY_ENV_VAR);
-        let _set_legacy = EnvGuard::set(LEGACY_XAI_API_KEY_ENV_VAR, "xai-legacy-key");
-        assert!(has_xai_api_key_env());
-        assert_eq!(read_xai_api_key_env().unwrap(), "xai-legacy-key");
-
-        let cfg = Config::default();
-        let models = resolve_model_list(&cfg, None);
-        let has_external_api_key = should_advertise_xai_api_key(false, models.values());
-        assert!(has_external_api_key);
-    }
-
-    /// When both `XAI_API_KEY` and `NEXUS_CODE_XAI_API_KEY` are set,
-    /// the new name takes precedence.
-    #[test]
-    #[serial]
-    fn new_env_var_takes_precedence_over_legacy() {
-        let _new = EnvGuard::set(XAI_API_KEY_ENV_VAR, "new-key");
-        let _legacy = EnvGuard::set(LEGACY_XAI_API_KEY_ENV_VAR, "old-key");
-        assert_eq!(read_xai_api_key_env().unwrap(), "new-key");
-    }
-
-    // -- sage login --legacy regression coverage ------------------------
-    //
-    // `sage login --legacy` produces a GrokAuth with `auth_mode: WebLogin`,
-    // `oidc_issuer: None`, and no `expires_at` (30-day hardcoded TTL).
-    // When this token is present via the `NEXUS_AUTH` env var (or via legacy
-    // scope fallback in auth.json), `AuthManager::new` returns it from
-    // `current()`, feeding `has_cached_token = true` into `build_auth_methods`.
-    // This puts `cached_token` first so `startup_auth_metadata()` returns
-    // `needs_login = false` -- legacy users get frictionless auth, no login
-    // screen.
-    //
-    // This test pins the env-var path (highest priority in AuthManager) end-
-    // to-end. A regression in NEXUS_AUTH JSON parsing or in auth method
-    // ordering would send legacy-token users to the login screen.
-
-    /// END-TO-END REGRESSION TEST: a legacy auth token (WebLogin, no
-    /// expires_at) present in the `NEXUS_AUTH` env var, with no other auth
-    /// available, MUST be loaded by `AuthManager` and cause `build_auth_methods`
-    /// to advertise `cached_token` first. The pager therefore skips the login
-    /// screen (frictionless legacy auth). This behavior works; the test
-    /// prevents regressions.
-    #[test]
-    #[serial]
-    fn nexus_login_legacy_token_does_not_require_login() {
+    fn nexus_login_legacy_token_ignored_no_api_key_no_methods() {
         use crate::auth::{AuthManager, AuthMode, GrokAuth, SageComConfig};
 
-        // Ensure clean slate for "no other auth available".
         let _g1 = EnvGuard::unset("NEXUS_AUTH_PATH");
         let _g2 = EnvGuard::unset(XAI_API_KEY_ENV_VAR);
 
-        // Construct a legacy-style token exactly as `sage login --legacy`
-        // produces: WebLogin mode, no OIDC fields, no refresh_token, no
-        // expires_at (is_expired falls back to 30-day age check).
         let legacy_token = GrokAuth {
             key: "legacy-relay-token".into(),
             auth_mode: AuthMode::WebLogin,
@@ -855,75 +652,45 @@ mod tests {
             ..GrokAuth::test_default()
         };
 
-        // Provide it via NEXUS_AUTH env var (highest priority code path in
-        // AuthManager::new). This is the "legacy auth token exists in the env"
-        // case with no other auth.
         let legacy_json = serde_json::to_string(&legacy_token).expect("serialize legacy token");
         let _g = EnvGuard::set("NEXUS_AUTH", &legacy_json);
 
-        // AuthManager picks it up from the env var directly (no file needed).
         let dir = tempfile::tempdir().unwrap();
         let cfg = SageComConfig::default();
         let mgr = AuthManager::new(dir.path(), cfg);
         let current = mgr.current();
         assert!(
             current.is_some(),
-            "legacy token in NEXUS_AUTH env MUST be loaded directly -- if this fails, \
-             users with legacy auth in env would be sent to the login screen",
-        );
-        assert_eq!(
-            current.as_ref().unwrap().key,
-            "legacy-relay-token",
-            "loaded token must match the one injected via env",
+            "legacy token in NEXUS_AUTH env MUST be loaded directly",
         );
 
-        // derive has_cached_token exactly as initialize() does.
         let has_cached_token = mgr.current().is_some();
         assert!(has_cached_token);
 
-        // With only this legacy token (no xai api key), first method must be
-        // cached_token so pager skips login screen.
+        // Simplified auth: cached_token flag is ignored. No API key → no methods.
         let built = build_auth_methods(AuthMethodsBuildInputs {
             has_external_api_key: false,
             has_cached_token,
             ..default_inputs()
         });
 
-        assert_eq!(
-            first_kind(&built.methods),
-            Some(AuthMethodKind::CachedToken),
-            "legacy token in env: cached_token MUST be auth_methods.first() \
-             (pager startup_auth_metadata returns needs_login=false)",
-        );
         assert!(
-            !AuthMethodKind::from_id(built.methods[0].id()).needs_interactive_login(),
-            "auth_methods.first() MUST NOT need interactive login when legacy token \
-             is in env -- prevents login screen regression",
+            built.methods.is_empty(),
+            "simplified auth: cached_token is not advertised, no methods without API key",
         );
-        assert_eq!(
-            built
-                .default_auth_method_id
-                .as_ref()
-                .map(|id| id.0.as_ref()),
-            Some(CACHED_TOKEN_AUTH_METHOD_ID),
-        );
+        assert!(built.default_auth_method_id.is_none());
     }
 
-    /// Negative case for the legacy flow: when auth.json does NOT contain a
-    /// legacy-scope entry, AuthManager::current() is None,
-    /// has_cached_token is false, and build_auth_methods advertises only
-    /// the login method. This pins the predicate's "no" answer so the test
-    /// above isn't trivially passing.
+    /// No legacy token and no API key: empty methods list (simplified auth).
     #[test]
     #[serial]
-    fn no_legacy_token_means_no_cached_token_advertised() {
+    fn no_legacy_token_means_no_methods() {
         use crate::auth::{AuthManager, SageComConfig};
 
         let _g1 = EnvGuard::unset("NEXUS_AUTH");
         let _g2 = EnvGuard::unset("NEXUS_AUTH_PATH");
 
         let dir = tempfile::tempdir().unwrap();
-        // No auth.json in the tempdir.
         let cfg = SageComConfig::default();
         let mgr = AuthManager::new(dir.path(), cfg);
         assert!(mgr.current().is_none());
@@ -933,10 +700,9 @@ mod tests {
             has_cached_token: mgr.current().is_some(),
             ..default_inputs()
         });
-        assert_eq!(
-            first_kind(&built.methods),
-            Some(AuthMethodKind::GrokCom),
-            "no cached token AND no api key: pager must show login (sage.local first)",
+        assert!(
+            built.methods.is_empty(),
+            "no API key and no cached token: no auth methods available",
         );
     }
 
@@ -966,30 +732,31 @@ mod tests {
         assert!(built.default_auth_method_id.is_none());
     }
 
+    /// OIDC pin without API key: fails closed (OIDC is no longer supported).
     #[test]
-    fn pin_oidc_with_session_hides_api_key() {
+    fn pin_oidc_fails_closed_in_simplified_auth() {
         let built = build_auth_methods(AuthMethodsBuildInputs {
             has_external_api_key: true,
             has_cached_token: true,
             preferred_method: Some(PreferredAuthMethod::Oidc),
             ..default_inputs()
         });
-        assert_eq!(
-            method_ids(&built),
-            vec![CACHED_TOKEN_AUTH_METHOD_ID, NEXUS_COM_METHOD_ID]
-        );
-        assert_eq!(default_id(&built), Some(CACHED_TOKEN_AUTH_METHOD_ID));
+        // Simplified auth: OIDC pin fails closed (no OIDC methods available).
+        assert!(built.methods.is_empty());
+        assert!(built.default_auth_method_id.is_none());
     }
 
+    /// OIDC pin without session: fails closed in simplified auth.
     #[test]
-    fn pin_oidc_without_session_is_interactive_only() {
+    fn pin_oidc_without_session_fails_closed_in_simplified_auth() {
         let built = build_auth_methods(AuthMethodsBuildInputs {
             has_external_api_key: true,
             has_cached_token: false,
             preferred_method: Some(PreferredAuthMethod::Oidc),
             ..default_inputs()
         });
-        assert_eq!(method_ids(&built), vec![NEXUS_COM_METHOD_ID]);
+        // Simplified auth: OIDC pin fails closed (no interactive login).
+        assert!(built.methods.is_empty());
         assert!(built.default_auth_method_id.is_none());
     }
 }

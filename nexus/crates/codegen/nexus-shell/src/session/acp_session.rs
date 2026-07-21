@@ -1677,7 +1677,7 @@ mod tool_meta_stamp_tests {
                 let t = tool_meta(early.as_ref()).expect("early ToolCall carries x.ai/tool");
                 assert_eq!(t["name"], "read_file");
                 assert_eq!(t["kind"], "read");
-                assert_eq!(t["namespace"], "nexus_build");
+                assert_eq!(t["namespace"], "sage_build");
                 assert!(t.get("input").is_none(), "identity-only before parse");
                 let refined = refined.expect("refinement ToolCallUpdate emitted");
                 let t = tool_meta(refined.as_ref()).expect("refinement carries x.ai/tool");

@@ -45,7 +45,7 @@ pub fn default_agent_type() -> String {
 /// Default base URL for the cli chat proxy.
 pub const CLI_CHAT_PROXY_BASE_URL_DEFAULT: &str = "https://cli-chat-proxy.nexus.local/v1";
 /// Default base URL for the public xAI API.
-pub const XAI_API_BASE_URL_DEFAULT: &str = "https://api.deepseek.com/v1";
+pub const XAI_API_BASE_URL_DEFAULT: &str = "https://api.x.ai/v1";
 /// Default base URL for the asset server (profile images, etc.).
 pub const ASSET_SERVER_URL_DEFAULT: &str = "https://assets.nexus.local";
 /// One or more environment variable names that may hold a model API key.
@@ -3446,7 +3446,7 @@ pub struct ModelEntryConfig {
     pub id: Option<String>,
     /// The routing slug sent in API requests.
     pub model: String,
-    /// The base URL of the model. e.g. "https://api.deepseek.com/v1"
+    /// The base URL of the model. e.g. "https://api.x.ai/v1"
     pub base_url: String,
     /// Human-readable display name of the model.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -5097,7 +5097,7 @@ reasoning_effort = "low"
     #[test]
     fn inject_url_derived_headers_skips_proxy_headers_for_external_url() {
         let mut headers = IndexMap::new();
-        inject_url_derived_headers(&mut headers, None, "https://api.deepseek.com/v1");
+        inject_url_derived_headers(&mut headers, None, "https://api.x.ai/v1");
         assert!(headers.get("X-XAI-Token-Auth").is_none());
         assert!(headers.get("x-authenticateresponse").is_none());
     }
@@ -5338,7 +5338,7 @@ reasoning_effort = "low"
             "ws-model".to_string(),
             test_model_entry(
                 "ws-model",
-                "https://api.deepseek.com/v1",
+                "https://api.x.ai/v1",
                 Some("first-party-key"),
                 None,
                 None,
@@ -5802,15 +5802,15 @@ reasoning_effort = "low"
     #[test]
     fn enforce_disable_api_key_auth_blocks_first_party_only() {
         use nexus_chat_state::AuthType;
-        let mut creds = api_key_creds("https://api.deepseek.com/v1");
+        let mut creds = api_key_creds("https://api.x.ai/v1");
         enforce_disable_api_key_auth(&mut creds, false, Some("session-jwt"));
         assert_eq!(creds.auth_type, AuthType::ApiKey);
         assert_eq!(creds.api_key.as_deref(), Some("xai-secret"));
-        let mut creds = api_key_creds("https://api.deepseek.com/v1");
+        let mut creds = api_key_creds("https://api.x.ai/v1");
         enforce_disable_api_key_auth(&mut creds, true, Some("session-jwt"));
         assert_eq!(creds.auth_type, AuthType::SessionToken);
         assert_eq!(creds.api_key.as_deref(), Some("session-jwt"));
-        let mut creds = api_key_creds("https://api.deepseek.com/v1");
+        let mut creds = api_key_creds("https://api.x.ai/v1");
         enforce_disable_api_key_auth(&mut creds, true, None);
         assert_eq!(creds.auth_type, AuthType::SessionToken);
         assert_eq!(creds.api_key, None);
@@ -5820,7 +5820,7 @@ reasoning_effort = "low"
         assert_eq!(creds.api_key.as_deref(), Some("xai-secret"));
         let mut creds = ResolvedCredentials {
             auth_type: AuthType::SessionToken,
-            ..api_key_creds("https://api.deepseek.com/v1")
+            ..api_key_creds("https://api.x.ai/v1")
         };
         enforce_disable_api_key_auth(&mut creds, true, Some("session-jwt"));
         assert_eq!(creds.auth_type, AuthType::SessionToken);
@@ -5836,7 +5836,7 @@ reasoning_effort = "low"
         use nexus_chat_state::AuthType;
         let entry = test_model_entry(
             "m",
-            "https://api.deepseek.com/v1",
+            "https://api.x.ai/v1",
             Some("xai-model-key"),
             None,
             None,
@@ -5949,7 +5949,7 @@ reasoning_effort = "low"
             byok_from_lookup(&ModelLookup::Loaded(Some(&byok))),
             ModelByok::Byok,
         );
-        let session = test_model_entry("m", "https://api.deepseek.com/v1", None, None, None);
+        let session = test_model_entry("m", "https://api.x.ai/v1", None, None, None);
         assert_eq!(
             byok_from_lookup(&ModelLookup::Loaded(Some(&session))),
             ModelByok::NotByok,
@@ -6212,7 +6212,7 @@ reasoning_effort = "low"
     }
     #[test]
     fn sampling_config_context_window_from_entry_or_default() {
-        let model = test_model_entry("any-model", "https://api.deepseek.com/v1", None, None, None);
+        let model = test_model_entry("any-model", "https://api.x.ai/v1", None, None, None);
         let config = sampling_config_for_model(
             &model,
             resolve_credentials(&model, None),
@@ -6222,7 +6222,7 @@ reasoning_effort = "low"
             None,
         );
         assert_eq!(config.context_window, 200_000);
-        let mut model = test_model_entry("any-model", "https://api.deepseek.com/v1", None, None, None);
+        let mut model = test_model_entry("any-model", "https://api.x.ai/v1", None, None, None);
         model.info.context_window = NonZeroU64::new(256_000).unwrap();
         let config = sampling_config_for_model(
             &model,
@@ -6807,12 +6807,12 @@ reasoning_effort = "low"
             r#"
             [model.visible-model]
             model = "visible-model"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
 
             [model.hidden-model]
             model = "hidden-model"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
             hidden = true
             "#,
@@ -6847,7 +6847,7 @@ reasoning_effort = "low"
             disabled_models = ["to-disable"]
             [model.to-disable]
             model = "to-disable"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
             "#,
         )
@@ -6864,7 +6864,7 @@ reasoning_effort = "low"
             hidden_models = ["to-hide"]
             [model.to-hide]
             model = "to-hide"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
             "#,
         )
@@ -6884,15 +6884,15 @@ reasoning_effort = "low"
             allowed_models = ["keep-*", "explicit-key", "explicit-model-id"]
             [model.to-drop]
             model = "to-drop"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 256000
             [model.keep-one]
             model = "keep-one"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 256000
             [model.explicit-key]
             model = "explicit-model-id"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 256000
             "#,
         )
@@ -6917,7 +6917,7 @@ reasoning_effort = "low"
             allowed_models = []
             [model.foo]
             model = "foo"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 256000
             "#,
         )
@@ -6955,13 +6955,13 @@ reasoning_effort = "low"
             r#"
             [model.oauth-only-model]
             model = "oauth-only-model"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
             supported_in_api = false
 
             [model.public-model]
             model = "public-model"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
             "#,
         )
@@ -6987,7 +6987,7 @@ reasoning_effort = "low"
             r#"
             [model.slow-model]
             model = "sage-4.5"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
             inference_idle_timeout_secs = 600
             "#,
@@ -7004,7 +7004,7 @@ reasoning_effort = "low"
             r#"
             [model.default-model]
             model = "sage-fast"
-            base_url = "https://api.deepseek.com/v1"
+            base_url = "https://api.x.ai/v1"
             context_window = 200000
             "#,
         )
@@ -7411,7 +7411,7 @@ reasoning_effort = "low"
         let sampling = resolve_sampling(model, None);
         assert_eq!(sampling.api_key.as_deref(), Some("xai-external-key"));
         assert_eq!(
-            sampling.base_url, "https://api.deepseek.com/v1",
+            sampling.base_url, "https://api.x.ai/v1",
             "external API key should route to api.x.ai via api_base_url"
         );
         unsafe { std::env::remove_var("XAI_API_KEY") };
@@ -7475,7 +7475,7 @@ reasoning_effort = "low"
             "https://proxy.api/v1",
             None,
             None,
-            Some("https://api.deepseek.com/v1"),
+            Some("https://api.x.ai/v1"),
         );
         let sampling = resolve_sampling(&model_no_key, Some("session-key"));
         assert_eq!(
@@ -7494,7 +7494,7 @@ reasoning_effort = "low"
             "env key should be used when no session and no model credentials"
         );
         assert_eq!(
-            sampling.base_url, "https://api.deepseek.com/v1",
+            sampling.base_url, "https://api.x.ai/v1",
             "env key should route to api_base_url"
         );
         unsafe { std::env::remove_var("XAI_API_KEY") };
@@ -7583,7 +7583,7 @@ reasoning_effort = "low"
                 "https://cli-chat-proxy.nexus.local/v1",
                 None,
                 None,
-                Some("https://api.deepseek.com/v1"),
+                Some("https://api.x.ai/v1"),
             ),
         );
         models.insert(
@@ -10448,7 +10448,7 @@ default = "sage-4.5"
             [models]
             default = "sage-4.5"
 
-            [model.nexus-build]
+            [model.sage-build]
             model = "sage-4.5"
             context_window = 500000
             base_url = "https://inference.example.com/v1"
@@ -10840,7 +10840,7 @@ default = "sage-4.5"
     fn resolve_model_list_config_reasoning_efforts_beats_remote() {
         let raw_config: toml::Value = toml::from_str(
             r#"
-            [model.nexus-x]
+            [model.sage-x]
             reasoning_efforts = ["low"]
             "#,
         )

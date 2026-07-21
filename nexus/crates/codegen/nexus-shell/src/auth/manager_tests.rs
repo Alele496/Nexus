@@ -85,17 +85,10 @@ fn has_usable_token_covers_memory_and_disk() {
 }
 
 #[test]
-fn auth_scope_uses_oauth2_when_present() {
+fn auth_scope_uses_api_key_in_simplified_auth() {
     let cfg = SageComConfig::default();
-    // Default config always has oauth2 set to the xAI defaults.
-    assert_eq!(
-        cfg.auth_scope(),
-        format!(
-            "{}::{}",
-            crate::auth::config::XAI_OAUTH2_ISSUER,
-            obfstr::obfstr!("b1a00492-073a-47ea-816f-4c329264a828"),
-        )
-    );
+    // Simplified auth: no OAuth2 → auth_scope returns "api_key" (API-key only).
+    assert_eq!(cfg.auth_scope(), "api_key");
 }
 
 #[test]

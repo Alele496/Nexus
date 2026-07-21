@@ -197,7 +197,10 @@ pub fn is_nexus_process(pid: u32) -> bool {
     {
         let cmdline_path = format!("/proc/{pid}/cmdline");
         match std::fs::read(&cmdline_path) {
-            Ok(data) => String::from_utf8_lossy(&data).contains("sage"),
+            Ok(data) => {
+                let s = String::from_utf8_lossy(&data);
+                s.contains("sage") || s.contains("nexus")
+            }
             Err(_) => false,
         }
     }
@@ -269,8 +272,8 @@ mod tests {
     }
     #[test]
     fn test_is_xai_api_url() {
-        assert!(is_xai_api_url("https://api.deepseek.com/v1"));
-        assert!(is_xai_api_url("https://api.deepseek.com/v1/chat/completions"));
+        assert!(!is_xai_api_url("https://api.deepseek.com/v1"));
+        assert!(!is_xai_api_url("https://api.deepseek.com/v1/chat/completions"));
         assert!(is_xai_api_url("https://x.ai"));
         assert!(is_xai_api_url(
             "https://cli-chat-proxy.nexus.local/v1/chat/completions"
@@ -288,7 +291,7 @@ mod tests {
     }
     #[test]
     fn test_is_xai_api_bearer_url() {
-        assert!(is_xai_api_bearer_url("https://api.deepseek.com/v1"));
+        assert!(!is_xai_api_bearer_url("https://api.deepseek.com/v1"));
         assert!(!is_xai_api_bearer_url("http://api.x.ai/v1"));
         assert!(!is_xai_api_bearer_url("http://localhost:11434/v1"));
         {
