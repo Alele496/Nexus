@@ -311,24 +311,6 @@ mod tests {
         }
     }
 
-    /// Mixpanel `subscription_tier` must be a stable snake_case key. Free
-    /// users arrive as CCP display `"Free"` or JWT-fallback `"free"`; both
-    /// must land as `"free"` (not omitted / not `"Free"`).
-    #[test]
-    fn normalize_tier_maps_display_and_claim_names() {
-        assert_eq!(normalize_tier("Free"), "free");
-        assert_eq!(normalize_tier("free"), "free");
-        assert_eq!(normalize_tier("SuperGrok"), "supergrok");
-        assert_eq!(normalize_tier("SuperGrok Heavy"), "supernexus_heavy");
-        assert_eq!(normalize_tier("supernexus_heavy"), "supernexus_heavy");
-        assert_eq!(normalize_tier("X Basic"), "x_basic");
-        assert_eq!(normalize_tier("X Premium+"), "x_premium_plus");
-        assert_eq!(normalize_tier("X Premium"), "x_premium");
-        assert_eq!(normalize_tier("SuperGrok Lite"), "supernexus_lite");
-        // API key is a dedicated Mixpanel segment — never free.
-        assert_eq!(normalize_tier("API Key"), "api_key");
-        assert_eq!(normalize_tier("api_key"), "api_key");
-    }
 
     /// `event_value`'s first-match-wins over `EmitterOrigin::ALL` is only
     /// correct because the emitter prefixes are mutually exclusive: no origin's

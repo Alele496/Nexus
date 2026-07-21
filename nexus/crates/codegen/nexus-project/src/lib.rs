@@ -563,7 +563,7 @@ mod tests {
         let files = list_config_files(tmp.path());
         assert!(files.contains(&"Cargo.toml".to_string()));
         assert!(files.contains(&"Makefile".to_string()));
-        assert!(!files.contains(&"package.json"));
+        assert!(!files.contains(&"package.json".to_string()));
     }
 
     #[test]
