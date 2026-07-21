@@ -955,7 +955,7 @@ mod tests {
         let paths = find_skill_paths(&nexus_dir);
         assert_eq!(paths.len(), 2);
 
-        let path_strs: Vec<String> = paths.iter().map(|p| p.display().to_string()).collect();
+        let path_strs: Vec<String> = paths.iter().map(|p| p.display().to_string().replace('\\', "/")).collect();
         assert!(path_strs.iter().any(|p| p.contains("parent/SKILL.md")));
         assert!(path_strs.iter().any(|p| p.contains("child/SKILL.md")));
     }
@@ -2683,6 +2683,10 @@ mod tests {
             .find(|s| s.name == "zz-copyfix-japandi2")
             .unwrap();
         assert_eq!(rekeyed.display_name.as_deref(), Some("zz-copyfix-japandi"));
-        assert!(rekeyed.path.ends_with("zz-copyfix-japandi2/SKILL.md"));
+        assert!(
+            rekeyed.path.replace('\\', "/").ends_with("zz-copyfix-japandi2/SKILL.md"),
+            "path should end with zz-copyfix-japandi2/SKILL.md, got: {}",
+            rekeyed.path
+        );
     }
 }

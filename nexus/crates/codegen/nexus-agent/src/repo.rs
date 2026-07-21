@@ -85,11 +85,27 @@ impl RepoDirChain {
 /// from `sage-workspace`, which depends on THIS crate) to keep the dep edge
 /// one-way; backs the home-is-dotfiles guard in [`RepoDirChain::resolve`].
 fn is_home_dir(path: &Path) -> bool {
-    let Some(home) = dirs::home_dir() else {
+    let Some(home) = home_dir_uncached() else {
         return false;
     };
     let canon = |p: &Path| dunce::canonicalize(p).unwrap_or_else(|_| p.to_path_buf());
     canon(path) == canon(&home)
+}
+
+/// Read the user's home directory from environment variables without caching.
+///
+/// `dirs::home_dir()` caches the value in a `OnceLock`, so tests that set
+/// `HOME` / `USERPROFILE` after the first call would get a stale result.
+/// This function reads the env vars directly, matching `dirs`'s precedence.
+fn home_dir_uncached() -> Option<PathBuf> {
+    #[cfg(windows)]
+    if let Some(home) = std::env::var_os("USERPROFILE").filter(|v| !v.is_empty()) {
+        return Some(PathBuf::from(home));
+    }
+    if let Some(home) = std::env::var_os("HOME").filter(|v| !v.is_empty()) {
+        return Some(PathBuf::from(home));
+    }
+    dirs::home_dir()
 }
 
 /// Existing `<dir>/<subdir>` directories under each dir of a precomputed
@@ -192,6 +208,9 @@ mod tests {
         let home = dunce::canonicalize(tmp.path()).unwrap();
         git2::Repository::init(&home).unwrap();
         let _home_guard = EnvVarGuard::set("HOME", &home);
+        // dirs::home_dir() on Windows uses USERPROFILE, not HOME.
+        #[cfg(windows)]
+        let _userprofile_guard = EnvVarGuard::set("USERPROFILE", &home);
         let sub = home.join("proj");
         std::fs::create_dir_all(&sub).unwrap();
 

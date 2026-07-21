@@ -101,6 +101,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "requires sh shell")]
     fn sets_environment_variables() {
         let dir = tempfile::tempdir().unwrap();
         let out = dir.path().join("env.txt");
@@ -134,6 +135,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "requires sh shell")]
     fn omits_session_id_when_none() {
         let dir = tempfile::tempdir().unwrap();
         let out = dir.path().join("env.txt");
@@ -194,6 +196,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "requires sh shell")]
     fn successful_command_completes_without_error() {
         let dir = tempfile::tempdir().unwrap();
         let marker = dir.path().join("done");
@@ -252,6 +255,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "requires sh shell")]
     fn run_hook_passes_correct_env_via_thread() {
         let dir = tempfile::tempdir().unwrap();
         let out = dir.path().join("env.txt");

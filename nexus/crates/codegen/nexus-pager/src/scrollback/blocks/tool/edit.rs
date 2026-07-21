@@ -1680,6 +1680,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn header_link_target_is_absolute_file_for_all_surfaces() {
         let abs = "/Users/me/project/src/foo.rs";
         let cwd = Path::new("/Users/me/project");

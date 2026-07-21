@@ -2608,6 +2608,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn markdown_wrapped_session_media_path_fully_linkified() {
         // Regression: imagine-tool prose whose long session path soft-wraps
         // across rows. The whole path must be clickable (one overlay region
@@ -2707,6 +2708,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn collapsed_block_header_file_path_is_scanned() {
         // File paths in the command header line should be linkified even
         // when the block is collapsed.
@@ -2837,6 +2839,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn collapse_header_entry_does_not_leak_links_but_visible_group_entries_do() {
         // Smallest shape the truncation fold can produce for an expanded
         // group: 3 entries, header count = group_len - 1 = 2.
@@ -3531,6 +3534,7 @@ mod tests {
     /// Collapsed Edit header: after bullet prepend the path is span 2, and the
     /// OSC8 overlay must cover path cols only (not the verb or bullet).
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn tool_header_link_target_overlay_covers_path_after_bullet() {
         use crate::appearance::ToolBullet;
         use crate::scrollback::types::{BlockContext, selectable_cols};
@@ -3652,6 +3656,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn official_vscode_remote_delegates_scanned_absolute_path() {
         let path = "/worktree/src/main.rs";
         let entry = make_markdown_entry(path);
@@ -3677,6 +3682,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn official_vscode_remote_tool_headers_delegate_only_self_resolving_paint() {
         let cwd = std::path::PathBuf::from("/worktree");
         let target = "/worktree/src/nested/main.rs";
@@ -3782,6 +3788,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn basename_headers_stay_nexus_owned_for_duplicate_and_outside_targets() {
         let cwd = std::path::PathBuf::from("/worktree");
         let terminal = official_vscode_remote_context();
@@ -3831,6 +3838,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn long_read_header_link_is_clipped_to_offset_content_area() {
         let path = "/outside/a/very/long/path/that/is/clipped/main.rs";
         let mut entry = ScrollbackEntry::new(RenderBlock::read(path, None));
@@ -3855,6 +3863,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn explicit_tool_link_clips_before_u16_conversion() {
         let path = format!("/outside/{}.rs", "x".repeat(70_000));
         let mut entry = ScrollbackEntry::new(RenderBlock::read(path, None));

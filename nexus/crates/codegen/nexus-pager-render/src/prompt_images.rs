@@ -938,7 +938,18 @@ fn token_to_path(token: &str) -> Option<PathBuf> {
         if url.scheme() != "file" {
             return None;
         }
-        return url.to_file_path().ok();
+        // On Windows `to_file_path()` fails for Unix-style absolute paths
+        // (e.g. `file:///definitely/missing/...` has no drive letter).
+        // Fall back to the path component directly so that `file://` URLs
+        // from clipboard drops always produce a usable path.
+        if let Ok(path) = url.to_file_path() {
+            return Some(path);
+        }
+        let path = std::path::PathBuf::from(url.path());
+        if path.as_os_str().is_empty() {
+            return None;
+        }
+        return Some(path);
     }
 
     let unescaped = shell_unescape(unquoted);

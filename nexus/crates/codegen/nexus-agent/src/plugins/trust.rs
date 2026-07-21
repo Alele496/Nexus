@@ -167,7 +167,7 @@ impl TrustStore {
     /// is under the user's home directory.  Otherwise it requires explicit
     /// trust via `~/.nexus/trusted-plugins`.
     pub fn is_config_path_auto_trusted(plugin_root: &Path) -> bool {
-        let Some(home) = dirs::home_dir() else {
+        let Some(home) = home_dir_uncached() else {
             return false;
         };
         match dunce::canonicalize(plugin_root) {
@@ -206,6 +206,22 @@ impl TrustStore {
             })
             .collect()
     }
+}
+
+/// Read the user's home directory from environment variables without caching.
+///
+/// `dirs::home_dir()` caches the value in a `OnceLock`, so tests that set
+/// `HOME` / `USERPROFILE` after the first call would get a stale result.
+/// This function reads the env vars directly, matching `dirs`'s precedence.
+fn home_dir_uncached() -> Option<PathBuf> {
+    #[cfg(windows)]
+    if let Some(home) = std::env::var_os("USERPROFILE").filter(|v| !v.is_empty()) {
+        return Some(PathBuf::from(home));
+    }
+    if let Some(home) = std::env::var_os("HOME").filter(|v| !v.is_empty()) {
+        return Some(PathBuf::from(home));
+    }
+    dirs::home_dir()
 }
 
 // ── Errors ────────────────────────────────────────────────────────────

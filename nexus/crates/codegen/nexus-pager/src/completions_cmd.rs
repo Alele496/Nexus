@@ -10,21 +10,17 @@ use crate::app::PagerArgs;
 
 /// Generate and print the completion script for the given shell.
 pub fn run(shell: Shell) {
-    // Ensure the script always uses the public "sage" name (matches historical
-    // behavior and what the installers + docs expect).
-    let mut cmd = PagerArgs::command().name("sage");
+    let cli_name = PagerArgs::command().get_name().to_string();
+    let mut cmd = PagerArgs::command();
     if shell != Shell::Zsh {
-        generate(shell, &mut cmd, "sage", &mut std::io::stdout());
+        generate(shell, &mut cmd, &cli_name, &mut std::io::stdout());
         return;
     }
     // zsh needs post-processing (see fix_zsh_root_prompt_positional).
     let mut buf = Vec::new();
-    generate(shell, &mut cmd, "sage", &mut buf);
+    generate(shell, &mut cmd, &cli_name, &mut buf);
     match String::from_utf8(buf) {
-        Ok(script) => print!("{}", fix_zsh_root_prompt_positional(&script)),
-        // clap_complete output is generated from Rust strings, so this arm is
-        // unreachable in practice — but the installers run this command, so
-        // emit the unmodified script rather than panic.
+        Ok(script) => print!("{}", fix_zsh_root_prompt_positional(&script, &cli_name)),
         Err(e) => {
             use std::io::Write as _;
             let _ = std::io::stdout().write_all(e.as_bytes());
@@ -48,7 +44,7 @@ pub fn run(shell: Shell) {
 /// blocks already use `$line[1]` and are untouched; the three rewritten
 /// patterns are unique to the root block (pinned by the test below — delete
 /// this whole workaround once upstream fixes the generator).
-fn fix_zsh_root_prompt_positional(script: &str) -> String {
+fn fix_zsh_root_prompt_positional(script: &str, cli_name: &str) -> String {
     let mut out = String::with_capacity(script.len());
     script
         .lines()
@@ -58,15 +54,13 @@ fn fix_zsh_root_prompt_positional(script: &str) -> String {
             out.push_str(line);
             out.push('\n');
         });
+    let word_assign_from = format!(r#"words=($line[2] "${{words[@]}}")"#);
+    let word_assign_to = format!(r#"words=($line[1] "${{words[@]}}")"#);
+    let curcontext_from = format!(r#"curcontext="${{curcontext%:*:*}}:{cli_name}-command-$line[2]:""#);
+    let curcontext_to = format!(r#"curcontext="${{curcontext%:*:*}}:{cli_name}-command-$line[1]:""#);
     for (from, to) in [
-        (
-            r#"words=($line[2] "${words[@]}")"#,
-            r#"words=($line[1] "${words[@]}")"#,
-        ),
-        (
-            r#"curcontext="${curcontext%:*:*}:sage-command-$line[2]:""#,
-            r#"curcontext="${curcontext%:*:*}:sage-command-$line[1]:""#,
-        ),
+        (word_assign_from.as_str(), word_assign_to.as_str()),
+        (curcontext_from.as_str(), curcontext_to.as_str()),
         (r#"case $line[2] in"#, r#"case $line[1] in"#),
     ] {
         out = out.replacen(from, to, 1);
@@ -80,9 +74,10 @@ mod tests {
 
     /// Generate the zsh completion script exactly like `run` does.
     fn zsh_script() -> String {
-        let mut cmd = PagerArgs::command().name("sage");
+        let cli_name = PagerArgs::command().get_name().to_string();
+        let mut cmd = PagerArgs::command();
         let mut buf = Vec::new();
-        generate(Shell::Zsh, &mut cmd, "sage", &mut buf);
+        generate(Shell::Zsh, &mut cmd, &cli_name, &mut buf);
         String::from_utf8(buf).expect("completion script is UTF-8")
     }
 
@@ -102,7 +97,7 @@ mod tests {
             "raw root dispatch on $line[2]"
         );
 
-        let fixed = fix_zsh_root_prompt_positional(&raw);
+        let fixed = fix_zsh_root_prompt_positional(&raw, "nexus");
         assert!(
             !fixed.contains("::prompt"),
             "prompt positional must not appear in the emitted zsh script"

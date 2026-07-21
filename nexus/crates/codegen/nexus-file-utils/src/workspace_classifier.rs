@@ -93,6 +93,15 @@ fn is_platform_system_dir(cwd: &Path) -> bool {
         }
     }
 
+    // Unix-style temp paths are commonly used in tests and by MSYS2/Git Bash.
+    if cwd == Path::new("/tmp")
+        || cwd.starts_with("/tmp/")
+        || cwd == Path::new("/var/tmp")
+        || cwd.starts_with("/var/tmp/")
+    {
+        return true;
+    }
+
     let path_lower = cwd.to_string_lossy().to_lowercase();
     if path_lower.contains("\\windows\\")
         || path_lower.ends_with("\\windows")

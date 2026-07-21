@@ -73,12 +73,19 @@ use std::sync::Arc;
 use std::time::Instant;
 fn test_app() -> AppView {
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
+    let test_model = acp::ModelId::new(std::sync::Arc::from("test-model"));
+    let mut models = ModelState::default();
+    models.available.insert(
+        test_model.clone(),
+        acp::ModelInfo::new(test_model.clone(), "Test Model".to_string()),
+    );
+    models.current = Some(test_model);
     AppView {
         active_view: ActiveView::Welcome,
         auth_return_view: None,
         agents: IndexMap::new(),
         next_agent_id: 0,
-        models: ModelState::default(),
+        models,
         registry: crate::actions::ActionRegistry::defaults(),
         settings_registry: std::sync::Arc::new(crate::settings::SettingsRegistry::defaults()),
         current_ui: nexus_shell::agent::config::UiConfig::default(),
@@ -315,6 +322,13 @@ pub(super) fn test_app_with_agent() -> AppView {
     app.agents.insert(id, agent);
     app.next_agent_id = 1;
     switch_to_agent(&mut app, id, SwitchCause::New);
+    // Seed a default model so worktree/session dispatch can proceed.
+    let test_model = acp::ModelId::new(std::sync::Arc::from("test-model"));
+    app.models.available.insert(
+        test_model.clone(),
+        acp::ModelInfo::new(test_model.clone(), "Test Model".to_string()),
+    );
+    app.models.current = Some(test_model);
     app
 }
 /// Give a test agent a generated title so the dashboard renders it.

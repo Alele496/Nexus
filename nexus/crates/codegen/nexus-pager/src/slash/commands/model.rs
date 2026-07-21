@@ -465,15 +465,15 @@ mod tests {
         }
     }
 
-    /// Case-insensitive matching against the catalog: `/model sage 4.5`
-    /// resolves to the same `ModelId` as `/model Sage 4.5`.
+    /// Case-insensitive matching against the catalog: `/model nexus 4.5`
+    /// resolves to the same `ModelId` as `/model NEXUS 4.5`.
     #[test]
     fn run_set_default_model_resolves_case_insensitively() {
         let mut state = ModelState::default();
-        let (id, info) = plain_model("sage-4.5", "Nexus 4.5");
+        let (id, info) = plain_model("nexus-4.5", "Nexus 4.5");
         state.available.insert(id.clone(), info);
         let mut ctx = dummy_exec_ctx(&state);
-        let result = ModelCommand.run(&mut ctx, "sage 4.5");
+        let result = ModelCommand.run(&mut ctx, "nexus 4.5");
         match result {
             CommandResult::Action(Action::SetDefaultModel(resolved_id)) => {
                 assert_eq!(resolved_id, id);

@@ -235,6 +235,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "Url::from_file_path fails for Unix paths on Windows")]
     fn file_target_provenance_survives_overlay_to_visible_map() {
         let path = Arc::<std::path::Path>::from(std::path::Path::new(
             "/tmp/non-display-target/file name.rs",

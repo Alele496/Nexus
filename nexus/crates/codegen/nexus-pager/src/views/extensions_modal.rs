@@ -1453,14 +1453,18 @@ pub fn tab_complete_path(partial: &str) -> Option<String> {
         .map(|e| {
             let name = e.file_name().to_string_lossy().to_string();
             let full = parent.join(&name);
-            let parent_str = if expanded.contains('/') {
-                expanded
-                    .rsplit_once('/')
-                    .map(|(p, _)| format!("{p}/"))
-                    .unwrap_or_default()
+            // Pick the separator that appears in the user's input so the
+            // completed path uses the same style. On Windows both `\` and
+            // `/` are common; the `contains` check must handle both.
+            let sep = if expanded.contains('/') {
+                '/'
             } else {
-                String::new()
+                '\\'
             };
+            let parent_str = expanded
+                .rsplit_once(sep)
+                .map(|(p, _)| format!("{p}{sep}"))
+                .unwrap_or_default();
             if full.is_dir() {
                 format!("{parent_str}{name}/")
             } else {

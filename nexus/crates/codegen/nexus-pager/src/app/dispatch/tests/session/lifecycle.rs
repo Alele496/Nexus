@@ -591,6 +591,9 @@ fn session_failed_clears_flag_no_fetches() {
     {
         let a = app.agents.get_mut(&id).unwrap();
         a.session.session_id = None;
+        // Set forked_from so the dispatch doesn't treat this agent as an
+        // orphan zombie (no session_id, no forked_from) and remove it.
+        a.session.forked_from = Some(AgentId(999));
         a.pending_extensions_fetch = true;
         a.extensions_modal = Some(ExtensionsModalState::new(ExtensionsTab::Hooks));
     }

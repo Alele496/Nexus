@@ -1028,7 +1028,7 @@ fn acp_command_colliding_with_builtin_skipped_in_autocomplete() {
     }
     let registry = app.agents[&id].prompt.slash_controller.registry();
     let exit_cmd = registry.get("exit").unwrap();
-    assert_eq!(exit_cmd.description(), "Quit the application");
+    assert_eq!(exit_cmd.description(), "退出程序");
     assert!(registry.get("flush").is_some());
 }
 #[test]

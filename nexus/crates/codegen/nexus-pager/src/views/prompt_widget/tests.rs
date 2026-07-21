@@ -1687,21 +1687,21 @@
 
         let mut pw = PromptWidget::new();
         let mut models = crate::acp::model_state::ModelState::default();
-        let model_id = agent_client_protocol::ModelId::new(Arc::from("sage-4.5"));
+        let model_id = agent_client_protocol::ModelId::new(Arc::from("nexus-4.5"));
         models.available.insert(
             model_id.clone(),
             agent_client_protocol::ModelInfo::new(model_id, "Nexus 4.5".to_string()),
         );
 
-        // Type "/model gr" and position cursor at end (in args).
-        pw.textarea.insert_str("/model gr");
+        // Type "/model nex" and position cursor at end (in args).
+        pw.textarea.insert_str("/model nex");
         pw.refresh_slash(&models);
 
         let snap = pw.slash_snapshot();
         assert!(snap.open, "arg suggestions should be open");
         assert!(snap.args_range.is_some());
 
-        // Accept arg completion → should replace "gr" with "Nexus 4.5".
+        // Accept arg completion → should replace "nex" with "Nexus 4.5".
         pw.accept_slash_completion(&models);
         let text = pw.textarea.text().to_string();
         assert!(

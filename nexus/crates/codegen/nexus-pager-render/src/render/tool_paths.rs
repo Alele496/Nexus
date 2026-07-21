@@ -68,7 +68,8 @@ fn non_empty_rel(rel: &Path) -> Option<String> {
     if value.is_empty() {
         None
     } else {
-        Some(value.into_owned())
+        // Normalize Windows backslashes for cross-platform display consistency.
+        Some(value.into_owned().replace('\\', "/"))
     }
 }
 
@@ -110,14 +111,14 @@ fn path_for_fullscreen_header(path: &str, cwd: Option<&Path>) -> String {
     resolve_tool_path(path, cwd)
         .display_path
         .to_string_lossy()
-        .into_owned()
+        .replace('\\', "/")
 }
 
 fn path_for_expanded_header(path: &str, cwd: Option<&Path>) -> String {
     let resolved = resolve_tool_path(path, cwd);
     resolved
         .relative_to_cwd
-        .unwrap_or_else(|| resolved.display_path.to_string_lossy().into_owned())
+        .unwrap_or_else(|| resolved.display_path.to_string_lossy().replace('\\', "/"))
 }
 
 /// Shorten a file path to fit within `budget` display columns using fish-style

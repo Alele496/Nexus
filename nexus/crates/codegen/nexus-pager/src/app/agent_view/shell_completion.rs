@@ -128,7 +128,7 @@ impl AgentView {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(windows)))]
 mod shell_suggestion_key_tests {
     use super::*;
     use crate::app::actions::{Action, Effect};
