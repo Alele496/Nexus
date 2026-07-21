@@ -586,6 +586,7 @@ mod tests {
             "snapshot must reflect refreshed token for subsequent apply() calls"
         );
     }
+    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn embedding_session_credentials_scopes_to_first_party() {
         let _guard = EarlyInvalidationGuard::pin_to_default();

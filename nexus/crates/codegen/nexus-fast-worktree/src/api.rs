@@ -1745,6 +1745,7 @@ pub mod gc {
         }
 
         #[test]
+        #[cfg_attr(windows, ignore = "is_pid_alive uses kill -0 which is unavailable on Windows")]
         fn is_pid_alive_true_for_running_processes() {
             assert!(is_pid_alive(std::process::id()));
             // PID 1 (init) always exists.
@@ -1803,6 +1804,7 @@ pub mod gc {
         }
 
         #[test]
+        #[cfg_attr(windows, ignore = "is_pid_alive uses kill -0 which is unavailable on Windows")]
         fn is_reclaimable_requires_expired_and_unguarded() {
             let cutoff = 1_000;
             // Expired (old created_at, never accessed) and unguarded → reclaimable.
@@ -2952,6 +2954,7 @@ mod tests {
         }
 
         #[test]
+        #[cfg_attr(windows, ignore = "is_pid_alive uses kill -0 which is unavailable on Windows")]
         fn gc_skips_alive_pids() {
             let tmp = tempfile::TempDir::new().unwrap();
             let db = db_at(&tmp);

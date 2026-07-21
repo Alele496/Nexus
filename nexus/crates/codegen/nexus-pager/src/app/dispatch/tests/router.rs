@@ -100,6 +100,7 @@ fn quit_returns_quit_effect() {
     assert!(matches!(effects.as_slice(), [Effect::Quit]));
 }
 #[test]
+#[cfg_attr(windows, ignore = "uses Unix paths")]
 fn resume_foreign_session_consumes_hint_and_uses_each_tools_prompt() {
     use nexus_workspace::foreign_sessions::ForeignSessionTool;
     for (tool, prompt) in [

@@ -6756,6 +6756,7 @@ pub(crate) mod tests {
         );
     }
     #[test]
+    #[cfg_attr(windows, ignore = "uses Unix path /tmp for CWD canonicalization")]
     fn welcome_ctrl_u_update_keeps_priority_over_foreign_resume() {
         let mut app = test_app();
         app.foreign_session_compat =

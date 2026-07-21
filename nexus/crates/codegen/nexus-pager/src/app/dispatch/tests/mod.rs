@@ -72,6 +72,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 fn test_app() -> AppView {
+    // Force non-legacy glyphs in tests so Unicode checkmarks/warnings
+    // (✓, ⚠) don't get ASCII fallback (√, !) on Windows CI where the
+    // terminal brand is Unknown and the legacy-console probe fires.
+    static GLYPH_INIT: std::sync::Once = std::sync::Once::new();
+    GLYPH_INIT.call_once(|| {
+        std::env::set_var("NEXUS_FORCE_LEGACY_CONSOLE", "0");
+    });
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
     let test_model = acp::ModelId::new(std::sync::Arc::from("test-model"));
     let mut models = ModelState::default();

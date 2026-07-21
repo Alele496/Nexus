@@ -800,6 +800,7 @@ mod tests {
 
     /// Regression: hook commands still execute successfully.
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn test_hook_basic_execution() {
         let spec = make_shell_spec("exit 0");
         let envelope = make_envelope();
@@ -816,6 +817,7 @@ mod tests {
 
     /// Regression: blocking hooks still parse JSON decisions correctly.
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn test_hook_blocking_allow() {
         let spec = make_shell_spec(r#"echo '{"decision":"allow"}'"#);
         let envelope = make_envelope();
@@ -866,6 +868,7 @@ mod tests {
     /// the var is unset (and the dispatcher fail-opens, so the tool call
     /// itself is not blocked).
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn test_env_var_interpolation_runs_via_shell() {
         let tmp = tempfile::tempdir().unwrap();
         let script = tmp.path().join("hook.sh");
@@ -919,6 +922,7 @@ mod tests {
     /// resolves correctly; otherwise such hooks fail to find the
     /// command.
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn test_claude_project_dir_is_exported() {
         let tmp = tempfile::tempdir().unwrap();
         let script = tmp.path().join("hook.sh");
@@ -1226,6 +1230,7 @@ mod tests {
     /// (e.g. `${VAR:-/some/default}`) must NOT be refused -- the user has
     /// expressed intent for what should happen when the var is unset.
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn test_parameter_expansion_default_is_not_refused() {
         let tmp = tempfile::tempdir().unwrap();
         let script = tmp.path().join("default.sh");

@@ -473,6 +473,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn single_deny_hook() {
         let spec = make_command_spec(
             "deny-hook",
@@ -526,6 +527,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn matcher_fires_on_matching_tool() {
         // Deny hook with matcher for "run_terminal_cmd" should fire.
         let spec = make_command_spec(
@@ -544,6 +546,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn first_deny_wins_short_circuits() {
         // Two hooks: first denies, second allows. First deny should win.
         let deny_spec = make_command_spec(
@@ -575,6 +578,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn allow_then_deny_denies() {
         // First hook allows, second hook denies. The deny should win.
         // This is the key "stricter deny filter takes precedence" scenario.
@@ -603,6 +607,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn allow_broad_deny_specific_tool_match() {
         // Broad allow hook (no matcher), specific deny hook for "run_terminal_cmd".
         // The deny should fire for matching tool even though allow came first.
@@ -663,6 +668,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn fail_open_then_deny_lets_deny_win() {
         // First hook crashes (now fail-open), second denies. Under
         // fail-open the chain continues past the crash and the second
@@ -729,6 +735,7 @@ mod tests {
     // ── fail-open regression tests ───────────────────────────────
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn fail_open_records_error_in_run_results() {
         // A hook that returns malformed output and exits non-zero now
         // results in Allow (fail-open) but the failure detail is still
@@ -791,6 +798,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn non_blocking_success() {
         let mut spec = make_command_spec("starter", None, true, "echo ok");
         spec.event = HookEventName::SessionStart;
@@ -808,6 +816,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "requires Unix shell")]
     async fn non_blocking_failure_does_not_stop_chain() {
         let mut spec1 = make_command_spec("crasher", None, true, "exit 1");
         spec1.event = HookEventName::SessionStart;
