@@ -50,6 +50,15 @@ jobs:
           mkdir -p C:/tmp
           echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
 
+      - name: Install ripgrep
+        shell: bash
+        run: |
+          mkdir -p C:/tmp/rg
+          curl -fsSL -o C:/tmp/rg/ripgrep.zip "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-pc-windows-msvc.zip"
+          unzip -o C:/tmp/rg/ripgrep.zip -d C:/tmp/rg
+          cp C:/tmp/rg/ripgrep-*/rg.exe C:/tmp/rg/
+          echo "C:/tmp/rg" >> $GITHUB_PATH
+
       - name: Cargo check
         run: cargo check --workspace
 
