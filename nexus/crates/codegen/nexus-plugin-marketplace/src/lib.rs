@@ -23,10 +23,10 @@ pub use error::MarketplaceError;
 pub use scanner::scan_marketplace;
 pub use types::*;
 
-/// Display name of the official xAI marketplace source.
-pub const OFFICIAL_SOURCE_NAME: &str = "xAI Official";
+/// Display name of the official marketplace source.
+pub const OFFICIAL_SOURCE_NAME: &str = "Nexus Official";
 
-/// Git URL of the official xAI marketplace source. Auto-registered on first run.
+/// Git URL of the official marketplace source. Auto-registered on first run.
 pub const OFFICIAL_SOURCE_GIT_URL: &str = "https://github.com/sage-org/plugin-marketplace.git";
 
 /// Whether `url` is the official xAI marketplace source, normalizing case, a
@@ -93,7 +93,7 @@ mod tests {
             "https://github.com/anthropics/claude-plugins-official.git"
         ));
         assert!(!is_official_source_url(
-            "https://github.com/xai-org/some-other-repo.git"
+            "https://github.com/example-org/some-other-repo.git"
         ));
         assert!(!is_official_source_url(""));
     }
@@ -101,7 +101,7 @@ mod tests {
     #[test]
     fn is_official_matches_noncanonical_forms() {
         assert!(is_official_source_url(
-            "https://GitHub.com/XAI-org/Plugin-Marketplace"
+            "https://GitHub.com/Sage-Org/Plugin-Marketplace"
         ));
         assert!(is_official_source_url(
             "https://github.com/sage-org/plugin-marketplace/"
@@ -116,7 +116,7 @@ mod tests {
             "https://www.github.com/sage-org/plugin-marketplace.git"
         ));
         assert!(is_official_source_url(
-            "git@github.com:XAI-org/plugin-marketplace.git"
+            "git@github.com:Sage-Org/plugin-marketplace.git"
         ));
     }
 }

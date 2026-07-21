@@ -1,0 +1,3 @@
+# Force LF line endings for template files so the XOR-encrypted byte
+# constants in prompt_encrypted.rs match on all platforms (Linux + Windows).
+crates/codegen/nexus-agent/templates/*.md text eol=lf

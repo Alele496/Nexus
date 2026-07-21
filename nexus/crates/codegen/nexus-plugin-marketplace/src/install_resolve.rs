@@ -323,7 +323,7 @@ mod tests {
     fn parse_rejects_fragment() {
         assert_eq!(parse_marketplace_ref("sentry#sub"), None);
         assert_eq!(
-            parse_marketplace_ref("sentry@xai-org/marketplace#sub"),
+            parse_marketplace_ref("sentry@example-org/marketplace#sub"),
             None
         );
     }
@@ -377,7 +377,7 @@ mod tests {
             "https://github.com/sage-org/plugin-marketplace.git",
             "git@github.com:sage-org/plugin-marketplace.git",
             "ssh://git@github.com/sage-org/plugin-marketplace",
-            "https://GitHub.com/XAI-org/Plugin-Marketplace",
+            "https://GitHub.com/Sage-Org/Plugin-Marketplace",
         ] {
             let sources = [git_source("src", url)];
             assert_eq!(
