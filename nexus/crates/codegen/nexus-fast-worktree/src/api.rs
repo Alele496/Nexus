@@ -1544,7 +1544,7 @@ pub mod gc {
             // STILL_ACTIVE = 259
             unsafe {
                 use std::ffi::c_void;
-                extern "system" {
+                unsafe extern "system" {
                     fn OpenProcess(
                         dwDesiredAccess: u32,
                         bInheritHandle: i32,

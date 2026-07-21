@@ -77,7 +77,7 @@ fn test_app() -> AppView {
     // terminal brand is Unknown and the legacy-console probe fires.
     static GLYPH_INIT: std::sync::Once = std::sync::Once::new();
     GLYPH_INIT.call_once(|| {
-        std::env::set_var("NEXUS_FORCE_LEGACY_CONSOLE", "0");
+        unsafe { std::env::set_var("NEXUS_FORCE_LEGACY_CONSOLE", "0") };
     });
     let (tx, _rx) = tokio::sync::mpsc::unbounded_channel();
     let test_model = acp::ModelId::new(std::sync::Arc::from("test-model"));
