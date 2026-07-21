@@ -794,11 +794,11 @@ mod tests {
             "interactive prompt must keep the <user_guide> block"
         );
         assert!(
-            prompt.contains("interactive CLI tool"),
+            prompt.contains("交互式CLI工具"),
             "interactive prompt must declare interactive mode in the header"
         );
         assert!(
-            !prompt.contains("autonomous agent"),
+            !prompt.contains("自主完成软件工程任务的智能体"),
             "interactive prompt must NOT advertise non-interactive (autonomous) mode"
         );
     }
@@ -817,11 +817,11 @@ mod tests {
             "non-interactive prompt must suppress the <user_guide> block"
         );
         assert!(
-            prompt.contains("autonomous agent"),
+            prompt.contains("自主完成软件工程任务的智能体"),
             "non-interactive prompt must declare autonomous mode in the header"
         );
         assert!(
-            !prompt.contains("interactive CLI tool"),
+            !prompt.contains("交互式CLI工具"),
             "non-interactive prompt must NOT claim to be the interactive CLI"
         );
         // Sanity: rest of the template still renders.

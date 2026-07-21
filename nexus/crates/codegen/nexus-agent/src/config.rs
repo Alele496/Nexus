@@ -225,6 +225,11 @@ fn native_toolset_presets() -> Vec<(&'static str, ToolServerConfig)> {
         ("explore", explore_toolset()),
         ("plan", plan_toolset()),
         ("sage-computer", nexus_computer_toolset()),
+        // Backward-compatible nexus_* aliases
+        ("nexus-build", workspace_nexus_build_toolset()),
+        ("nexus-build-concise", nexus_build_concise_toolset()),
+        ("nexus-build-plan", nexus_build_plan_toolset()),
+        ("nexus-computer", nexus_computer_toolset()),
     ]
 }
 /// Every named **public** toolset preset (native + externally registered public
