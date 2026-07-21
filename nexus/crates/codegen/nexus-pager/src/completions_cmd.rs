@@ -112,12 +112,12 @@ mod tests {
             "root dispatch must be shifted to $line[1]"
         );
         assert!(
-            fixed.contains(r#"curcontext="${curcontext%:*:*}:sage-command-$line[1]:""#),
+            fixed.contains(r#"curcontext="${curcontext%:*:*}:nexus-command-$line[1]:""#),
             "root dispatch context must use $line[1]"
         );
         // Subcommand dispatch blocks (already on $line[1]) must survive.
         assert!(
-            fixed.contains("sage-worktree-command-$line[1]"),
+            fixed.contains("nexus-worktree-command-$line[1]"),
             "nested subcommand dispatch must be untouched"
         );
         // The subcommand list itself must still be offered at the root.
