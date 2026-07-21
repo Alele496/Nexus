@@ -1826,9 +1826,9 @@ mod tests {
         assert!(!args.no_alt_screen);
     }
     #[test]
-    fn cli_command_name_is_grok() {
+    fn cli_command_name_is_nexus() {
         use clap::CommandFactory;
-        assert_eq!(PagerArgs::command().get_name(), "sage");
+        assert_eq!(PagerArgs::command().get_name(), "nexus");
     }
     #[test]
     fn cli_help_output_header() {
@@ -1840,7 +1840,7 @@ mod tests {
             vec![
                 "Nexus TUI",
                 "",
-                "Usage: sage [OPTIONS] [PROMPT] [COMMAND]",
+                "Usage: nexus [OPTIONS] [PROMPT] [COMMAND]",
                 "",
                 "Arguments:",
             ]

@@ -1409,11 +1409,11 @@ mod tests {
         );
         assert!(!scoped.is_empty(), "trusted endpoint keeps the credential");
         assert!(
-            scoped.approved_for("https://API.x.ai/v1"),
+            scoped.approved_for("https://API.DEEPSEEK.com/v1"),
             "host casing normalizes"
         );
         assert!(
-            !scoped.approved_for("https://api.x.ai/v2"),
+            !scoped.approved_for("https://api.deepseek.com/v2"),
             "different path rejected"
         );
         assert!(

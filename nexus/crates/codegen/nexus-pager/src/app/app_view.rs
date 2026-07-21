@@ -7039,11 +7039,14 @@ pub(crate) mod tests {
         ));
     }
     #[test]
-    fn welcome_ctrl_w_noop_outside_git_repo() {
+    fn welcome_ctrl_w_outside_git_starts_session() {
         let mut app = test_app();
         app.cwd_has_git_ancestor = false;
         let outcome = app.handle_input(&key_event(KeyCode::Char('w'), KeyModifiers::CONTROL));
-        assert!(matches!(outcome, InputOutcome::Unchanged));
+        assert!(matches!(
+            outcome,
+            InputOutcome::Action(Action::NewSession)
+        ));
     }
     #[test]
     fn welcome_trust_decline_keys_quit() {
@@ -7107,15 +7110,15 @@ pub(crate) mod tests {
     #[test]
     fn menu_action_indices_without_changelog() {
         assert!(matches!(
-            dispatch_menu_action(0, false, false, None),
+            dispatch_menu_action(1, false, false, None),
             InputOutcome::Action(Action::OpenNewWorktreeDialog)
         ));
         assert!(matches!(
-            dispatch_menu_action(1, false, false, None),
+            dispatch_menu_action(2, false, false, None),
             InputOutcome::Action(Action::FetchSessionList)
         ));
         assert!(matches!(
-            dispatch_menu_action(2, false, false, None),
+            dispatch_menu_action(3, false, false, None),
             InputOutcome::Action(Action::Quit)
         ));
     }
@@ -7123,22 +7126,22 @@ pub(crate) mod tests {
     fn menu_action_changelog_sits_above_quit() {
         let md = Some("# notes");
         assert!(matches!(
-            dispatch_menu_action(1, false, true, md),
+            dispatch_menu_action(2, false, true, md),
             InputOutcome::Action(Action::FetchSessionList)
         ));
         assert!(matches!(
-            dispatch_menu_action(2, false, true, md),
+            dispatch_menu_action(3, false, true, md),
             InputOutcome::Action(Action::ShowReleaseNotes { .. })
         ));
         assert!(matches!(
-            dispatch_menu_action(3, false, true, md),
+            dispatch_menu_action(4, false, true, md),
             InputOutcome::Action(Action::Quit)
         ));
     }
     #[test]
     fn menu_action_changelog_before_fetch_is_noop() {
         assert!(matches!(
-            dispatch_menu_action(2, false, true, None),
+            dispatch_menu_action(3, false, true, None),
             InputOutcome::Unchanged
         ));
     }
@@ -7150,19 +7153,19 @@ pub(crate) mod tests {
             InputOutcome::Action(Action::ImportClaudeSettings)
         ));
         assert!(matches!(
-            dispatch_menu_action(1, true, true, md),
+            dispatch_menu_action(2, true, true, md),
             InputOutcome::Action(Action::OpenNewWorktreeDialog)
         ));
         assert!(matches!(
-            dispatch_menu_action(2, true, true, md),
+            dispatch_menu_action(3, true, true, md),
             InputOutcome::Action(Action::FetchSessionList)
         ));
         assert!(matches!(
-            dispatch_menu_action(3, true, true, md),
+            dispatch_menu_action(4, true, true, md),
             InputOutcome::Action(Action::ShowReleaseNotes { .. })
         ));
         assert!(matches!(
-            dispatch_menu_action(4, true, true, md),
+            dispatch_menu_action(5, true, true, md),
             InputOutcome::Action(Action::Quit)
         ));
     }

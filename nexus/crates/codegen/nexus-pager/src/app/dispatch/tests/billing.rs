@@ -108,13 +108,13 @@ fn credit_limit_retry_preserves_image_submission_state() {
 #[test]
 fn is_max_tier_positive_match() {
     assert!(is_max_tier(Some("supernexus_heavy")));
-    assert!(is_max_tier(Some("SuperGrok Heavy")));
+    assert!(is_max_tier(Some("SuperNexus Heavy")));
     assert!(is_max_tier(Some("SUPERNEXUS_HEAVY")));
 }
 
 #[test]
 fn is_max_tier_non_max_and_unknown() {
-    assert!(!is_max_tier(Some("supergrok")));
+    assert!(!is_max_tier(Some("supernexus")));
     assert!(!is_max_tier(Some("premium")));
     assert!(!is_max_tier(Some("free")));
     // Unknown defaults to non-max → Q&A shown.
@@ -123,9 +123,9 @@ fn is_max_tier_non_max_and_unknown() {
 
 #[test]
 fn is_max_tier_handles_mixed_case_and_whitespace() {
-    assert!(is_max_tier(Some("SuperGrok_Heavy")));
-    assert!(is_max_tier(Some("supergrok heavy")));
-    assert!(is_max_tier(Some("SUPERGROK HEAVY")));
+    assert!(is_max_tier(Some("SuperNexus_Heavy")));
+    assert!(is_max_tier(Some("supernexus heavy")));
+    assert!(is_max_tier(Some("SUPERNEXUS HEAVY")));
 }
 
 #[test]
