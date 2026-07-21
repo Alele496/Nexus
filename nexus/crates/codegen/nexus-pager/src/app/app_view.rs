@@ -5463,6 +5463,13 @@ pub(crate) mod tests {
         );
         agent.active_pane = crate::views::agent::ActivePane::Scrollback;
         app.agents.insert(id, agent);
+        // Seed a default model so worktree/session dispatch can proceed.
+        let test_model = acp::ModelId::new(std::sync::Arc::from("test-model"));
+        app.models.available.insert(
+            test_model.clone(),
+            acp::ModelInfo::new(test_model.clone(), "Test Model".to_string()),
+        );
+        app.models.current = Some(test_model);
         super::super::dispatch::switch_to_agent(
             &mut app,
             id,
