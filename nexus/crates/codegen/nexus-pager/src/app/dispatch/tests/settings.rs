@@ -266,7 +266,7 @@ fn set_default_model_allowed_when_agent_chat_kind() {
 fn slash_model_valid_dispatches_set_default_model_with_switch_and_persist() {
     let mut app = test_app_with_agent();
     let id = AgentId(0);
-    let model_id = acp::ModelId::new(std::sync::Arc::from("sage-4.5"));
+    let model_id = acp::ModelId::new(std::sync::Arc::from("nexus-4.5"));
     app.agents
         .get_mut(&id)
         .unwrap()
@@ -277,7 +277,7 @@ fn slash_model_valid_dispatches_set_default_model_with_switch_and_persist() {
             model_id.clone(),
             acp::ModelInfo::new(model_id.clone(), "Nexus 4.5".to_string()),
         );
-    let effects = dispatch(Action::SendPrompt("/model Sage 4.5".into()), &mut app);
+    let effects = dispatch(Action::SendPrompt("/model Nexus 4.5".into()), &mut app);
     assert_eq!(
         effects.len(),
         2,
