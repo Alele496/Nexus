@@ -21,7 +21,13 @@ fn is_cached_credential_compatible(auth: &GrokAuth, nexus_com_config: &SageComCo
         .as_ref()
         .map(|c| c.issuer.as_str())
         .or_else(|| nexus_com_config.oauth2.as_ref().map(|c| c.issuer.as_str()));
-    let issuer_compatible = match (auth.oidc_issuer.as_deref(), expected_issuer) {
+    // Simplified auth: when no OIDC/OAuth2 is configured, no cached
+    // credential can be compatible — there is no mechanism to refresh or
+    // use it. All supported auth goes through API keys.
+    let Some(expected_issuer) = expected_issuer else {
+        return false;
+    };
+    let issuer_compatible = match (auth.oidc_issuer.as_deref(), Some(expected_issuer)) {
         (Some(actual), Some(expected)) => actual == expected,
         (None, Some(_)) => false,
         _ => true,
@@ -1682,6 +1688,12 @@ mod tests {
     fn pinned_cfg(team: &str) -> SageComConfig {
         SageComConfig {
             force_login_team_uuid: Some(crate::auth::config::ForceLoginTeam::Single(team.into())),
+            oidc: Some(crate::auth::config::OidcAuthConfig {
+                issuer: XAI_OAUTH2_ISSUER.into(),
+                client_id: "test-client".into(),
+                scopes: vec!["openid".into()],
+                audience: None,
+            }),
             ..SageComConfig::default()
         }
     }
@@ -1775,7 +1787,15 @@ mod tests {
     #[tokio::test]
     async fn run_auth_flow_returns_cached_when_valid() {
         let dir = tempfile::tempdir().unwrap();
-        let cfg = SageComConfig::default();
+        let cfg = SageComConfig {
+            oidc: Some(crate::auth::config::OidcAuthConfig {
+                issuer: XAI_OAUTH2_ISSUER.into(),
+                client_id: "client-1".into(),
+                scopes: vec!["openid".into()],
+                audience: None,
+            }),
+            ..SageComConfig::default()
+        };
         let mgr = Arc::new(AuthManager::new(dir.path(), cfg.clone()));
 
         let valid = GrokAuth {
@@ -1886,13 +1906,18 @@ mod tests {
         )
         .await;
 
-        let err = result.unwrap_err();
-        // Device flow fall-through hits the device-code endpoint (not OIDC
-        // discovery).
-        assert!(
-            err.to_string().contains("/oauth2/device/code"),
-            "expected device-code request error (proves flow fell through to interactive login), got: {err}"
-        );
+        // Simplified auth: without OAuth2 configured, the flow falls
+        // through to the API key fallback (try_api_key_auth). Either it
+        // succeeds with a stored key or fails with "No authentication
+        // method available". Both outcomes prove the flow did NOT reach
+        // the interactive device-code endpoint.
+        match &result {
+            Ok((auth, _)) => assert_eq!(auth.auth_mode, AuthMode::ApiKey),
+            Err(err) => assert!(
+                err.to_string().contains("No authentication method available"),
+                "expected API key success or 'No authentication method available', got: {err}"
+            ),
+        }
     }
 
     #[test]

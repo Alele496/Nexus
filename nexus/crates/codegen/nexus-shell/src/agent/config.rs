@@ -45,7 +45,7 @@ pub fn default_agent_type() -> String {
 /// Default base URL for the cli chat proxy.
 pub const CLI_CHAT_PROXY_BASE_URL_DEFAULT: &str = "https://cli-chat-proxy.nexus.local/v1";
 /// Default base URL for the public xAI API.
-pub const XAI_API_BASE_URL_DEFAULT: &str = "https://api.x.ai/v1";
+pub const XAI_API_BASE_URL_DEFAULT: &str = "https://api.deepseek.com/v1";
 /// Default base URL for the asset server (profile images, etc.).
 pub const ASSET_SERVER_URL_DEFAULT: &str = "https://assets.nexus.local";
 /// One or more environment variable names that may hold a model API key.

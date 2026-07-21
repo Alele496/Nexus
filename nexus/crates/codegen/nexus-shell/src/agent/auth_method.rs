@@ -127,6 +127,16 @@ pub struct BuiltAuthMethods {
 /// When API key credentials are available, returns `[xai.api_key]`.
 /// Otherwise, returns an empty list (caller shows a setup prompt).
 pub fn build_auth_methods(inputs: AuthMethodsBuildInputs<'_>) -> BuiltAuthMethods {
+    // OIDC pin: fail closed. OIDC is no longer supported, so even if an API
+    // key is available, we must not silently fall back when OIDC was
+    // explicitly pinned — that would defeat the purpose of the pin.
+    if inputs.preferred_method == Some(PreferredAuthMethod::Oidc) {
+        return BuiltAuthMethods {
+            methods: Vec::new(),
+            default_auth_method_id: None,
+        };
+    }
+
     let has_external_api_key = inputs.has_external_api_key;
 
     if !has_external_api_key {
