@@ -580,7 +580,6 @@ mod tests {
         );
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn test_nonblocking_acquire_writes_holder_info() {
         // fix: advisory cleanup sites must record `PID:TS`, never hold the
@@ -761,7 +760,6 @@ mod tests {
 
     // ── Async tests against the production code path ─────────────────
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[tokio::test]
     async fn test_async_acquire_release_basic() {
         let dir = TempDir::new().unwrap();

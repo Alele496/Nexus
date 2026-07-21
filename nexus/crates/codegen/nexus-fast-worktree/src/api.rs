@@ -1533,9 +1533,43 @@ pub mod gc {
             let errno = std::io::Error::last_os_error().raw_os_error().unwrap_or(0);
             pid_alive_from_kill(ret, errno)
         }
-        #[cfg(not(target_os = "linux"))]
+        #[cfg(windows)]
         {
-            // No libc dependency off Linux; fall back to `kill -0` exit status.
+            // Use Windows API: OpenProcess + GetExitCodeProcess. Avoids the
+            // `kill -0` shell-out which doesn't exist on Windows.
+            if pid == 0 || pid > i32::MAX as u32 {
+                return false;
+            }
+            // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            // STILL_ACTIVE = 259
+            unsafe {
+                use std::ffi::c_void;
+                extern "system" {
+                    fn OpenProcess(
+                        dwDesiredAccess: u32,
+                        bInheritHandle: i32,
+                        dwProcessId: u32,
+                    ) -> *mut c_void;
+                    fn GetExitCodeProcess(
+                        hProcess: *mut c_void,
+                        lpExitCode: *mut u32,
+                    ) -> i32;
+                    fn CloseHandle(hObject: *mut c_void) -> i32;
+                }
+                let handle = OpenProcess(0x1000, 0, pid);
+                if handle.is_null() {
+                    return false;
+                }
+                let mut exit_code: u32 = 0;
+                let ret = GetExitCodeProcess(handle, &mut exit_code);
+                CloseHandle(handle);
+                ret != 0 && exit_code == 259 // STILL_ACTIVE
+            }
+        }
+        #[cfg(not(any(target_os = "linux", windows)))]
+        {
+            // macOS / FreeBSD / etc.: use `kill -0` which is available on all
+            // Unix-like systems.
             let mut cmd = std::process::Command::new("kill");
             nexus_tty_utils::detach_std_command(&mut cmd);
             cmd.stdin(std::process::Stdio::null());
@@ -1745,7 +1779,6 @@ pub mod gc {
         }
 
         #[test]
-        #[cfg_attr(windows, ignore = "is_pid_alive uses kill -0 which is unavailable on Windows")]
         fn is_pid_alive_true_for_running_processes() {
             assert!(is_pid_alive(std::process::id()));
             // PID 1 (init) always exists.
@@ -1804,7 +1837,6 @@ pub mod gc {
         }
 
         #[test]
-        #[cfg_attr(windows, ignore = "is_pid_alive uses kill -0 which is unavailable on Windows")]
         fn is_reclaimable_requires_expired_and_unguarded() {
             let cutoff = 1_000;
             // Expired (old created_at, never accessed) and unguarded → reclaimable.
@@ -2954,7 +2986,6 @@ mod tests {
         }
 
         #[test]
-        #[cfg_attr(windows, ignore = "is_pid_alive uses kill -0 which is unavailable on Windows")]
         fn gc_skips_alive_pids() {
             let tmp = tempfile::TempDir::new().unwrap();
             let db = db_at(&tmp);

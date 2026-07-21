@@ -1437,7 +1437,6 @@ mod tests {
         );
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[tokio::test]
     async fn enterprise_oidc_never_uses_device_flow() {
         // oidc=Some, oauth2=None: `sage login` must use loopback, not device —
@@ -1463,7 +1462,6 @@ mod tests {
         assert!(cli_should_use_device(&xai, LoginTransportOverride::ForceDevice).await);
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn device_flow_precedence_cli_beats_env_config_remote() {
         // CLI flag wins over a *conflicting* env + config + remote feature flag.
@@ -1491,7 +1489,6 @@ mod tests {
         });
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn device_flow_precedence_env_beats_config() {
         // No CLI flag: env wins over a conflicting config.
@@ -1503,7 +1500,6 @@ mod tests {
         });
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn device_flow_env_beats_remote() {
         // env sits above the remote feature flag.
@@ -1521,7 +1517,6 @@ mod tests {
         });
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn device_flow_config_beats_remote() {
         // Local config sits above the remote feature flag (env unset so config decides).
@@ -1537,7 +1532,6 @@ mod tests {
         });
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn device_flow_precedence_config_then_default() {
         // No CLI flag, no env: config decides; absent everything → loopback.
@@ -1551,7 +1545,6 @@ mod tests {
         });
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn device_flow_remote_then_default() {
         // No CLI flag, no env, no config: the remote feature flag drives the rollout.
@@ -1572,7 +1565,6 @@ mod tests {
         });
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn device_flow_records_deciding_tier() {
         // The resolver records which tier decided, so the rollout ramp can log it.
@@ -1644,14 +1636,12 @@ mod tests {
         }
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn weblogin_cred_is_never_compatible() {
         let cfg = SageComConfig::default();
         assert!(!is_cached_credential_compatible(&legacy_auth(), &cfg));
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn oidc_cred_with_matching_issuer_is_compatible() {
         let cfg = SageComConfig::default();
@@ -1661,7 +1651,6 @@ mod tests {
         ));
     }
 
-    #[ignore = "auth infra needs nexus-brand update"]
     #[test]
     fn external_cred_compatibility_follows_issuer() {
         let cfg = SageComConfig::default();
