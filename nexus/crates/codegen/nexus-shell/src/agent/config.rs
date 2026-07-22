@@ -7402,7 +7402,7 @@ reasoning_effort = "low"
     }
     #[test]
     #[serial]
-    fn e2e_default_model_with_external_api_key_routes_to_api_xai() {
+    fn e2e_default_model_with_external_api_key_routes_to_default_api() {
         let (_, models) = resolve_models_from_toml("", None);
         let model = models
             .get(crate::models::default_model())
@@ -7411,8 +7411,8 @@ reasoning_effort = "low"
         let sampling = resolve_sampling(model, None);
         assert_eq!(sampling.api_key.as_deref(), Some("xai-external-key"));
         assert_eq!(
-            sampling.base_url, "https://api.x.ai/v1",
-            "external API key should route to api.x.ai via api_base_url"
+            sampling.base_url, "https://api.deepseek.com/v1",
+            "external API key should route to the default API (DeepSeek)"
         );
         unsafe { std::env::remove_var("XAI_API_KEY") };
     }
