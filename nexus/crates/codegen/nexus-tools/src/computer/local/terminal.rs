@@ -3111,7 +3111,7 @@ fn extract_exit_status(status: std::process::ExitStatus) -> ExitStatus {
 // Tests
 // ============================================================================
 
-#[cfg(test)]
+#[cfg(all(test, unix))]
 mod tests {
     use super::*;
     use crate::computer::types::TaskKind;

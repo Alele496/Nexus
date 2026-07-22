@@ -798,6 +798,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[tokio::test]
     async fn output_file_path() {
         let mut resources = make_resources(MockTerminal::success("ok", 0));
