@@ -7,6 +7,9 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: "0"
@@ -54,13 +57,10 @@ jobs:
       - name: Build release
         run: cargo build -p nexus-bin --release
 
-      - name: Create GitHub Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Nexus ${{ github.ref_name }}
           files: nexus/target/release/nexus.exe
-          generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
 
   # ── Linux release ──────────────────────────────────────────────
   release-linux:

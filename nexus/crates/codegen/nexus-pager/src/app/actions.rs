@@ -753,6 +753,17 @@ pub enum Action {
     OpenDashboard,
     /// Close the dashboard, returning to the previous `ActiveView`.
     ExitDashboard,
+    /// Open the Agent Graph view (`/agent-graph`).
+    OpenAgentGraph,
+    /// Close the agent graph, returning to the previous `ActiveView`.
+    ExitAgentGraph,
+    /// Open a specific agent session from the graph.
+    GraphOpenAgent(crate::app::agent::AgentId),
+    /// Open a subagent in fullscreen from the graph.
+    GraphOpenSubagent {
+        child_session_id: String,
+        parent_agent: crate::app::agent::AgentId,
+    },
     /// Attach to a dashboard row — switches to the parent agent and
     /// (for subagent rows) sets the parent's `active_subagent`.
     DashboardAttach(crate::views::dashboard::DashboardRowId),

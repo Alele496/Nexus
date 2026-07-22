@@ -226,6 +226,8 @@ pub enum ActiveView {
     Agent(AgentId),
     /// The top-level Agent Dashboard. State lives in `AppView::dashboard`.
     AgentDashboard,
+    /// Agent relationship graph visualization. State lives in `AppView::agent_graph`.
+    AgentGraph,
 }
 /// Target restored when leaving the dashboard (Ctrl+\ / Esc).
 /// Consumed by `dispatch_exit_dashboard`; dead agents fall back to
@@ -1106,6 +1108,13 @@ pub struct AppView {
     pub dashboard: Option<crate::views::dashboard::DashboardState>,
     /// Where to return when leaving the dashboard. See [`DashboardReturn`].
     pub dashboard_return: Option<DashboardReturn>,
+    /// Agent graph visualization state. Held here (not on ActiveView discriminant)
+    /// because the graph state owns data (`AgentGraph`, `AgentGraphState`).
+    pub(crate) agent_graph: Option<crate::views::agent_graph::AgentGraphState>,
+    /// Cached agent graph data. Rebuilt on open.
+    pub(crate) agent_graph_data: Option<crate::views::agent_graph::state::AgentGraph>,
+    /// View to return to after exiting the agent graph.
+    pub(crate) agent_graph_return: Option<ActiveView>,
     /// Persisted dashboard configuration (pinned rows, reorderings,
     /// grouping). Loaded once on startup from
     /// `~/.nexus/config.toml`. `None` when the file/section is absent
@@ -1408,6 +1417,9 @@ impl AppView {
             dashboard: None,
             dashboard_return: None,
             dashboard_persisted: None,
+            agent_graph: None,
+            agent_graph_data: None,
+            agent_graph_return: None,
             keyboard_normalizer: KeyboardNormalizer::from_terminal_context(),
             voice_mode_enabled: false,
             voice_ui_active: false,
@@ -1767,6 +1779,7 @@ impl AppView {
                     d.error_toast = Some(crate::glyphs::legacy_glyph_fallback(msg).into_owned());
                 }
             }
+            ActiveView::AgentGraph => {}
             ActiveView::Welcome => {}
         }
     }
@@ -2097,6 +2110,7 @@ impl AppView {
                     dashboard.handle_scroll(lines);
                 }
             }
+            ActiveView::AgentGraph => {}
         }
     }
 }
@@ -2580,6 +2594,19 @@ impl AppView {
                 } else {
                     InputOutcome::Unchanged
                 }
+            }
+            ActiveView::AgentGraph => {
+                let graph_data = self
+                    .agent_graph_data
+                    .get_or_insert_with(crate::views::agent_graph::state::AgentGraph::new);
+                let graph_state = self
+                    .agent_graph
+                    .get_or_insert_with(crate::views::agent_graph::AgentGraphState::new);
+                crate::views::agent_graph::input::handle_agent_graph_input(
+                    ev,
+                    graph_data,
+                    graph_state,
+                )
             }
         };
         if let InputOutcome::Action(Action::Quit) = &outcome {
@@ -4367,6 +4394,21 @@ impl AppView {
                             return (cursor, Self::merge_escapes(notif_escapes, popup_post_flush));
                         }
                     }
+                    ActiveView::AgentGraph => {
+                        let graph_state = self
+                            .agent_graph
+                            .get_or_insert_with(crate::views::agent_graph::AgentGraphState::new);
+                        let graph_data = self
+                            .agent_graph_data
+                            .get_or_insert_with(crate::views::agent_graph::state::AgentGraph::new);
+                        crate::views::agent_graph::render_agent_graph(
+                            view_area,
+                            f.buffer_mut(),
+                            graph_data,
+                            graph_state,
+                        );
+                        return (None, None);
+                    }
                 }
             }
             if let Some(fps) = &fps_overlay {
@@ -4415,6 +4457,7 @@ impl AppView {
                     .as_ref()
                     .is_some_and(|d| d.upgrade_cta_hit.rect.is_some()),
             ),
+            ActiveView::AgentGraph => (false, false, false, false),
         };
         if !(banner || welcome || header || dashboard) {
             return;
@@ -4700,6 +4743,17 @@ impl AppView {
             needs_redraw = true;
             d.dispatch.poll_file_search();
             d.peek_reply.poll_file_search();
+        }
+        if matches!(self.active_view, ActiveView::AgentGraph) {
+            // Rebuild graph snapshot each tick so status and subagent changes
+            // are reflected live while the view is open.
+            self.agent_graph_data = Some(
+                crate::views::agent_graph::state::AgentGraph::build_from_sessions(&self.agents),
+            );
+            if let Some(state) = self.agent_graph.as_mut() {
+                state.dirty = true;
+            }
+            needs_redraw = true;
         }
         if let Some(pending) = &self.pending_action
             && pending.expired()
@@ -5099,6 +5153,18 @@ impl AppView {
                     TickDemand::None
                 }
             }
+            ActiveView::AgentGraph => {
+                // Refresh if any agent state changes (subagents running, etc.)
+                let any_running = self.agents.values().any(|agent| {
+                    !agent.session.state.is_idle()
+                        || agent.subagent_sessions.values().any(|info| !info.finished)
+                });
+                if any_running {
+                    TickDemand::Slow
+                } else {
+                    TickDemand::None
+                }
+            }
             ActiveView::Welcome => TickDemand::Slow,
         }
     }
@@ -5411,6 +5477,9 @@ pub(crate) mod tests {
             dashboard: None,
             dashboard_return: None,
             dashboard_persisted: None,
+            agent_graph: None,
+            agent_graph_data: None,
+            agent_graph_return: None,
             keyboard_normalizer: KeyboardNormalizer::from_terminal_context(),
             voice_mode_enabled: false,
             voice_ui_active: false,

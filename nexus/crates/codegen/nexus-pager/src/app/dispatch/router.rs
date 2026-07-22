@@ -8,6 +8,10 @@ use super::ctx::{
     active_agent_session_id, get_active_agent_mut, navigate_clearing_selection, open_url_or_show,
     sync_sleep_inhibitor, with_active_agent, with_scrollback,
 };
+use super::agent_graph::{
+    dispatch_exit_agent_graph, dispatch_graph_open_agent, dispatch_graph_open_subagent,
+    dispatch_open_agent_graph,
+};
 use super::dashboard::{
     dispatch_dashboard_attach, dispatch_dashboard_begin_rename, dispatch_dashboard_change_location,
     dispatch_dashboard_commit_rename, dispatch_dashboard_confirm_worktree,
@@ -1173,6 +1177,13 @@ pub(crate) fn dispatch(action: Action, app: &mut AppView) -> Vec<Effect> {
         }
         Action::OpenDashboard => dispatch_open_dashboard(app),
         Action::ExitDashboard => dispatch_exit_dashboard(app),
+        Action::OpenAgentGraph => dispatch_open_agent_graph(app),
+        Action::ExitAgentGraph => dispatch_exit_agent_graph(app),
+        Action::GraphOpenAgent(id) => dispatch_graph_open_agent(app, id),
+        Action::GraphOpenSubagent {
+            child_session_id,
+            parent_agent,
+        } => dispatch_graph_open_subagent(app, child_session_id, parent_agent),
         Action::DashboardAttach(id) => dispatch_dashboard_attach(app, id),
         Action::DashboardDispatch { text, attach } => {
             dispatch_dashboard_dispatch(app, text, attach)
