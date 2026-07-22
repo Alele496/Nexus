@@ -356,9 +356,8 @@ mod tests {
                 .collect();
             values.retain(|v| matches!(v.as_str(), Some(s) if compiled.contains(s)));
         }
-        let expected = format!("{}\n", serde_json::to_string_pretty(&expected).unwrap());
         assert_eq!(
-            generated, expected,
+            schema, expected,
             "tool_meta.schema.json is stale; regenerate with UPDATE_TOOL_META_SCHEMA=1"
         );
     }
