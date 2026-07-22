@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package sage.tools.v1;
+package nexus.tools.v1;
 
 // ============================================================================
 // MAIN SERVICE

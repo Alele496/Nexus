@@ -29,18 +29,17 @@ use crate::types::resources::SharedResources;
     schemars::JsonSchema,
     strum::EnumIter,
 )]
-#[serde(rename_all = "snake_case")]
 pub enum ToolNamespace {
-    #[serde(alias = "NexusBuild")]
+    #[serde(rename = "nexus_build", alias = "SageBuild", alias = "NexusBuild")]
     #[display("NexusBuild")]
     SageBuild,
-    #[serde(alias = "NexusBuildConcise")]
+    #[serde(rename = "nexus_build_concise", alias = "SageBuildConcise", alias = "NexusBuildConcise")]
     #[display("NexusBuildConcise")]
     SageBuildConcise,
-    #[serde(alias = "NexusBuildHashline")]
+    #[serde(rename = "nexus_build_hashline", alias = "SageBuildHashline", alias = "NexusBuildHashline")]
     #[display("NexusBuildHashline")]
     SageBuildHashline,
-    #[serde(alias = "Codex")]
+    #[serde(rename = "codex", alias = "Codex")]
     Codex,
     #[serde(rename = "opencode", alias = "OpenCode", alias = "open_code")]
     OpenCode,

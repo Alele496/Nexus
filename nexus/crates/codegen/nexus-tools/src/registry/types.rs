@@ -1880,7 +1880,7 @@ fn explain_requirement_failure(
                         "NexusBuildConcise:run_terminal_cmd is present but enabled_background=false",
                     );
             }
-            let mut message = "get_task_output requires a background-capable bash tool (SageBuild:run_terminal_cmd or SageBuildConcise:run_terminal_cmd with enabled_background=true), OpenCode:bash, or SageBuild:task"
+            let mut message = "get_task_output requires a background-capable bash tool (NexusBuild:run_terminal_cmd or NexusBuildConcise:run_terminal_cmd with enabled_background=true), OpenCode:bash, or NexusBuild:task"
                 .to_string();
             let has_provider = has_nexus_build_bash || has_nexus_build_concise_bash
                 || has_opencode_bash || has_task;
@@ -1890,7 +1890,7 @@ fn explain_requirement_failure(
             RequirementError::new(fq_tool_id, message)
                 .with_field_path("tools")
                 .with_expected(
-                    "include a background-capable bash tool, OpenCode:bash, or SageBuild:task",
+                    "include a background-capable bash tool, OpenCode:bash, or NexusBuild:task",
                 )
                 .with_category("requirements")
         }
@@ -1904,7 +1904,7 @@ fn explain_requirement_failure(
                 )
                 .with_field_path("params.skip_read_before_edit")
                 .with_expected(
-                    "set skip_read_before_edit=true or include a Read tool such as SageBuild:read_file",
+                    "set skip_read_before_edit=true or include a Read tool such as NexusBuild:read_file",
                 )
                 .with_bad_value(serde_json::Value::Bool(false))
                 .with_category("requirements")
@@ -1912,19 +1912,19 @@ fn explain_requirement_failure(
         "NexusBuild:enter_plan_mode" => {
             RequirementError::new(
                     fq_tool_id,
-                    "enter_plan_mode requires SageBuild:exit_plan_mode so plan mode can always be exited",
+                    "enter_plan_mode requires NexusBuild:exit_plan_mode so plan mode can always be exited",
                 )
                 .with_field_path("tools")
-                .with_expected("include SageBuild:exit_plan_mode")
+                .with_expected("include NexusBuild:exit_plan_mode")
                 .with_category("requirements")
         }
         "NexusBuild:exit_plan_mode" => {
             RequirementError::new(
                     fq_tool_id,
-                    "exit_plan_mode requires SageBuild:enter_plan_mode so plan mode can be entered before exiting",
+                    "exit_plan_mode requires NexusBuild:enter_plan_mode so plan mode can be entered before exiting",
                 )
                 .with_field_path("tools")
-                .with_expected("include SageBuild:enter_plan_mode")
+                .with_expected("include NexusBuild:enter_plan_mode")
                 .with_category("requirements")
         }
         _ => {

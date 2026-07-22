@@ -8,7 +8,7 @@
 
 /// Generated protobuf types.
 pub mod pb {
-    include!(concat!(env!("OUT_DIR"), "/sage.tools.v1.rs"));
+    include!(concat!(env!("OUT_DIR"), "/nexus.tools.v1.rs"));
 }
 
 pub mod config_validation;
