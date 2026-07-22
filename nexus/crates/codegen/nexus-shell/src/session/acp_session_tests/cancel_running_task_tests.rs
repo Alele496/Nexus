@@ -19,7 +19,7 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
         .run_until(async {
             let tmp = tempfile::TempDir::new().unwrap();
             let session_dir = tmp.path().join("session");
-            let cwd = AbsPathBuf::new(std::path::PathBuf::from("/tmp")).unwrap();
+            let cwd = super::support::test_cwd();
             let fs = Arc::new(nexus_workspace::file_system::MockFs::new(
                 cwd.to_path_buf(),
             ));
@@ -265,7 +265,7 @@ async fn persist_ack_waits_for_disk_flush_before_success() {
                 hook_load_errors: std::cell::RefCell::new(Vec::new()),
                 plugin_registry: std::cell::RefCell::new(None),
                 plugin_registry_handle: None,
-                events: crate::session::events::EventTracker::new(std::path::Path::new("/tmp")),
+                events: crate::session::events::EventTracker::new(&test_temp_dir()),
                 observability_bridge: noop_observability_bridge(),
                 current_turn_number: std::cell::Cell::new(0),
                 last_recap_main_turn: std::cell::Cell::new(0),
@@ -721,7 +721,7 @@ async fn first_turn_memory_injection_disabled_does_not_persist_to_chat_history()
                 hook_load_errors: std::cell::RefCell::new(Vec::new()),
                 plugin_registry: std::cell::RefCell::new(None),
                 plugin_registry_handle: None,
-                events: crate::session::events::EventTracker::new(std::path::Path::new("/tmp")),
+                events: crate::session::events::EventTracker::new(&test_temp_dir()),
                 observability_bridge: noop_observability_bridge(),
                 current_turn_number: std::cell::Cell::new(0),
                 last_recap_main_turn: std::cell::Cell::new(0),
@@ -788,7 +788,7 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
             let (persistence_tx, _persistence_rx) = tokio::sync::mpsc::unbounded_channel::<
                 PersistenceMsg,
             >();
-            let cwd = AbsPathBuf::new(std::path::PathBuf::from("/tmp")).unwrap();
+            let cwd = super::support::test_cwd();
             let fs = Arc::new(
                 nexus_workspace::file_system::MockFs::new(cwd.to_path_buf()),
             );
@@ -941,7 +941,7 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                 plan_mode: Arc::new(
                     parking_lot::Mutex::new(
                         crate::session::plan_mode::PlanModeTracker::new(
-                            std::path::PathBuf::from("/tmp/test-session"),
+                            test_temp_dir().join("test-session"),
                         ),
                     ),
                 ),
@@ -953,7 +953,7 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                 goal_tracker: Arc::new(
                     parking_lot::Mutex::new(
                         crate::session::goal_tracker::GoalTracker::new(
-                            std::path::PathBuf::from("/tmp/test-session"),
+                            test_temp_dir().join("test-session"),
                         ),
                     ),
                 ),
@@ -1006,7 +1006,7 @@ async fn cancel_running_task_teardown_clears_running_and_pending_work() {
                 plugin_registry: std::cell::RefCell::new(None),
                 plugin_registry_handle: None,
                 events: crate::session::events::EventTracker::new(
-                    std::path::Path::new("/tmp"),
+                    &test_temp_dir(),
                 ),
                 observability_bridge: noop_observability_bridge(),
                 current_turn_number: std::cell::Cell::new(0),
@@ -2021,7 +2021,7 @@ async fn cancel_propagates_to_sampler_handle_so_no_further_emission() {
             let (persistence_tx, _persistence_rx) = tokio::sync::mpsc::unbounded_channel::<
                 PersistenceMsg,
             >();
-            let cwd = AbsPathBuf::new(std::path::PathBuf::from("/tmp")).unwrap();
+            let cwd = super::support::test_cwd();
             let fs = Arc::new(
                 nexus_workspace::file_system::MockFs::new(cwd.to_path_buf()),
             );
@@ -2174,7 +2174,7 @@ async fn cancel_propagates_to_sampler_handle_so_no_further_emission() {
                 plan_mode: Arc::new(
                     parking_lot::Mutex::new(
                         crate::session::plan_mode::PlanModeTracker::new(
-                            std::path::PathBuf::from("/tmp/test-session"),
+                            test_temp_dir().join("test-session"),
                         ),
                     ),
                 ),
@@ -2186,7 +2186,7 @@ async fn cancel_propagates_to_sampler_handle_so_no_further_emission() {
                 goal_tracker: Arc::new(
                     parking_lot::Mutex::new(
                         crate::session::goal_tracker::GoalTracker::new(
-                            std::path::PathBuf::from("/tmp/test-session"),
+                            test_temp_dir().join("test-session"),
                         ),
                     ),
                 ),
@@ -2239,7 +2239,7 @@ async fn cancel_propagates_to_sampler_handle_so_no_further_emission() {
                 plugin_registry: std::cell::RefCell::new(None),
                 plugin_registry_handle: None,
                 events: crate::session::events::EventTracker::new(
-                    std::path::Path::new("/tmp"),
+                    &test_temp_dir(),
                 ),
                 observability_bridge: noop_observability_bridge(),
                 current_turn_number: std::cell::Cell::new(0),

@@ -2152,7 +2152,7 @@ mod inline_auto_compact_flow_tests {
         gateway_tx: mpsc::UnboundedSender<nexus_acp_lib::AcpClientMessage>,
         persistence_tx: mpsc::UnboundedSender<PersistenceMsg>,
     ) -> SessionActor {
-        let cwd = AbsPathBuf::new(std::path::PathBuf::from("/tmp")).unwrap();
+        let cwd = nexus_paths::AbsPathBuf::new(std::env::temp_dir()).unwrap();
         let fs = Arc::new(MockFs::new(cwd.to_path_buf()));
         let terminal = Arc::new(DummyTerminal {});
         let (hunk_tx, _hunk_rx) = tokio::sync::mpsc::unbounded_channel();

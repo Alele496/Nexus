@@ -78,7 +78,7 @@ fn prompt_mode_plan_drives_tracker_into_pending_when_inactive() {
             }
         }
     }
-    let mut tracker = PlanModeTracker::new(PathBuf::from("/tmp/test"));
+    let mut tracker = PlanModeTracker::new(std::env::temp_dir().join("test"));
     assert_eq!(tracker.state(), PlanModeState::Inactive);
     reconcile(&mut tracker, PromptMode::Plan);
     assert_eq!(tracker.state(), PlanModeState::Pending);

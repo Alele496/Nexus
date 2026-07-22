@@ -104,6 +104,19 @@ impl AgentGraphState {
             self.dirty = true;
         }
     }
+
+    /// Hit-test: return the node index at the given viewport coordinates.
+    /// Coordinates are relative to the graph area (not screen).
+    pub fn find_node_at(&self, x: u16, y: u16) -> Option<usize> {
+        let layout = self.layout.as_ref()?;
+        for (idx, node_layout) in layout.nodes.iter().enumerate() {
+            let r = node_layout.rect;
+            if x >= r.x && x < r.right() && y >= r.y && y < r.bottom() {
+                return Some(idx);
+            }
+        }
+        None
+    }
 }
 
 impl Default for AgentGraphState {
@@ -144,6 +157,21 @@ pub(crate) fn render_agent_graph(
     }
 
     let layout = state.layout.as_ref().unwrap();
+
+    // Clamp scroll to content bounds so users can't scroll past empty space.
+    if let Some(layout) = &state.layout {
+        let max_scroll_x = layout
+            .total_area
+            .width
+            .saturating_sub(area.width)
+            .saturating_add(4); // small padding
+        let max_scroll_y = layout
+            .total_area
+            .height
+            .saturating_sub(area.height.saturating_sub(2));
+        state.scroll_x = state.scroll_x.min(max_scroll_x);
+        state.scroll_y = state.scroll_y.min(max_scroll_y);
+    }
 
     // Offset area by scroll.
     let scroll_area = Rect::new(
@@ -366,7 +394,7 @@ fn render_help_bar(area: Rect, buf: &mut Buffer, detail_open: bool) {
             .set_style(Style::default().bg(Color::Rgb(30, 30, 40)));
     }
 
-    let help_text = " ↑↓/j,k: navigate  Enter: view agent  Tab: next  Space: toggle  d: detail  c: collapse  Esc: exit  /: command ";
+    let help_text = " ↑↓/j,k: move  h/l: parent/child  Enter: view  Space: toggle  c: collapse  d: detail  r: refresh  Esc: exit ";
     let detail_hint = if detail_open { " [d] close detail" } else { "" };
     let combined = format!("{}{}", help_text, detail_hint);
 

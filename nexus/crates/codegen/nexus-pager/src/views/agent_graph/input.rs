@@ -123,9 +123,41 @@ fn handle_mouse(
 ) -> InputOutcome {
     match mouse.kind {
         MouseEventKind::Down(MouseButton::Left) => {
-            // Mouse click hit-test would need computed layout positions.
-            // Placeholder for future implementation.
-            InputOutcome::Unchanged
+            // Hit-test using cached layout positions.
+            if let Some(idx) = state.find_node_at(mouse.column, mouse.row) {
+                if state.selected == Some(idx) {
+                    // Double-click: open the agent.
+                    let action = match &graph.nodes[idx].id {
+                        NodeId::Session(agent_id) => {
+                            Action::GraphOpenAgent(crate::app::agent::AgentId(*agent_id))
+                        }
+                        NodeId::Subagent(child_sid) => {
+                            let parent_agent = graph.nodes[idx].parent.and_then(|p_idx| {
+                                match &graph.nodes[p_idx].id {
+                                    NodeId::Session(id) => {
+                                        Some(crate::app::agent::AgentId(*id))
+                                    }
+                                    _ => None,
+                                }
+                            });
+                            let sid: String = child_sid.as_ref().to_string();
+                            if let Some(parent_id) = parent_agent {
+                                Action::GraphOpenSubagent {
+                                    child_session_id: sid,
+                                    parent_agent: parent_id,
+                                }
+                            } else {
+                                return InputOutcome::Unchanged;
+                            }
+                        }
+                    };
+                    return InputOutcome::Action(action);
+                }
+                state.selected = Some(idx);
+                InputOutcome::Changed
+            } else {
+                InputOutcome::Unchanged
+            }
         }
         MouseEventKind::ScrollDown => {
             state.select_next(graph);

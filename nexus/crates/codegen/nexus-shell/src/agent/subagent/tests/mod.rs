@@ -1220,7 +1220,7 @@ fn dummy_tracker(
     use crate::session::signals::SessionSignalsHandle;
     use std::sync::atomic::AtomicBool;
     let gateway = test_gateway();
-    let cwd = nexus_paths::AbsPathBuf::new(PathBuf::from("/tmp")).unwrap();
+    let cwd = nexus_paths::AbsPathBuf::new(std::env::temp_dir()).unwrap();
     let fs: Arc<dyn nexus_workspace::file_system::AsyncFileSystem> = Arc::new(
         nexus_workspace::file_system::LocalFs::new(PathBuf::from("/tmp")),
     );

@@ -1153,7 +1153,7 @@ fn make_test_handle(
         upload_queue: Arc::new(OnceLock::new()),
         upload_failures_since_success: Arc::new(std::sync::atomic::AtomicU64::new(0)),
         tool_context: crate::tools::ToolContext::new_local_context(
-            nexus_paths::AbsPathBuf::new(std::path::PathBuf::from("/tmp")).unwrap(),
+            nexus_paths::AbsPathBuf::new(std::env::temp_dir()).unwrap(),
             std::sync::Arc::new(nexus_workspace::file_system::LocalFs::new(
                 std::path::PathBuf::from("/tmp"),
             )),

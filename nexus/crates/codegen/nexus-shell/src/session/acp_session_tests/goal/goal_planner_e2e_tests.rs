@@ -625,7 +625,7 @@ async fn planner_existing_plan_does_not_re_fire() {
             {
                 let mut tracker = actor.goal_tracker.lock();
                 tracker.snapshot_mut().unwrap().plan_file =
-                    Some(std::path::PathBuf::from("/tmp/preexisting/plan.md"));
+                    Some(std::env::temp_dir().join("preexisting/plan.md"));
             }
 
             actor.maybe_run_goal_planner("do X").await;
@@ -676,7 +676,7 @@ async fn reconcile_skips_active_goal_with_plan() {
             {
                 let mut tracker = actor.goal_tracker.lock();
                 tracker.snapshot_mut().unwrap().plan_file =
-                    Some(std::path::PathBuf::from("/tmp/has-plan/plan.md"));
+                    Some(std::env::temp_dir().join("has-plan/plan.md"));
             }
 
             actor.maybe_reconcile_active_goal_without_plan().await;
@@ -991,7 +991,7 @@ async fn lifecycle_resume_with_plan_does_not_re_fire_planner() {
             {
                 let mut tracker = actor.goal_tracker.lock();
                 let snap = tracker.snapshot_mut().unwrap();
-                snap.plan_file = Some(std::path::PathBuf::from("/tmp/has-plan/plan.md"));
+                snap.plan_file = Some(std::env::temp_dir().join("has-plan/plan.md"));
             }
             // Pause the goal manually (planner-failure simulation).
             let _ = actor

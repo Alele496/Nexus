@@ -83,14 +83,14 @@ async fn test_agent_from_config(
     let ctx = SessionContext {
         backend,
         fs,
-        cwd: std::path::PathBuf::from("/tmp"),
+        cwd: test_temp_dir(),
         session_folder: std::env::temp_dir().join("sage-test"),
         session_env: std::sync::Arc::new(std::collections::HashMap::new()),
         notification_handle: ToolNotificationHandle::noop(),
         owner_session_id: None,
         parent_scheduler_handle: None,
         skills: vec![],
-        state_path: std::path::PathBuf::from("/tmp/tool_state.json"),
+        state_path: test_temp_dir().join("tool_state.json"),
         memory_backend: None,
         web_search_config: Default::default(),
         web_fetch_config: Default::default(),
@@ -135,6 +135,18 @@ impl crate::terminal::AsyncTerminalRunner for DummyTerminal {
         ))
     }
 }
+/// Cross-platform temp directory that is always absolute.
+#[cfg(test)]
+pub(crate) fn test_temp_dir() -> std::path::PathBuf {
+    std::env::temp_dir()
+}
+
+/// Cross-platform absolute CWD for test actor construction.
+#[cfg(test)]
+pub(crate) fn test_cwd() -> nexus_paths::AbsPathBuf {
+    nexus_paths::AbsPathBuf::new(std::env::temp_dir()).unwrap()
+}
+
 #[cfg(test)]
 pub(crate) async fn create_test_actor_ex(
     total_tokens: u64,
@@ -146,7 +158,7 @@ pub(crate) async fn create_test_actor_ex(
     SessionActor,
     tokio::sync::mpsc::UnboundedReceiver<SessionEvent>,
 ) {
-    let cwd = nexus_paths::AbsPathBuf::new(std::path::PathBuf::from("/tmp")).unwrap();
+    let cwd = test_cwd();
     let fs = Arc::new(nexus_workspace::file_system::MockFs::new(
         cwd.to_path_buf(),
     ));

@@ -6,7 +6,7 @@ use nexus_tools::registry::types::{SessionContext, ToolConfig, ToolServerConfig}
 /// A ToolBridge built with a custom FileSystem must route writes through it.
 #[tokio::test]
 async fn tool_bridge_routes_writes_through_injected_fs() {
-    let cwd = std::path::PathBuf::from("/tmp/fs-injection-test-nonexistent");
+    let cwd = std::env::temp_dir().join("fs-injection-test-nonexistent");
     let file_path = cwd.join("new.txt");
 
     let mock_fs = std::sync::Arc::new(MockFs::new());
