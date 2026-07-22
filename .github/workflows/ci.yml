@@ -18,6 +18,8 @@ jobs:
       TMP: C:/tmp
       TEMP: C:/tmp
       TMPDIR: C:/tmp
+      # Disable legacy glyph fallback (CI runner can handle Unicode)
+      NEXUS_FORCE_LEGACY_CONSOLE: "0"
     defaults:
       run:
         working-directory: nexus

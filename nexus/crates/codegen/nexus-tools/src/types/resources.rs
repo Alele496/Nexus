@@ -429,7 +429,7 @@ pub(crate) fn resolve_plan_file_path(res: &Resources) -> (Option<PathBuf>, Strin
     } else {
         PathBuf::from(PLAN_FILE_RELATIVE_PATH)
     };
-    let display = path.display().to_string();
+    let display = path.display().to_string().replace('\\', "/");
     let absolute_target = path.is_absolute().then_some(path);
     (absolute_target, display)
 }

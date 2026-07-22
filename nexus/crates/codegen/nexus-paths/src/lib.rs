@@ -426,9 +426,17 @@ mod tests {
         assert_eq!(rel.as_str(), "src/main.rs");
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_rel_path_buf_new_absolute_fails() {
         let result = RelPathBuf::new("/absolute/path");
+        assert!(result.is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_rel_path_buf_new_absolute_fails() {
+        let result = RelPathBuf::new("C:\\absolute\\path");
         assert!(result.is_err());
     }
 
@@ -537,9 +545,18 @@ mod tests {
         assert_eq!(deserialized, rel);
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_rel_path_buf_serde_absolute_fails() {
         let json = "\"/absolute/path\"";
+        let result: Result<RelPathBuf, _> = serde_json::from_str(json);
+        assert!(result.is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_rel_path_buf_serde_absolute_fails() {
+        let json = "\"C:\\\\absolute\\\\path\"";
         let result: Result<RelPathBuf, _> = serde_json::from_str(json);
         assert!(result.is_err());
     }

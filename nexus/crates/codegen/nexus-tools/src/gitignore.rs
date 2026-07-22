@@ -105,7 +105,10 @@ mod tests {
     #[test]
     fn regression_no_panic_on_absolute_path_without_git_root() {
         let gi = build_gitignore(Path::new("."), &["node_modules/", "*.log"]);
+        #[cfg(unix)]
         let abs_path = Path::new("/Users/someone/home/AGENTS.md");
+        #[cfg(windows)]
+        let abs_path = Path::new("C:\\Users\\someone\\home\\AGENTS.md");
 
         // Proves the raw crate panics with these inputs.
         assert!(
