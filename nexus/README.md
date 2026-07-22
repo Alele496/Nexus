@@ -1,110 +1,222 @@
 <div align="center">
 
-<h1>
-  <img alt="Nexus logo" src="" width="96">
-  <br>
-  Nexus (<code>nexus</code>)
-</h1>
+# Nexus (`nexus`)
 
-**Nexus** — 开源智能 AI 编程助手，终端原生 TUI 界面。
+**开源智能 AI 编程助手 — 终端原生 TUI 界面**
 
-支持 DeepSeek V4 等主流模型，理解你的代码库，编辑文件，执行 Shell 命令，
-代码搜索，多 Agent 协作，Agent Client Protocol (ACP) 扩展。
+[English](#english) | 中文
 
+支持 DeepSeek V4 等主流模型。代码理解、文件编辑、Shell 执行、
+多 Agent 协作、Agent Graph 可视化、Agent Client Protocol (ACP) 扩展。
+
+[快速开始](#快速开始) ·
+[特性](#特性) ·
+[命令参考](#命令参考) ·
 [从源码构建](#从源码构建) ·
 [配置](#配置) ·
-[命令参考](#命令参考) ·
-[开发](#开发) ·
-[许可证](#许可证)
+[开发](#开发)
 
 </div>
 
 ---
 
-## 特性
+## 快速开始
 
-- **终端原生 TUI** — 全屏交互界面，支持极简模式
-- **DeepSeek V4 深度推理** — 原生 1M token 上下文窗口，thinking 链式推理
-- **多 Agent 编排** — 子 Agent 并行处理，Agent 团队协作
-- **代码理解** — 全文搜索、符号跳转、项目结构分析
-- **扩展系统** — MCP 服务器、Hooks、插件、技能市场
-- **会话管理** — 分支会话 (/fork)、回退 (/rewind)、多会话仪表盘
-- **跨平台** — Windows / macOS / Linux
+### 下载预编译二进制
 
-## 从源码构建
+从 [GitHub Releases](https://github.com/Alele496/Nexus/releases) 下载最新版本：
 
-环境要求：
+| 平台 | 文件 |
+|------|------|
+| Windows | `nexus.exe` |
+| Linux | `nexus` |
 
-- **Rust** — 工具链版本由 [`rust-toolchain.toml`](rust-toolchain.toml) 锁定，`rustup` 首次构建时自动安装
-- **protoc** — 通过 [`bin/protoc`](bin/protoc) 提供，或使用系统 PATH 中的 `protoc`
+### 从源码构建
 
 ```sh
-# 开发构建
+# 开发模式
 cargo run -p nexus-bin
 
 # Release 构建
 cargo build -p nexus-bin --release
-# 输出: target/release/nexus.exe (Windows) / nexus (Linux/macOS)
 ```
 
-## 配置
+**环境要求：** Rust (见 `rust-toolchain.toml`) + protoc
 
-首次运行 Nexus 会自动弹出设置向导，引导你配置：
+首次运行会自动弹出设置向导，引导配置 API Key 和模型。
 
-- **API Key** — DeepSeek API Key（或通过 `SAGE_API_KEY` 环境变量设置）
-- **模型选择** — DeepSeek V4 Pro / Flash
-- **推理深度** — high / max
-- **数据目录** — 默认 `~/.sage/`（环境变量 `SAGE_HOME` 可覆盖）
+---
 
-配置文件：`~/.sage/config.toml`
+## 特性
+
+### 核心能力
+
+| 功能 | 说明 |
+|------|------|
+| **Agent Graph** | `/agent-graph` 全屏节点-边关系图，彩色状态、键盘/鼠标导航、实时刷新 |
+| **多 Agent 协调** | `/coordinator` 父 Agent 拆解任务，Worker 并行执行，可配置深度和并发 |
+| **Workflow 引擎** | `/workflow` DAG 任务编排，串行/并行步骤，进度追踪 |
+| **Fleet 舰队** | `/fleet` Agent 编队，共享项目上下文，成员状态查看 |
+| **单仓库模式** | `/project` 项目初始化、结构索引、自动上下文注入 |
+| **会话管理** | `/fork` 分支会话、`/rewind` 回退、多会话仪表盘 |
+| **扩展系统** | MCP 服务器、Hooks 钩子、自定义 Slash 命令 |
+
+### 模型与推理
+
+- **DeepSeek V4 Pro** — 原生 1M token 上下文窗口
+- **thinking 链式推理** — 支持 `reasoning_effort` (high/max) 映射
+- **多模型切换** — `/model <name>` 运行时热切换
+- **可扩展** — 架构支持接入更多模型提供商
+
+### 终端交互
+
+- 全屏 TUI 界面，支持极简模式
+- 代码高亮、Markdown 渲染、Mermaid 图表
+- 权限弹窗、计划模式、对话压缩
+- 跨平台: Windows / macOS / Linux
+
+---
 
 ## 命令参考
+
+### 会话与导航
 
 | 命令 | 说明 |
 |------|------|
 | `/new` | 新建会话 |
-| `/model <name>` | 切换模型 |
-| `/effort <level>` | 调整推理深度 |
-| `/fork` | 分支当前会话 |
-| `/plan` | 进入计划模式 |
-| `/compact` | 压缩对话历史 |
-| `/rewind` | 回退到之前的对话轮次 |
-| `/help` | 浏览全部命令和快捷键 |
-| `/mcps` | 查看 MCP 服务器状态 |
+| `/agent-graph` (`/graph`) | 打开 Agent 关系图 |
+| `/dashboard` | 多会话仪表盘 |
 | `/cd <path>` | 切换工作目录 |
+| `/fork` | 分支当前会话 |
+| `/rewind` | 回退到之前轮次 |
+| `/compact` | 压缩对话历史 |
+| `/resume` | 恢复之前会话 |
 
-更多命令使用 `/help` 查看，或阅读 `~/.sage/docs/user-guide/` 下的用户指南。
+### 多 Agent 与编排
+
+| 命令 | 说明 |
+|------|------|
+| `/coordinator` | 启动 Coordinator 协调 Agent |
+| `/workflow run <name>` | 执行工作流 |
+| `/fleet create <name>` | 创建舰队 |
+| `/fleet join <name>` | 加入舰队 |
+| `/fleet list` | 查看舰队状态 |
+
+### 项目与上下文
+
+| 命令 | 说明 |
+|------|------|
+| `/project init` | 初始化项目上下文 |
+| `/project index` | 索引项目结构 |
+| `/project context` | 查看当前项目上下文 |
+| `/project graph` | 查看项目结构图 |
+
+### 模型与工具
+
+| 命令 | 说明 |
+|------|------|
+| `/model <name>` | 切换模型 |
+| `/effort <level>` | 调整推理深度 (high/max) |
+| `/plan` | 进入计划模式 |
+| `/mcps` | MCP 服务器状态 |
+| `/help` | 浏览全部命令和快捷键 |
+
+---
+
+## 配置
+
+首次运行自动弹出设置向导，或手动编辑 `~/.nexus/config.toml`：
+
+```toml
+[models]
+provider = "deepseek"
+model = "deepseek-v4-pro"
+
+[auth]
+api_key = "sk-xxx"
+# 或设置环境变量: NEXUS_API_KEY
+
+[general]
+home = "~/.nexus"
+```
+
+**环境变量：**
+
+| 变量 | 说明 |
+|------|------|
+| `NEXUS_API_KEY` | API Key |
+| `NEXUS_HOME` | 数据目录 (默认 `~/.nexus/`) |
+
+---
+
+## 从源码构建
+
+```sh
+# 环境要求
+# - Rust 工具链 (见 rust-toolchain.toml)
+# - protoc (或 bin/protoc)
+
+cargo run -p nexus-bin          # 开发运行
+cargo build -p nexus-bin --release  # Release 构建
+```
+
+---
 
 ## 仓库结构
 
-| 路径 | 说明 |
-|------|------|
-| `crates/codegen/nexus-bin` | 二进制入口 crate，生成 `nexus` 可执行文件 |
-| `crates/codegen/nexus-pager` | TUI 界面：对话、提示词、模态框、渲染 |
-| `crates/codegen/nexus-shell` | Agent 运行时 + leader/stdio/headless 模式 |
-| `crates/codegen/nexus-tools` | 工具实现（终端、文件编辑、搜索等） |
-| `crates/codegen/nexus-agent` | Agent 生命周期、系统提示词、提示词模板 |
-| `crates/codegen/...` | 其余 crate（配置、MCP、Markdown、沙箱等） |
-| `crates/common/`, `crates/build/` | 共享叶 crate |
-| `third_party/` | 第三方源码（Mermaid 图表渲染） |
+```
+nexus/
+├── crates/codegen/
+│   ├── nexus-bin/        # 二进制入口
+│   ├── nexus-pager/      # TUI 界面、Agent Graph
+│   ├── nexus-shell/      # Agent 运行时、Session 管理
+│   ├── nexus-tools/      # 工具实现 (终端、文件、搜索等)
+│   ├── nexus-agent/      # Agent 生命周期、系统提示
+│   ├── nexus-project/    # 单仓库项目管理
+│   ├── nexus-fleet/      # Fleet 舰队管理
+│   ├── nexus-workflow/   # Workflow 工作流引擎
+│   └── ...               # 其余 80+ crate
+├── crates/common/        # 共享叶 crate
+├── crates/build/         # 构建辅助
+├── third_party/          # 第三方源码 (Mermaid)
+└── docs/                 # 文档
+```
 
-> [!NOTE]
-> 根目录 `Cargo.toml` 是工作区清单（workspace members + 依赖版本 + lint rules），由工具生成。
+---
 
 ## 开发
 
 ```sh
-cargo check -p nexus-bin         # 快速验证
-cargo test -p nexus-config       # 按 crate 运行测试
-cargo clippy -p nexus-bin        # Lint 检查（规则在 clippy.toml）
-cargo fmt --all                  # 格式化（规则在 rustfmt.toml）
+cargo check -p nexus-pager       # 快速验证指定 crate
+cargo test --workspace --lib     # 运行全部测试
+cargo clippy -p nexus-bin        # Lint 检查
+cargo fmt --all                  # 格式化
 ```
+
+CI 通过 GitHub Actions 自动化运行 (Linux + Windows)。
+
+---
 
 ## 许可证
 
-本项目采用 **Apache License, Version 2.0** — 详见 [`LICENSE`](LICENSE)。
+Apache License 2.0 — 详见 [LICENSE](LICENSE)。
 
-第三方及 vendored 代码遵循其原始许可证：
+第三方代码遵循原始许可证：[THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES) / [third_party/NOTICE](third_party/NOTICE)。
 
-- [`THIRD-PARTY-NOTICES`](THIRD-PARTY-NOTICES) — crates.io / git 依赖、内置 UI 主题、工具实现移植
-- [`third_party/NOTICE`](third_party/NOTICE) — vendored Mermaid 渲染栈
+---
+
+<h2 id="english">English</h2>
+
+Nexus is an open-source AI coding assistant with a native terminal TUI interface. Supports DeepSeek V4 and other models, understands your codebase, edits files, executes shell commands, and orchestrates multiple agents.
+
+**Key Features:**
+- **Agent Graph** — Interactive visual graph of agent sessions and subagent relationships
+- **Multi-Agent Coordination** — Coordinator/Worker mode with configurable depth
+- **Workflow Engine** — DAG-based task orchestration
+- **Fleet Mode** — Agent teams with shared project context
+- **Project Mode** — Code indexing and automatic context injection
+- **Session Management** — Fork, rewind, multi-session dashboard
+- **Cross-platform** — Windows, macOS, Linux
+
+See [Chinese section](#nexus-nexus) for full documentation.
+
