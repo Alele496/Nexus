@@ -1201,7 +1201,7 @@ async fn test_e2e_idle_resume_refreshes_model_metadata() {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
             let (gateway_tx, _) = mpsc::unbounded_channel::<nexus_acp_lib::AcpClientMessage>();
             let (persistence_tx, _) = mpsc::unbounded_channel::<PersistenceMsg>();
-            let cwd = nexus_paths::super::support::test_cwd();
+            let cwd = super::support::test_cwd();
             let fs = Arc::new(nexus_workspace::file_system::MockFs::new(
                 cwd.to_path_buf(),
             ));

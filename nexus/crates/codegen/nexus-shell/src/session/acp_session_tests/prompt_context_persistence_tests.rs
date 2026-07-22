@@ -243,7 +243,7 @@ const HEAD_TOKEN: &str = "HEADSTART_TOKEN_aaa";
 const TAIL_TOKEN: &str = "TAILEND_TOKEN_zzz";
 
 fn fake_prompt_path() -> std::path::PathBuf {
-    std::path::std::env::temp_dir().join("sage-test-home/sessions/cwd/sid/prompts/prompt_0.txt")
+    std::env::temp_dir().join("sage-test-home/sessions/cwd/sid/prompts/prompt_0.txt")
 }
 
 /// `truncate_bytes_suffix` keeps a char-boundary-safe suffix (multibyte-safe).

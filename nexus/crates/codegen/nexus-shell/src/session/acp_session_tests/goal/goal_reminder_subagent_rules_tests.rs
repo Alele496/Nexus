@@ -740,7 +740,7 @@ async fn maybe_queue_goal_continuation_is_plan_aware_when_planner_enabled() {
             actor.goal_planner_enabled = true;
             set_goal_harness_for_tests(&actor);
             seed_active_goal(&actor);
-            let plan = std::path::std::env::temp_dir().join("cont-plan/goal/plan.md");
+            let plan = std::env::temp_dir().join("cont-plan/goal/plan.md");
             actor.goal_tracker.lock().snapshot_mut().unwrap().plan_file = Some(plan.clone());
             actor.maybe_queue_goal_continuation().await;
             let state = actor.state.lock().await;
