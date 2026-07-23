@@ -22,14 +22,39 @@
 
 ## 快速开始
 
-### 下载预编译二进制
+### 方式一：下载预编译二进制（推荐）
 
-从 [GitHub Releases](https://github.com/Alele496/Nexus/releases) 下载最新版本：
+从 [GitHub Releases](https://github.com/Alele496/Nexus/releases) 下载最新版本，直接运行即可，无需安装。
 
 | 平台 | 文件 |
 |------|------|
-| Windows | `nexus.exe` |
-| Linux | `nexus` |
+| Windows | `nexus.exe` (129 MB, 免安装便携版) |
+| Linux | `nexus` (197 MB) |
+
+### 方式二：包管理器安装 (Windows)
+
+```powershell
+# winget（审核通过后可用）
+winget install Alele496.Nexus
+
+# Scoop
+scoop bucket add nexus https://github.com/Alele496/Nexus
+scoop install nexus
+```
+
+### 方式三：命令行快速安装
+
+**Windows (PowerShell)：**
+```powershell
+irm https://raw.githubusercontent.com/Alele496/Nexus/agent-dev/nexus/crates/codegen/nexus-pager/scripts/install.ps1 | iex
+```
+
+**Linux / macOS：**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Alele496/Nexus/agent-dev/nexus/crates/codegen/nexus-pager/scripts/install.sh | bash
+```
+
+安装脚本自动下载最新版本，添加到 PATH，并生成 Shell 补全。
 
 ### 从源码构建
 
@@ -63,6 +88,7 @@ cargo build -p nexus-bin --release
 
 ### 模型与推理
 
+- **多提供商支持** — DeepSeek V4、OpenAI GPT-5.2、Anthropic Claude 4.7，以及任意 OpenAI 兼容 API（通义千问、Moonshot、本地模型等）
 - **DeepSeek V4 Pro** — 原生 1M token 上下文窗口
 - **thinking 链式推理** — 支持 `reasoning_effort` (high/max) 映射
 - **多模型切换** — `/model <name>` 运行时热切换
@@ -128,16 +154,45 @@ cargo build -p nexus-bin --release
 首次运行自动弹出设置向导，或手动编辑 `~/.nexus/config.toml`：
 
 ```toml
+# DeepSeek 示例
 [models]
-provider = "deepseek"
+default = "deepseek-v4-pro"
+
+[model."deepseek-v4-pro"]
 model = "deepseek-v4-pro"
-
-[auth]
+name = "DeepSeek V4 Pro"
+base_url = "https://api.deepseek.com/v1"
+api_backend = "chat_completions"
 api_key = "sk-xxx"
-# 或设置环境变量: NEXUS_API_KEY
+context_window = 1000000
+supports_reasoning_effort = true
 
-[general]
-home = "~/.nexus"
+# OpenAI 示例
+[model."gpt-5.2"]
+model = "gpt-5.2"
+name = "GPT-5.2"
+base_url = "https://api.openai.com/v1"
+api_backend = "chat_completions"
+api_key = "sk-xxx"
+context_window = 128000
+
+# Anthropic Claude 示例
+[model."claude-sonnet-4-6"]
+model = "claude-sonnet-4-6"
+name = "Claude Sonnet 4.6"
+base_url = "https://api.anthropic.com/v1"
+api_backend = "messages"
+api_key = "sk-ant-xxx"
+context_window = 200000
+
+# 任意 OpenAI 兼容 API（通义千问、Ollama 本地模型等）
+[model."qwen-plus"]
+model = "qwen-plus"
+name = "通义千问 Plus"
+base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+api_backend = "chat_completions"
+api_key = "sk-xxx"
+context_window = 131072
 ```
 
 **环境变量：**
@@ -207,9 +262,10 @@ Apache License 2.0 — 详见 [LICENSE](LICENSE)。
 
 <h2 id="english">English</h2>
 
-Nexus is an open-source AI coding assistant with a native terminal TUI interface. Supports DeepSeek V4 and other models, understands your codebase, edits files, executes shell commands, and orchestrates multiple agents.
+Nexus is an open-source AI coding assistant with a native terminal TUI interface. Supports DeepSeek V4, OpenAI, Anthropic Claude, and any OpenAI-compatible API, understands your codebase, edits files, executes shell commands, and orchestrates multiple agents.
 
 **Key Features:**
+- **Multi-Provider** — DeepSeek, OpenAI, Anthropic, or any OpenAI-compatible API (Qwen, Moonshot, local models via Ollama)
 - **Agent Graph** — Interactive visual graph of agent sessions and subagent relationships
 - **Multi-Agent Coordination** — Coordinator/Worker mode with configurable depth
 - **Workflow Engine** — DAG-based task orchestration
@@ -217,6 +273,7 @@ Nexus is an open-source AI coding assistant with a native terminal TUI interface
 - **Project Mode** — Code indexing and automatic context injection
 - **Session Management** — Fork, rewind, multi-session dashboard
 - **Cross-platform** — Windows, macOS, Linux
+- **Easy Install** — Single portable .exe (Windows), shell installer, winget/scoop packages
 
 See [Chinese section](#nexus-nexus) for full documentation.
 

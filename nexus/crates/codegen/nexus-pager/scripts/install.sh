@@ -1,17 +1,15 @@
 #!/bin/bash
 #
-# Grok CLI installer — https://x.ai/cli/install.sh
+# Nexus CLI installer — https://github.com/Alele496/Nexus/releases
 #
-# Auth: SAGE_DEPLOYMENT_KEY (takes precedence) or ~/.sage/auth.json from `grok login`.
-# Env: SAGE_CHANNEL (stable|alpha|enterprise, default: stable), SAGE_BIN_DIR, SAGE_PROXY_URL
+# Downloads the latest Nexus binary from GitHub Releases and installs to ~/.nexus/bin/
 #
 # Usage:
-#   curl -fsSL https://x.ai/cli/install.sh | bash            # latest stable
-#   curl -fsSL https://x.ai/cli/install.sh | bash -s 0.1.42  # specific version
-#   SAGE_DEPLOYMENT_KEY=<key> bash <(curl -fsSL https://x.ai/cli/install.sh)
+#   curl -fsSL https://raw.githubusercontent.com/Alele496/Nexus/agent-dev/nexus/crates/codegen/nexus-pager/scripts/install.sh | bash
+#   curl -fsSL <url> | bash -s 0.3.0  # specific version
 #
-# Windows: run under Git for Windows / MSYS2 Bash (same curl | bash flow); WSL
-# uses the Linux binary.
+# Windows: run under Git for Windows / MSYS2 Bash (same curl | bash flow);
+# WSL uses the Linux binary.
 
 set -e
 
@@ -49,9 +47,6 @@ download_file() {
     fi
 }
 
-# Parallel byte-range download. Falls back to single-connection download_file
-# whenever HEAD lacks Content-Length, the file is small (<16 MiB), curl is
-# unavailable, or any chunk fetch / concat fails.
 download_file_parallel() {
     local url="$1" output="$2"
     if [ "$DOWNLOADER" != "curl" ]; then
@@ -88,59 +83,11 @@ download_file_parallel() {
     download_file "$url" "$output"
 }
 
-# Return 0 if a HEAD request for the URL gets HTTP 404.
-is_not_found() {
-    local url="$1" code
-    if [ "$DOWNLOADER" = "curl" ]; then
-        code=$(curl -o /dev/null -sSL -w '%{http_code}' --head "$url" 2>/dev/null) || true
-    else
-        code=$(wget --server-response --spider "$url" 2>&1 | awk '/HTTP\//{print $2}' | tail -1) || true
-    fi
-    [ "$code" = "404" ]
-}
-
-# JSON field extractor — extract a top-level string value using sed.
-json_get() {
-    local json="$1" field="$2"
-    # Extract value (handling \" inside strings), then unescape JSON sequences.
-    printf '%s' "$json" | sed -n -E 's/.*"'"$field"'"[[:space:]]*:[[:space:]]*"(([^"\\]|\\.)*)".*/\1/p' | head -1 \
-        | sed -e 's/\\"/"/g' -e 's/\\n/\'$'\n''/g' -e 's/\\t/\'$'\t''/g' -e 's/\\\\/\\/g'
-}
-
-# Read a token from ~/.sage/auth.json for the given scope key.
-# Format: {"scope_url": {"key": "token"}, ...}
-read_grok_token() {
-    local auth_file="$HOME/.sage/auth.json"
-    local scope="$1"
-    [ -f "$auth_file" ] || return 1
-    # Flatten to one line then extract: find the scope, then the "key" value after it
-    tr -d '\n' < "$auth_file" | sed -n 's|.*"'"$scope"'"[[:space:]]*:[[:space:]]*{[^}]*"key"[[:space:]]*:[[:space:]]*"\([^"]*\)".*|\1|p' | head -1
-}
-
-# Resolve auth: SAGE_DEPLOYMENT_KEY > OIDC token > legacy token
-OIDC_SCOPE="https://auth.x.ai::b1a00492-073a-47ea-816f-4c329264a828"
-LEGACY_SCOPE="https://accounts.x.ai/sign-in"
-AUTH_SOURCE=""
-
-if [ -n "$SAGE_DEPLOYMENT_KEY" ]; then
-    AUTH_SOURCE="deployment key"
-    echo "Auth: using deployment key." >&2
-else
-    OIDC_TOKEN=$(read_grok_token "$OIDC_SCOPE" 2>/dev/null) || true
-    LEGACY_TOKEN=$(read_grok_token "$LEGACY_SCOPE" 2>/dev/null) || true
-    if [ -n "$OIDC_TOKEN" ]; then
-        AUTH_SOURCE="auth.json (oidc)"
-        echo "Auth: using OIDC token from ~/.sage/auth.json." >&2
-    elif [ -n "$LEGACY_TOKEN" ]; then
-        AUTH_SOURCE="auth.json (legacy)"
-        echo "Auth: using legacy token from ~/.sage/auth.json." >&2
-    fi
-fi
+# ── Detect OS and architecture ─────────────────────────────────────────────
 
 case "$(uname -s)" in
     Darwin) os="macos" ;;
     Linux)  os="linux" ;;
-    # Git for Windows / MSYS2 / Cygwin host — native Windows builds
     MINGW* | MSYS* | CYGWIN*) os="windows" ;;
     *)      echo "Unsupported OS: $(uname -s)" >&2; exit 1 ;;
 esac
@@ -151,37 +98,28 @@ case "$(uname -m)" in
     *)                    echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
 esac
 
-BASE_URL_PRIMARY=""
-BASE_URL_FALLBACK=""
-DOWNLOAD_DIR="$HOME/.sage/downloads"
-BIN_DIR="${SAGE_BIN_DIR:-$HOME/.sage/bin}"
+NEXUS_DIR="${NEXUS_HOME:-$HOME/.nexus}"
+DOWNLOAD_DIR="$NEXUS_DIR/downloads"
+BIN_DIR="${NEXUS_BIN_DIR:-$NEXUS_DIR/bin}"
 mkdir -p "$DOWNLOAD_DIR" "$BIN_DIR"
 
 platform="${os}-${arch}"
-CHANNEL="${SAGE_CHANNEL:-stable}"
 
-# Pick a working BASE_URL: try Cloudflare-fronted x.ai first, fall back to
-# direct GCS if it's unreachable. The probe doubles as the channel-pointer
-# fetch when no explicit TARGET was passed, so the happy path costs zero
-# extra HTTP requests.
-if [ -z "$TARGET" ]; then echo "Fetching latest ${CHANNEL} version..." >&2; fi
-probe_result=$(download_file "${BASE_URL_PRIMARY}/${CHANNEL}" 2>/dev/null) || true
-if [ -n "$probe_result" ]; then
-    BASE_URL="$BASE_URL_PRIMARY"
-else
-    echo "Note: ${BASE_URL_PRIMARY} unreachable, falling back to direct GCS." >&2
-    BASE_URL="$BASE_URL_FALLBACK"
-    probe_result=$(download_file "${BASE_URL}/${CHANNEL}" 2>/dev/null) || true
-fi
+GITHUB_RELEASES="https://github.com/Alele496/Nexus/releases"
 
-if [ -n "$TARGET" ]; then
-    version="$TARGET"
-else
-    version=$(printf '%s' "$probe_result" | tr -d '\r' | head -n1 | tr -d '[:space:]')
+# ── Resolve version ────────────────────────────────────────────────────────
+
+if [ -z "$TARGET" ]; then
+    echo "Fetching latest Nexus version..." >&2
+    version=$(download_file "https://api.github.com/repos/Alele496/Nexus/releases/latest" 2>/dev/null | \
+        sed -n 's/.*"tag_name"[[:space:]]*:[[:space:]]*"\(v[^"]*\)".*/\1/p' | head -1 | tr -d 'v')
     if [ -z "$version" ]; then
-        echo "Error: failed to fetch latest version from ${BASE_URL_PRIMARY}/${CHANNEL} and ${BASE_URL_FALLBACK}/${CHANNEL}" >&2
+        echo "Error: failed to fetch latest version from GitHub." >&2
+        echo "Try specifying a version: curl -fsSL <url> | bash -s 0.3.0" >&2
         exit 1
     fi
+else
+    version="$TARGET"
 fi
 
 if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._]+)?$ ]]; then
@@ -189,177 +127,92 @@ if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9._]+)?$ ]]; then
     exit 1
 fi
 
-if [ -n "$AUTH_SOURCE" ]; then
-    echo "Installing Grok $version ($platform, $AUTH_SOURCE)..." >&2
-else
-    echo "Installing Grok $version ($platform)..." >&2
-fi
+echo "Installing Nexus v$version ($platform)..." >&2
 
-binary_path="$DOWNLOAD_DIR/grok-$platform"
-artifact_base="${BASE_URL}/grok-${version}-${platform}"
+# ── Download binary ────────────────────────────────────────────────────────
+
+binary_path="$DOWNLOAD_DIR/nexus-$platform"
+artifact_url="${GITHUB_RELEASES}/download/v${version}/nexus"
 
 if [ "$os" = "windows" ]; then
     binary_path="${binary_path}.exe"
+    artifact_url="${artifact_url}.exe"
 fi
 
 binary_tmp="${binary_path}.tmp.$$"
 rm -f "$binary_tmp" 2>/dev/null || true
 
-echo "  Downloading grok ${version}..." >&2
-if [ "$os" = "windows" ]; then
-    if ! download_file_parallel "${artifact_base}.exe" "$binary_tmp"; then
-        if ! download_file_parallel "$artifact_base" "$binary_tmp"; then
-            rm -f "$binary_tmp"
-            if is_not_found "${artifact_base}.exe"; then
-                echo "Error: Grok is not yet available for your system ($platform)." >&2
-            else
-                echo "Error: binary download failed (${artifact_base}.exe and ${artifact_base})" >&2
-            fi
-            exit 1
-        fi
-    fi
-elif ! download_file_parallel "$artifact_base" "$binary_tmp"; then
+echo "  Downloading nexus v${version}..." >&2
+if ! download_file_parallel "$artifact_url" "$binary_tmp"; then
     rm -f "$binary_tmp"
-    if is_not_found "$artifact_base"; then
-        echo "Error: Grok is not yet available for your system ($platform)." >&2
-    else
-        echo "Error: binary download failed from ${artifact_base}" >&2
-    fi
+    echo "Error: binary download failed from ${artifact_url}" >&2
     exit 1
 fi
 
 if [ "$os" = "windows" ]; then
     mv -f "$binary_tmp" "$binary_path"
-    # Symlinks require Developer Mode on Windows; copy instead.
-    # If the exe is locked by a running process, rename it aside then retry.
-    for bin_name in grok.exe agent.exe; do
-        rm -f "$BIN_DIR/$bin_name.old" 2>/dev/null || true  # stale backup from prior update
-        if ! cp -f "$binary_path" "$BIN_DIR/$bin_name" 2>/dev/null; then
-            mv -f "$BIN_DIR/$bin_name" "$BIN_DIR/$bin_name.old" 2>/dev/null || true
-            if ! cp -f "$binary_path" "$BIN_DIR/$bin_name" 2>/dev/null; then
-                # Rollback: restore the old binary so the install isn't broken.
-                mv -f "$BIN_DIR/$bin_name.old" "$BIN_DIR/$bin_name" 2>/dev/null || true
-                echo "Error: failed to install $bin_name" >&2
-                exit 1
-            fi
+    rm -f "$BIN_DIR/nexus.old" 2>/dev/null || true
+    if ! cp -f "$binary_path" "$BIN_DIR/nexus.exe" 2>/dev/null; then
+        mv -f "$BIN_DIR/nexus.exe" "$BIN_DIR/nexus.old" 2>/dev/null || true
+        if ! cp -f "$binary_path" "$BIN_DIR/nexus.exe" 2>/dev/null; then
+            mv -f "$BIN_DIR/nexus.old" "$BIN_DIR/nexus.exe" 2>/dev/null || true
+            echo "Error: failed to install nexus.exe" >&2
+            exit 1
         fi
-    done
-    echo "  Binary installed to $BIN_DIR/grok.exe and $BIN_DIR/agent.exe." >&2
+    fi
+    echo "  Binary installed to $BIN_DIR/nexus.exe" >&2
 else
     chmod +x "$binary_tmp"
     if ! "$binary_tmp" --version </dev/null >/dev/null 2>&1; then
-        echo "Error: downloaded grok failed to run; keeping the existing install." >&2
+        echo "Error: downloaded nexus failed to run; keeping the existing install." >&2
         rm -f "$binary_tmp"
         exit 1
     fi
     mv -f "$binary_tmp" "$binary_path"
     # Use relative symlinks when BIN_DIR and DOWNLOAD_DIR share a parent
-    # (default layout: ~/.sage/bin and ~/.sage/downloads are siblings).
-    # Relative symlinks survive Docker bind-mounts with a different $HOME.
     if [ "$(dirname "$BIN_DIR")" = "$(dirname "$DOWNLOAD_DIR")" ]; then
         link_target="../$(basename "$DOWNLOAD_DIR")/$(basename "$binary_path")"
     else
         link_target="$binary_path"
     fi
-    ln -sf "$link_target" "$BIN_DIR/grok"
-    ln -sf "$link_target" "$BIN_DIR/agent"
-    echo "  Binary linked to $BIN_DIR/grok and $BIN_DIR/agent." >&2
+    ln -sf "$link_target" "$BIN_DIR/nexus"
+    echo "  Binary linked to $BIN_DIR/nexus" >&2
 fi
 
-# Generate shell completions (best-effort)
-mkdir -p "$HOME/.sage/completions/bash" "$HOME/.sage/completions/zsh"
-"$BIN_DIR/grok" completions bash > "$HOME/.sage/completions/bash/grok.bash" 2>/dev/null || true
-"$BIN_DIR/grok" completions zsh  > "$HOME/.sage/completions/zsh/_grok"     2>/dev/null || true
-# Fish: write to the auto-loaded completions dir so it works immediately
+# ── Generate completions (best-effort) ─────────────────────────────────────
+
+mkdir -p "$NEXUS_DIR/completions/bash" "$NEXUS_DIR/completions/zsh"
+"$BIN_DIR/nexus" completions bash > "$NEXUS_DIR/completions/bash/nexus.bash" 2>/dev/null || true
+"$BIN_DIR/nexus" completions zsh  > "$NEXUS_DIR/completions/zsh/_nexus"     2>/dev/null || true
 if mkdir -p "$HOME/.config/fish/completions" 2>/dev/null; then
-    "$BIN_DIR/grok" completions fish > "$HOME/.config/fish/completions/grok.fish" 2>/dev/null || true
+    "$BIN_DIR/nexus" completions fish > "$HOME/.config/fish/completions/nexus.fish" 2>/dev/null || true
 fi
 
-# Persist installer source and channel to config
-CONFIG_FILE="$HOME/.sage/config.toml"
-CLI_BLOCK="installer = \"internal\""
-if [ "$CHANNEL" != "stable" ]; then
-    CLI_BLOCK="${CLI_BLOCK}\nchannel = \"${CHANNEL}\""
-fi
+# ── Persist installer config ───────────────────────────────────────────────
+
+CONFIG_FILE="$NEXUS_DIR/config.toml"
 if [ ! -f "$CONFIG_FILE" ]; then
-    printf '[cli]\n%b\n' "$CLI_BLOCK" > "$CONFIG_FILE"
-elif grep -q '^\[cli\]' "$CONFIG_FILE"; then
-    tmp="$CONFIG_FILE.tmp.$$"
-    awk -v block="$CLI_BLOCK" '
-        /^\[cli\][[:space:]]*(#.*)?$/ { print; printf "%s\n", block; in_cli=1; next }
-        /^\[.*\][[:space:]]*(#.*)?$/  { in_cli=0 }
-        in_cli && /^[[:space:]]*(installer|channel)[[:space:]]*=/ { next }
-        { print }
-    ' "$CONFIG_FILE" > "$tmp" && mv "$tmp" "$CONFIG_FILE"
-else
-    printf '\n[cli]\n%b\n' "$CLI_BLOCK" >> "$CONFIG_FILE"
+    printf '[cli]\ninstaller = "internal"\n' > "$CONFIG_FILE"
 fi
 
-# Fetch managed_config.toml + requirements.toml from server (deployment key only).
-if [ -n "$SAGE_DEPLOYMENT_KEY" ]; then
-    PROXY_URL="${SAGE_PROXY_URL:-https://cli-chat-proxy.grok.com/v1}"
-    echo "  Fetching deployment config..." >&2
-    DEPLOY_RESPONSE=""
-    AUTH_HEADER_FILE=$(mktemp 2>/dev/null) || AUTH_HEADER_FILE=""
-    if [ -n "$AUTH_HEADER_FILE" ]; then
-        chmod 600 "$AUTH_HEADER_FILE" 2>/dev/null || true
-        printf 'Authorization: Bearer %s\n' "$SAGE_DEPLOYMENT_KEY" > "$AUTH_HEADER_FILE"
-        DEPLOY_RESPONSE=$(curl -sS -f \
-            -H "@${AUTH_HEADER_FILE}" \
-            "${PROXY_URL}/deployment/config" 2>/dev/null) || DEPLOY_RESPONSE=""
-        : > "$AUTH_HEADER_FILE" 2>/dev/null || true
-        rm -f "$AUTH_HEADER_FILE"
-    fi
-    if [ -z "$DEPLOY_RESPONSE" ]; then
-        echo "  Warning: failed to fetch deployment config from ${PROXY_URL}/deployment/config" >&2
-    fi
-    if [ -n "$DEPLOY_RESPONSE" ]; then
-        MANAGED_CONFIG=$(json_get "$DEPLOY_RESPONSE" "managed_config")
-        REQUIREMENTS=$(json_get "$DEPLOY_RESPONSE" "requirements")
-        if [ -n "$MANAGED_CONFIG" ] && [ "$MANAGED_CONFIG" != "null" ]; then
-            printf '%s\n' "$MANAGED_CONFIG" > "$HOME/.sage/managed_config.toml"
-            echo "  Managed config applied." >&2
-        else
-            rm -f "$HOME/.sage/managed_config.toml"
-        fi
-        if [ -n "$REQUIREMENTS" ] && [ "$REQUIREMENTS" != "null" ]; then
-            printf '%s\n' "$REQUIREMENTS" > "$HOME/.sage/requirements.toml"
-            echo "  Requirements applied." >&2
-        else
-            rm -f "$HOME/.sage/requirements.toml"
-        fi
-    fi
-fi
-
-if [ "$os" = "windows" ]; then
-    echo "Grok $version installed to $BIN_DIR/grok.exe" >&2
-else
-    echo "Grok $version installed to $BIN_DIR/grok" >&2
-fi
-
-# --- Ensure grok is on PATH ---
+# ── Add to PATH ────────────────────────────────────────────────────────────
 
 path_has_dir() {
     case ":$PATH:" in *":$1:"*) return 0 ;; *) return 1 ;; esac
 }
 
-# Try to symlink into a directory already on PATH so grok works immediately
-# without restarting the shell. Candidate dirs in preference order.
 SYMLINK_CREATED=""
 if [ "$os" != "windows" ] && ! path_has_dir "$BIN_DIR"; then
     for candidate in "$HOME/.local/bin" "/usr/local/bin"; do
         if path_has_dir "$candidate" && [ -d "$candidate" ] && [ -w "$candidate" ]; then
-            ln -sf "$BIN_DIR/grok" "$candidate/grok"
-            ln -sf "$BIN_DIR/agent" "$candidate/agent"
+            ln -sf "$BIN_DIR/nexus" "$candidate/nexus"
             SYMLINK_CREATED="$candidate"
-            echo "  Symlinked $candidate/grok -> $BIN_DIR/grok" >&2
-            echo "  Symlinked $candidate/agent -> $BIN_DIR/agent" >&2
+            echo "  Symlinked $candidate/nexus -> $BIN_DIR/nexus" >&2
             break
         fi
     done
 fi
 
-# Also update shell config so ~/.sage/bin is on PATH for future sessions
 user_shell="$(basename "${SHELL:-}")"
 config_file=""
 
@@ -372,7 +225,7 @@ esac
 if [ -n "$config_file" ]; then
     mkdir -p "$(dirname "$config_file")"
 
-    # Resolve symlinks so tmp+mv rewrites the stow/dotfiles target, not the link.
+    # Resolve symlinks so tmp+mv rewrites the actual file, not the link.
     if [ -e "$config_file" ] || [ -L "$config_file" ]; then
         _cf="$config_file"
         _depth=0
@@ -384,64 +237,54 @@ if [ -n "$config_file" ]; then
             esac
             _depth=$((_depth + 1))
         done
-        # Still a symlink (cycle/cap): leave original path so we never rewrite the link.
         if [ ! -L "$_cf" ]; then
             config_file="$(cd "$(dirname "$_cf")" && pwd -P)/$(basename "$_cf")"
         fi
         unset _cf _link _depth
     fi
 
-    # Build the new installer block
     if [ "$user_shell" = "fish" ]; then
-        new_block='# >>> grok installer >>>
-fish_add_path $HOME/.sage/bin
-# <<< grok installer <<<'
+        new_block='# >>> nexus installer >>>
+fish_add_path $HOME/.nexus/bin
+# <<< nexus installer <<<'
     elif [ "$user_shell" = "zsh" ]; then
-        new_block='# >>> grok installer >>>
-export PATH="$HOME/.sage/bin:$PATH"
-fpath=(~/.sage/completions/zsh $fpath)
+        new_block='# >>> nexus installer >>>
+export PATH="$HOME/.nexus/bin:$PATH"
+fpath=(~/.nexus/completions/zsh $fpath)
 autoload -Uz compinit && compinit -C
-# <<< grok installer <<<'
+# <<< nexus installer <<<'
     else
-        new_block='# >>> grok installer >>>
-export PATH="$HOME/.sage/bin:$PATH"
-[[ -r "$HOME/.sage/completions/bash/grok.bash" ]] && source "$HOME/.sage/completions/bash/grok.bash"
-# <<< grok installer <<<'
+        new_block='# >>> nexus installer >>>
+export PATH="$HOME/.nexus/bin:$PATH"
+[[ -r "$HOME/.nexus/completions/bash/nexus.bash" ]] && source "$HOME/.nexus/completions/bash/nexus.bash"
+# <<< nexus installer <<<'
     fi
 
-    if grep -qs "grok installer" "$config_file" 2>/dev/null; then
-        # Replace existing block in-place (strip old >>> to <<< lines, insert new)
+    if grep -qs "nexus installer" "$config_file" 2>/dev/null; then
         tmp="$config_file.tmp.$$"
         awk '
-            /# >>> grok installer >>>/ { skip=1; next }
-            /# <<< grok installer <<</ { skip=0; next }
+            /# >>> nexus installer >>>/ { skip=1; next }
+            /# <<< nexus installer <<</ { skip=0; next }
             !skip { print }
         ' "$config_file" > "$tmp" && mv "$tmp" "$config_file"
-    else
-        [ -f "$config_file" ] && cp "$config_file" "$config_file.bak.$(date +%s)"
-
-        # macOS bash: ensure bash_profile sources bashrc
-        if [ "$user_shell" = "bash" ] && [ "$(uname -s)" = "Darwin" ]; then
-            if [ -f "$HOME/.bash_profile" ] && ! grep -qs "source ~/.bashrc" "$HOME/.bash_profile"; then
-                printf '\n[[ -r ~/.bashrc ]] && source ~/.bashrc\n' >> "$HOME/.bash_profile"
-            fi
-        fi
     fi
 
     printf '\n%s\n' "$new_block" >> "$config_file"
-    echo "  Updated $BIN_DIR in PATH in $config_file." >&2
+    echo "  Added $BIN_DIR to PATH in $config_file." >&2
 fi
 
 echo "" >&2
+echo "Nexus v$version installed successfully!" >&2
+echo "" >&2
 if path_has_dir "$BIN_DIR" || [ -n "$SYMLINK_CREATED" ]; then
-    echo "Run 'grok' or 'agent' to get started!" >&2
+    echo "Run 'nexus' to get started!" >&2
 elif [ -n "$config_file" ]; then
-    echo "Restart your terminal, then run 'grok' or 'agent' to get started!" >&2
+    echo "Restart your terminal, then run 'nexus' to get started!" >&2
 else
-    echo "Add $BIN_DIR to your PATH, then run 'grok' or 'agent' to get started:" >&2
-    echo '  export PATH="$HOME/.sage/bin:$PATH"' >&2
+    echo "Add $BIN_DIR to your PATH, then run 'nexus' to get started:" >&2
+    echo '  export PATH="$HOME/.nexus/bin:$PATH"' >&2
 fi
 
 if [ "$os" = "windows" ]; then
-    echo "To use grok from cmd.exe or PowerShell, add %USERPROFILE%\\.grok\\bin to your PATH." >&2
+    echo "To use nexus from cmd.exe or PowerShell, add %USERPROFILE%\\.nexus\\bin to your PATH." >&2
 fi

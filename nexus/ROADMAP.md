@@ -47,11 +47,11 @@
 
 | 功能 | 说明 | 状态 |
 |------|------|------|
-| CI 全绿 | Windows + Linux 零失败 | 进行中 |
-| 模型无关化 | 支持所有 OpenAI 兼容 API，用户自填 Key + Base URL | 待开始 |
-| **Agent Graph 可视化** | `/agent-graph` 命令，可视化所有 Agent 关系图，点击独立聊天 | 待开始 |
-| Windows 安装体验 | 单 exe 免安装，winget / scoop 包 | 待开始 |
-| 中文文档 | 完整中文 README + 使用指南 | 待开始 |
+| CI 全绿 | Windows + Linux 零失败 | 🟡 进行中 (Linux ✅, Windows 剩余预存失败) |
+| 模型无关化 | 支持所有 OpenAI 兼容 API，用户自填 Key + Base URL | ✅ 已完成 |
+| **Agent Graph 可视化** | `/agent-graph` 命令，可视化所有 Agent 关系图，点击独立聊天 | ✅ 已完成 |
+| Windows 安装体验 | 单 exe 免安装，winget / scoop 包 | ✅ 已完成 |
+| 中文文档 | 完整中文 README + 使用指南 | ✅ 已完成 |
 
 **为什么 Agent Graph 放在 P0：** 对个人开发者来说，可视化多 Agent 并行工作是最直观的差异化体验——"这工具能同时跑 5 个 Agent 还能点开聊天？"——比功能列表更有传播力。
 

@@ -1,0 +1,52 @@
+# winget manifest for Nexus
+# To submit to winget-pkgs, copy to:
+#   manifests/a/Alele496/Nexus/<version>/Alele496.Nexus.yaml
+#
+# Install: winget install Alele496.Nexus
+# (once accepted into winget-pkgs repository)
+
+PackageIdentifier: Alele496.Nexus
+PackageVersion: 0.3.0
+PackageName: Nexus
+Publisher: Alele496
+License: Apache-2.0
+LicenseUrl: https://github.com/Alele496/Nexus/blob/agent-dev/LICENSE
+Moniker: nexus
+ShortDescription: 开源智能 AI 编程助手 — 终端原生 TUI 界面
+Description: |
+  Nexus 是一个开源的终端原生 AI 编程助手，支持 DeepSeek V4、OpenAI、Anthropic Claude
+  等多种模型。提供代码理解、文件编辑、Shell 执行、多 Agent 协作、Agent Graph 可视化、
+  MCP 扩展等能力。中文优先，Windows 原生。
+
+Tags:
+  - ai
+  - coding-assistant
+  - terminal
+  - cli
+  - rust
+  - deepseek
+  - openai
+  - anthropic
+  - developer-tools
+  - tui
+
+Homepage: https://github.com/Alele496/Nexus
+ReleaseNotesUrl: https://github.com/Alele496/Nexus/releases/tag/v0.3.0
+DocumentationUrl: https://github.com/Alele496/Nexus/blob/agent-dev/nexus/README.md
+
+# Single-file portable app; install to %LOCALAPPDATA%\Programs\Nexus\
+InstallerType: portable
+InstallModes:
+  - silent
+
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/Alele496/Nexus/releases/download/v0.3.0/nexus.exe
+    InstallerSha256: <AUTO_FILLED_BY_CI>
+    # Run 'nexus' after install to start the TUI
+
+Commands:
+  - nexus
+
+ManifestType: singleton
+ManifestVersion: 1.9.0

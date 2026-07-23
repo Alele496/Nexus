@@ -193,6 +193,9 @@ pub(crate) async fn spawn_session_actor(
     parent_scheduler_handle: Option<
         nexus_tools::implementations::nexus_build::scheduler::types::SchedulerHandle,
     >,
+    parent_mailbox_handle: Option<
+        nexus_tools::implementations::nexus_build::mailbox::MailboxHandle,
+    >,
     max_turns: Option<usize>,
     forked_tool_override: Option<Vec<ToolSpec>>,
 ) -> Result<
@@ -878,6 +881,11 @@ pub(crate) async fn spawn_session_actor(
         owner_session_id: Some(session_info.id.0.to_string()),
         parent_scheduler_handle: if startup_hints.is_subagent {
             parent_scheduler_handle
+        } else {
+            None
+        },
+        parent_mailbox_handle: if startup_hints.is_subagent {
+            parent_mailbox_handle
         } else {
             None
         },
@@ -1804,6 +1812,9 @@ pub(crate) async fn spawn_session_on_thread(
     parent_scheduler_handle: Option<
         nexus_tools::implementations::nexus_build::scheduler::types::SchedulerHandle,
     >,
+    parent_mailbox_handle: Option<
+        nexus_tools::implementations::nexus_build::mailbox::MailboxHandle,
+    >,
     max_turns: Option<usize>,
     forked_tool_override: Option<Vec<ToolSpec>>,
 ) -> Result<
@@ -1962,6 +1973,7 @@ pub(crate) async fn spawn_session_on_thread(
                         laziness_debug_log,
                         parent_terminal_backend,
                         parent_scheduler_handle,
+                        parent_mailbox_handle,
                         max_turns,
                         forked_tool_override,
                     )

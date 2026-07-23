@@ -238,6 +238,11 @@ pub struct SessionContext {
     /// subagent exit.
     pub parent_scheduler_handle:
         Option<crate::implementations::nexus_build::scheduler::types::SchedulerHandle>,
+    /// Parent's mailbox handle. When `Some`, the session reuses the parent's
+    /// mailbox actor instead of spawning its own, so messages survive
+    /// subagent exit.
+    pub parent_mailbox_handle:
+        Option<crate::implementations::nexus_build::mailbox::MailboxHandle>,
     /// Available skills for the Skill tool and description templates.
     pub skills: Vec<SkillInfo>,
     /// File path for persisting Resources state across restarts.
@@ -448,6 +453,7 @@ pub struct FinalizedToolset {
     pub resources: SharedResources,
     resources_persistence: Arc<ResourcesPersistence>,
     scheduler_cancel: Option<tokio_util::sync::CancellationToken>,
+    mailbox_cancel: Option<tokio_util::sync::CancellationToken>,
     /// Shared local registry for in-process dispatch.
     /// Contains only config-enabled tools. Can be shared with ToolHarness.
     local_registry: nexus_computer_hub_sdk::LocalRegistry,
@@ -1181,11 +1187,31 @@ impl ToolRegistryBuilder {
                 );
                 (Some(scheduler_cmd_rx), Some(cancel_token))
             };
+        let (mailbox_cmd_rx, mailbox_cancel_token) =
+            if let Some(parent_handle) = ctx.parent_mailbox_handle {
+                resources.insert(parent_handle);
+                (None, None)
+            } else {
+                let (mailbox_cmd_tx, mailbox_cmd_rx) = tokio::sync::mpsc::unbounded_channel();
+                let cancel_token = tokio_util::sync::CancellationToken::new();
+                resources.insert(
+                    crate::implementations::nexus_build::mailbox::MailboxHandle(mailbox_cmd_tx),
+                );
+                (Some(mailbox_cmd_rx), Some(cancel_token))
+            };
         let shared_resources = resources.into_shared();
         if let (Some(cmd_rx), Some(cancel_token)) = (scheduler_cmd_rx, &scheduler_cancel_token) {
             let actor = crate::implementations::nexus_build::scheduler::actor::SchedulerActor {
                 resources: shared_resources.clone(),
                 notification_handle: scheduler_notification_handle,
+                cmd_rx,
+                cancel_token: cancel_token.clone(),
+            };
+            tokio::spawn(actor.run());
+        }
+        if let (Some(cmd_rx), Some(cancel_token)) = (mailbox_cmd_rx, &mailbox_cancel_token) {
+            let actor = crate::implementations::nexus_build::mailbox::MailboxActor {
+                resources: shared_resources.clone(),
                 cmd_rx,
                 cancel_token: cancel_token.clone(),
             };
@@ -1197,6 +1223,7 @@ impl ToolRegistryBuilder {
             resources: shared_resources,
             resources_persistence: persistence,
             scheduler_cancel: scheduler_cancel_token,
+            mailbox_cancel: mailbox_cancel_token,
             local_registry,
             renderer: renderer_arc,
             system_reminder_tag: ctx.system_reminder_tag,
@@ -1207,6 +1234,9 @@ impl ToolRegistryBuilder {
 impl Drop for FinalizedToolset {
     fn drop(&mut self) {
         if let Some(cancel) = self.scheduler_cancel.take() {
+            cancel.cancel();
+        }
+        if let Some(cancel) = self.mailbox_cancel.take() {
             cancel.cancel();
         }
     }
@@ -1262,6 +1292,7 @@ impl FinalizedToolset {
             )),
             resources_persistence: Arc::new(ResourcesPersistence::noop()),
             scheduler_cancel: None,
+            mailbox_cancel: None,
             local_registry: nexus_computer_hub_sdk::LocalRegistry::new(),
             renderer: Arc::new(TemplateRenderer::new(
                 std::collections::HashMap::new(),
@@ -2001,6 +2032,7 @@ mod tests {
             notification_handle: crate::notification::ToolNotificationHandle::noop(),
             owner_session_id: None,
             parent_scheduler_handle: None,
+            parent_mailbox_handle: None,
             skills: vec![],
             state_path: tmp.path().join("state.json"),
             memory_backend: None,

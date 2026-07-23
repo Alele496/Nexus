@@ -3647,6 +3647,7 @@ impl MvpAgent {
                     laziness_debug_log_for_spawn,
                     None,
                     None,
+                    None,
                     max_turns,
                     None,
                 )

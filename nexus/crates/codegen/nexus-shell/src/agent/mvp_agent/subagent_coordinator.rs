@@ -613,6 +613,7 @@ impl MvpAgent {
             parent_terminal_backend: parent_terminal_backend.clone(),
             parent_notification_handle: parent_notification_handle.clone(),
             parent_scheduler_handle: parent_scheduler_handle.clone(),
+            parent_mailbox_handle: None,
         })
     }
 }

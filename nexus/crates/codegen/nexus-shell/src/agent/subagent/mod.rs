@@ -209,6 +209,10 @@ pub(crate) struct SubagentSpawnContext {
     /// parent's scheduler actor so scheduled tasks survive subagent exit.
     pub parent_scheduler_handle:
         Option<nexus_tools::implementations::nexus_build::scheduler::types::SchedulerHandle>,
+    /// Parent's mailbox handle. When `Some`, the subagent reuses the
+    /// parent's mailbox actor so messages survive subagent exit.
+    pub parent_mailbox_handle:
+        Option<nexus_tools::implementations::nexus_build::mailbox::MailboxHandle>,
     /// Parent's session environment variables (.envrc + color settings).
     /// Shared so the child inherits the same env without re-loading.
     pub session_env: Arc<HashMap<String, String>>,

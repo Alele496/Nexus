@@ -20,6 +20,7 @@ pub mod image_gen;
 pub mod kill_task;
 pub mod list_dir;
 pub mod lsp;
+pub mod mailbox;
 pub mod monitor;
 pub mod read_file;
 pub mod scheduler;
@@ -46,6 +47,8 @@ pub use image_gen::{
 pub use kill_task::{KillTaskTool, KillTerminalCommandTool};
 pub use list_dir::ListDirTool;
 pub use lsp::LspTool;
+pub use mailbox::check::{CHECK_MAILBOX_TOOL_NAME, CheckMailboxTool};
+pub use mailbox::send::{SEND_MESSAGE_TOOL_NAME, SendMessageTool};
 pub use monitor::tool::MonitorTool;
 pub use read_file::ReadFileTool;
 pub use scheduler::create::{

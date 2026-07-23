@@ -1070,6 +1070,7 @@ async fn file_toolset_override_e2e_to_finalized_toolset() {
         notification_handle: ToolNotificationHandle::noop(),
         owner_session_id: None,
         parent_scheduler_handle: None,
+        parent_mailbox_handle: None,
         skills: vec![],
         state_path: tmp.path().join("state.json"),
         memory_backend: None,

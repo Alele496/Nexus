@@ -56,6 +56,8 @@ pub struct AgentBuilder {
     owner_session_id: Option<String>,
     parent_scheduler_handle:
         Option<nexus_tools::implementations::nexus_build::scheduler::types::SchedulerHandle>,
+    parent_mailbox_handle:
+        Option<nexus_tools::implementations::nexus_build::mailbox::MailboxHandle>,
     /// The agent definition — set via from_definition() or built up
     /// via individual with_*() calls.
     definition: Option<AgentDefinition>,
@@ -190,6 +192,7 @@ impl AgentBuilder {
             notification_handle,
             owner_session_id: None,
             parent_scheduler_handle: None,
+            parent_mailbox_handle: None,
             definition: None,
             persona_summaries: Vec::new(),
             prompt_audience: crate::prompt::context::PromptAudience::Primary,
@@ -408,6 +411,14 @@ impl AgentBuilder {
         handle: nexus_tools::implementations::nexus_build::scheduler::types::SchedulerHandle,
     ) -> Self {
         self.parent_scheduler_handle = Some(handle);
+        self
+    }
+    /// Share the parent's mailbox handle so messages survive subagent exit.
+    pub fn with_parent_mailbox_handle(
+        mut self,
+        handle: nexus_tools::implementations::nexus_build::mailbox::MailboxHandle,
+    ) -> Self {
+        self.parent_mailbox_handle = Some(handle);
         self
     }
     /// Set the web search configuration.
@@ -1021,6 +1032,7 @@ impl AgentBuilder {
                 notification_handle: self.notification_handle.clone(),
                 owner_session_id: self.owner_session_id.clone(),
                 parent_scheduler_handle: self.parent_scheduler_handle.take(),
+                parent_mailbox_handle: self.parent_mailbox_handle.take(),
                 skills: skill_info.clone(),
                 state_path,
                 memory_backend: self.memory_backend,

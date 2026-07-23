@@ -133,6 +133,8 @@ pub(crate) struct AgentRebuildSpec {
     pub owner_session_id: Option<String>,
     pub parent_scheduler_handle:
         Option<nexus_tools::implementations::nexus_build::scheduler::types::SchedulerHandle>,
+    pub parent_mailbox_handle:
+        Option<nexus_tools::implementations::nexus_build::mailbox::MailboxHandle>,
 }
 impl AgentRebuildSpec {
     /// Build a fresh [`Agent`] from this spec and an [`AgentDefinition`].
@@ -226,6 +228,7 @@ impl AgentRebuildSpec {
             system_prompt_label,
             owner_session_id,
             parent_scheduler_handle,
+            parent_mailbox_handle,
         } = self.as_ref();
         let _ = mcp_state;
         #[allow(unused_variables)]
@@ -278,6 +281,9 @@ impl AgentRebuildSpec {
         }
         if let Some(handle) = parent_scheduler_handle.clone() {
             builder = builder.with_parent_scheduler_handle(handle);
+        }
+        if let Some(handle) = parent_mailbox_handle.clone() {
+            builder = builder.with_parent_mailbox_handle(handle);
         }
         if let Some(memory_backend) = memory_backend.clone() {
             builder = builder.with_memory_backend(memory_backend);
@@ -436,6 +442,7 @@ pub(crate) fn test_rebuild_spec_default() -> Arc<AgentRebuildSpec> {
         system_prompt_label: nexus_agent::DEFAULT_SYSTEM_PROMPT_LABEL.to_string(),
         owner_session_id: Some("test-session".to_string()),
         parent_scheduler_handle: None,
+        parent_mailbox_handle: None,
     })
 }
 #[cfg(test)]

@@ -1,0 +1,23 @@
+{
+    "version": "0.3.0",
+    "description": "开源智能 AI 编程助手 — 终端原生 TUI 界面",
+    "homepage": "https://github.com/Alele496/Nexus",
+    "license": "Apache-2.0",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/Alele496/Nexus/releases/download/v0.3.0/nexus.exe",
+            "hash": "<AUTO_FILLED_BY_CI>",
+            "bin": "nexus.exe"
+        }
+    },
+    "checkver": {
+        "github": "https://github.com/Alele496/Nexus"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/Alele496/Nexus/releases/download/v$version/nexus.exe"
+            }
+        }
+    }
+}

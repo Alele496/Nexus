@@ -458,6 +458,7 @@ impl SessionContextFactory for WorkspaceSessionContextFactory {
             notification_handle,
             owner_session_id: None,
             parent_scheduler_handle: None,
+            parent_mailbox_handle: None,
             skills: vec![],
             state_path: self.resolve_state_path(session_id),
             memory_backend: None,
