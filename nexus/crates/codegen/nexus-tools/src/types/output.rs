@@ -647,6 +647,8 @@ pub enum ToolOutput {
     SchedulerDelete(crate::implementations::nexus_build::scheduler::delete::SchedulerDeleteOutput),
     SchedulerList(crate::implementations::nexus_build::scheduler::list::SchedulerListOutput),
     UpdateGoal(crate::implementations::nexus_build::update_goal::UpdateGoalOutput),
+    SendMessage(crate::implementations::nexus_build::mailbox::send::SendMessageOutput),
+    CheckMailbox(crate::implementations::nexus_build::mailbox::check::CheckMailboxOutput),
     /// Dynamic output for runtime-registered tools (MCP, test tools, etc.)
     Dynamic(DynamicOutput),
     /// Generic text output for tools that produce simple formatted text
@@ -975,6 +977,19 @@ impl ToolOutput {
                 }
             }
             ToolOutput::UpdateGoal(o) => o.summary.clone(),
+            ToolOutput::SendMessage(o) => {
+                format!("Message sent — ID: {}, to: {}, status: {}", o.message_id, o.to, o.status)
+            }
+            ToolOutput::CheckMailbox(o) => {
+                if o.messages.is_empty() {
+                    "No new messages.".to_string()
+                } else {
+                    let msgs: Vec<String> = o.messages.iter().map(|m| {
+                        format!("[{}] from {}: {} — {}", m.id, m.from, m.subject, if m.is_unread { "unread" } else { "read" })
+                    }).collect();
+                    format!("{} message(s):\n{}", o.count, msgs.join("\n"))
+                }
+            }
             ToolOutput::Dynamic(v) => serde_json::to_string_pretty(&v.value).unwrap_or_default(),
             ToolOutput::Text(text) => text.text.clone(),
             ToolOutput::ImageGen(m) => m.prompt_text("Image generated"),

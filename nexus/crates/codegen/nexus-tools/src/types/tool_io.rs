@@ -19,6 +19,8 @@ use crate::implementations::nexus_build::ask_user_question::AskUserQuestionInput
 use crate::implementations::nexus_build::enter_plan_mode::EnterPlanModeInput;
 use crate::implementations::nexus_build::exit_plan_mode::ExitPlanModeInput;
 use crate::implementations::nexus_build::grep::GrepSearchInput;
+use crate::implementations::nexus_build::mailbox::check::CheckMailboxInput;
+use crate::implementations::nexus_build::mailbox::send::SendMessageInput;
 use crate::implementations::nexus_build::image_edit::ImageEditInput;
 use crate::implementations::nexus_build::image_gen::ImageGenInput;
 use crate::implementations::nexus_build::list_dir::ListDirInput;
@@ -95,6 +97,8 @@ pub enum ToolInput {
     SchedulerDelete(crate::implementations::nexus_build::scheduler::delete::SchedulerDeleteInput),
     SchedulerList(crate::implementations::nexus_build::scheduler::list::SchedulerListInput),
     UpdateGoal(UpdateGoalInput),
+    SendMessage(SendMessageInput),
+    CheckMailbox(CheckMailboxInput),
     /// Dynamic input for runtime-registered tools (MCP, etc.)
     Dynamic(serde_json::Value),
 }
