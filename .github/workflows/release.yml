@@ -66,7 +66,7 @@ jobs:
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
           ARTIFACT="nexus-${VERSION}-windows-x86_64.exe"
-          cp nexus/target/release/nexus.exe "${ARTIFACT}"
+          cp target/release/nexus.exe "${ARTIFACT}"
           echo "ARTIFACT=${ARTIFACT}" >> $GITHUB_ENV
 
       - name: Upload to GitHub Release
@@ -114,7 +114,7 @@ jobs:
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
           ARTIFACT="nexus-${VERSION}-linux-x86_64"
-          cp nexus/target/release/nexus "${ARTIFACT}"
+          cp target/release/nexus "${ARTIFACT}"
           chmod +x "${ARTIFACT}"
           echo "ARTIFACT=${ARTIFACT}" >> $GITHUB_ENV
 
@@ -164,7 +164,7 @@ jobs:
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
           ARTIFACT="nexus-${VERSION}-macos-aarch64"
-          cp nexus/target/release/nexus "${ARTIFACT}"
+          cp target/release/nexus "${ARTIFACT}"
           chmod +x "${ARTIFACT}"
           echo "ARTIFACT=${ARTIFACT}" >> $GITHUB_ENV
 
