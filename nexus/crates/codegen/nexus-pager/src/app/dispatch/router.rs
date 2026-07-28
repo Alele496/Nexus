@@ -8,6 +8,7 @@ use super::ctx::{
     active_agent_session_id, get_active_agent_mut, navigate_clearing_selection, open_url_or_show,
     sync_sleep_inhibitor, with_active_agent, with_scrollback,
 };
+use crate::app::approval_scopes::ApprovalScope;
 use super::agent_graph::{
     dispatch_exit_agent_graph, dispatch_graph_open_agent, dispatch_graph_open_subagent,
     dispatch_open_agent_graph,
@@ -1367,7 +1368,7 @@ fn dispatch_approve_scope_add(
         .approval_scopes
         .active_scopes()
         .last()
-        .map(|s| s.describe())
+        .map(|s: &&ApprovalScope| s.describe())
         .unwrap_or_default();
     app.show_toast(&format!("审批作用域已添加: {desc}"));
     vec![]
@@ -1385,7 +1386,7 @@ fn dispatch_approve_scope_list(app: &mut AppView) -> Vec<Effect> {
         .approval_scopes
         .active_scopes()
         .iter()
-        .map(|s| s.describe())
+        .map(|s: &&ApprovalScope| s.describe())
         .collect();
     if active.is_empty() {
         app.show_toast("无活跃的审批作用域");
@@ -1447,7 +1448,7 @@ fn dispatch_review_start(app: &mut AppView, target_agent_name: &str) -> Vec<Effe
             let files: Vec<String> = m
                 .modified_files
                 .iter()
-                .map(|p| format!("`{}`", p.display()))
+                .map(|p: &std::path::PathBuf| format!("`{}`", p.display()))
                 .collect();
             if files.is_empty() {
                 String::new()
