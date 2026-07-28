@@ -856,6 +856,7 @@ pub(crate) async fn spawn_session_actor(
         persona_summaries: persona_summaries.clone(),
         prompt_audience,
         role_instructions: role_instructions.clone(),
+        shared_context_section: startup_hints.shared_context_section.clone(),
         persona_instructions: persona_instructions.clone(),
         skills_config: skills_config.clone(),
         compat,

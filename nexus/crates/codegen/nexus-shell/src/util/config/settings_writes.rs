@@ -289,3 +289,42 @@ pub async fn set_show_tips(value: bool) -> Result<()> {
 pub async fn set_auto_update(value: bool) -> Result<()> {
     update_config(|cfg| cfg.cli.auto_update = Some(value)).await
 }
+
+// ── Phase 1: proxy & reasoning effort ────────────────────────────────────
+
+/// Persist `[endpoints].proxy_http` via `update_config`.
+/// Restart-required: proxy is applied at HTTP client construction.
+pub async fn set_proxy_http(value: String) -> Result<()> {
+    update_config(|cfg| {
+        cfg.proxy_http = if value.is_empty() { None } else { Some(value) };
+    })
+    .await
+}
+
+/// Persist `[endpoints].proxy_https` via `update_config`.
+/// Restart-required: proxy is applied at HTTP client construction.
+pub async fn set_proxy_https(value: String) -> Result<()> {
+    update_config(|cfg| {
+        cfg.proxy_https = if value.is_empty() { None } else { Some(value) };
+    })
+    .await
+}
+
+/// Persist `[endpoints].proxy_no_proxy` via `update_config`.
+/// Restart-required: proxy is applied at HTTP client construction.
+pub async fn set_proxy_no_proxy(value: String) -> Result<()> {
+    update_config(|cfg| {
+        cfg.proxy_no_proxy = if value.is_empty() { None } else { Some(value) };
+    })
+    .await
+}
+
+/// Persist `[models].default_reasoning_effort` via `update_config`.
+pub async fn set_default_reasoning_effort(value: String) -> Result<()> {
+    let effort = match value.as_str() {
+        "high" => nexus_sampling_types::ReasoningEffort::High,
+        "xhigh" => nexus_sampling_types::ReasoningEffort::Xhigh,
+        other => anyhow::bail!("unknown reasoning effort: {other}"),
+    };
+    update_config(|cfg| cfg.models.default_reasoning_effort = Some(effort)).await
+}

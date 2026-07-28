@@ -8,8 +8,10 @@ use crate::app::actions::{Action, Effect, SwitchModelError};
 use crate::app::agent::{AgentCommand, AgentId, AgentSession, AgentState};
 use crate::app::agent_view::{ActivePane, AgentView, McpInitProgress};
 use crate::app::app_view::{ActiveView, AppView, TrustState};
+use crate::views::dashboard::state::DashboardEventKind;
 use crate::app::dispatch::ctx::{
-    SwitchCause, get_active_agent, reseed_tip_for_new_session, show_welcome, switch_to_agent,
+    SwitchCause, agent_label, get_active_agent, go_home, push_dashboard_event,
+    reseed_tip_for_new_session, show_welcome, switch_to_agent,
 };
 use crate::app::dispatch::modes::inherit_auto_mode;
 use crate::app::dispatch::prompt::{consume_chat_kind, dispatch_initial_prompt};
@@ -326,6 +328,12 @@ pub(in crate::app::dispatch) fn dispatch_new_session_inner_with_id(
         scrollback,
     );
     app.agents.insert(agent_id, agent);
+    let label = agent_label(app, agent_id);
+    push_dashboard_event(
+        app,
+        DashboardEventKind::AgentCreated,
+        format!("{label} created"),
+    );
     {
         let agent = app.agents.get_mut(&agent_id).unwrap();
         agent.prompt.set_compact(app.appearance.prompt.compact);
@@ -368,21 +376,43 @@ pub(in crate::app::dispatch) fn dispatch_new_session_inner_with_id(
             agent.session.prompt_history_loading = true;
         }
         let preferred_session_id = app.deferred_startup.preferred_session_id.take();
+        let shared_context_section = app.shared_context.build_context_section(agent_id);
         effects.push(Effect::CreateSession {
             agent_id,
             cwd: effective_cwd,
             model_id,
             preferred_session_id,
             chat_kind,
+            shared_context_section,
         });
     }
     (agent_id, effects)
 }
-/// Exit the current session and return to the welcome screen.
+/// Exit the current session and return to the home screen (Dashboard when
+/// other agents exist, Welcome otherwise).
 pub(in crate::app::dispatch) fn dispatch_exit_session(app: &mut AppView) -> Vec<Effect> {
+    let agent_label = get_active_agent(app)
+        .map(|a| {
+            a.display_name
+                .clone()
+                .or_else(|| a.generated_session_title.clone())
+                .unwrap_or_else(|| "unknown".to_string())
+        })
+        .unwrap_or_else(|| "unknown".to_string());
     let effects =
         unregister_session_effect(get_active_agent(app).and_then(|a| a.session.session_id.clone()));
-    show_welcome(app);
+    push_dashboard_event(
+        app,
+        DashboardEventKind::AgentCompleted,
+        format!("{agent_label} finished"),
+    );
+    // The closing agent is still in the map; if it's the only one, go to
+    // Welcome instead of an empty Dashboard.
+    if app.agents.len() > 1 {
+        go_home(app);
+    } else {
+        show_welcome(app);
+    }
     app.welcome_prompt_focused = true;
     app.session_picker_entries = None;
     app.session_picker_loading = false;
@@ -673,6 +703,12 @@ pub(in crate::app::dispatch) fn dispatch_new_worktree_session(
     agent.session.start_command(cmd);
     agent.turn_started_at = Some(Instant::now());
     app.agents.insert(agent_id, agent);
+    let event_label = agent_label(app, agent_id);
+    push_dashboard_event(
+        app,
+        DashboardEventKind::AgentCreated,
+        format!("{event_label} created (worktree)"),
+    );
     let chat_kind = if load_session_id.is_none() {
         consume_chat_kind(app)
     } else {
@@ -752,7 +788,7 @@ pub(in crate::app::dispatch) fn refuse_chat_mode_build_agent(app: &mut AppView, 
     if let Some(target) = fallback {
         switch_to_agent(app, target, SwitchCause::Picker);
     } else {
-        show_welcome(app);
+        go_home(app);
         app.welcome_prompt_focused = true;
         app.session_picker_entries = None;
         app.session_picker_loading = false;
@@ -797,16 +833,14 @@ pub(in crate::app::dispatch) fn skip_picker_and_create_session(
         }
     }
     let preferred_session_id = app.deferred_startup.preferred_session_id.take();
+    let shared_context_section = app.shared_context.build_context_section(agent_id);
     vec![Effect::CreateSession {
         agent_id,
         cwd: app.cwd.clone(),
         model_id: None,
         preferred_session_id,
         chat_kind,
-        
-        
-        
-        
+        shared_context_section,
     }]
 }
 pub(in crate::app::dispatch) fn handle_session_created(
@@ -1018,12 +1052,18 @@ pub(in crate::app::dispatch) fn handle_worktree_session_failed(
         .get(&agent_id)
         .is_some_and(|a| a.session.session_id.is_none() && a.session.forked_from.is_none());
     if is_orphan_zombie {
+        let label = agent_label(app, agent_id);
+        push_dashboard_event(
+            app,
+            DashboardEventKind::AgentFailed,
+            format!("{label} worktree failed: {error}"),
+        );
         let fallback = app.agents.keys().copied().find(|id| *id != agent_id);
         remove_agent_and_cleanup(app, agent_id);
         if let Some(target) = fallback {
             switch_to_agent(app, target, SwitchCause::Picker);
         } else {
-            show_welcome(app);
+            go_home(app);
             app.welcome_prompt_focused = true;
             app.session_picker_entries = None;
             app.session_picker_loading = false;

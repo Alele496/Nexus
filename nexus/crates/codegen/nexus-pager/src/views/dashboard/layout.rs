@@ -217,7 +217,17 @@ pub struct DashboardLayout {
     /// (`area.height <= 16`, same threshold as
     /// `views::agent::AgentViewLayout::compute`).
     pub bottom_margin: Rect,
+    /// Right-side event stream panel. Shows recent agent lifecycle
+    /// events (created, completed, failed, messages). Hidden when the
+    /// terminal is narrower than [`EVENT_STREAM_MIN_WIDTH`].
+    pub event_stream: Rect,
 }
+
+/// Minimum total dashboard width for the event stream panel to appear.
+const EVENT_STREAM_MIN_TOTAL_WIDTH: u16 = 80;
+/// Fraction of the content area allocated to the event stream.
+const EVENT_STREAM_WIDTH_FRAC_NUM: u16 = 3;
+const EVENT_STREAM_WIDTH_FRAC_DEN: u16 = 10;
 
 /// Compute the dashboard layout for a given content area.
 ///
@@ -343,6 +353,7 @@ fn compute_layout_with_dispatch_inner(
             dispatch: z,
             footer: z,
             bottom_margin: z,
+            event_stream: z,
         };
     }
     let (
@@ -447,8 +458,25 @@ fn compute_layout_with_dispatch_inner(
     // The outer columns stay painted bg_base by the area-wide fill in
     // render_dashboard. Mirrors the dispatch inset pattern but with a
     // smaller pad (1 vs 2) because row text is long and dense.
+    //
+    // When the terminal is wide enough (≥ EVENT_STREAM_MIN_TOTAL_WIDTH),
+    // carve a right-side event stream panel out of the list area. The
+    // list and event stream share the same vertical space.
+    let show_event_stream = area.width >= EVENT_STREAM_MIN_TOTAL_WIDTH;
+    let event_stream_width = if show_event_stream {
+        (area.width * EVENT_STREAM_WIDTH_FRAC_NUM / EVENT_STREAM_WIDTH_FRAC_DEN)
+            .min(40)
+            .max(20)
+    } else {
+        0
+    };
     let list_inner_pad = LIST_OUTER_HPAD.saturating_mul(2);
-    let list_width = area.width.saturating_sub(list_inner_pad);
+    let list_full_width = area.width.saturating_sub(list_inner_pad);
+    let list_width = if show_event_stream {
+        list_full_width.saturating_sub(event_stream_width + 1) // 1-col gap
+    } else {
+        list_full_width
+    };
     let list_x = if list_width > 0 {
         area.x.saturating_add(LIST_OUTER_HPAD)
     } else {
@@ -463,6 +491,16 @@ fn compute_layout_with_dispatch_inner(
             area.width
         },
         height: remaining,
+    };
+    let event_stream = if show_event_stream {
+        Rect {
+            x: list.x + list.width + 1, // 1-col gap from list
+            y,
+            width: area.width.saturating_sub(list.width + LIST_OUTER_HPAD + 1),
+            height: remaining,
+        }
+    } else {
+        Rect::default()
     };
     y += remaining;
 
@@ -537,6 +575,7 @@ fn compute_layout_with_dispatch_inner(
         dispatch,
         footer,
         bottom_margin,
+        event_stream,
     }
 }
 
@@ -665,7 +704,7 @@ mod tests {
     /// Footer remains full-width.
     #[test]
     fn layout_insets_header_and_list() {
-        let area = Rect::new(0, 0, 80, 30);
+        let area = Rect::new(0, 0, 79, 30);
         let layout = compute_layout(area, false);
         assert_eq!(
             layout.header.width,
@@ -683,7 +722,7 @@ mod tests {
     /// bg_base (painted by the top-level area fill).
     #[test]
     fn layout_applies_outer_hpad_to_list() {
-        let area = Rect::new(0, 0, 80, 30);
+        let area = Rect::new(0, 0, 79, 30);
         let layout = compute_layout(area, false);
         assert_eq!(
             layout.list.x,
@@ -700,7 +739,7 @@ mod tests {
     /// Header h-pad matches list so title aligns with content columns.
     #[test]
     fn layout_applies_outer_hpad_to_header() {
-        let area = Rect::new(0, 0, 80, 30);
+        let area = Rect::new(0, 0, 79, 30);
         let layout = compute_layout(area, false);
         assert_eq!(HEADER_OUTER_HPAD, LIST_OUTER_HPAD);
         assert_eq!(
@@ -992,7 +1031,7 @@ mod tests {
 
     #[test]
     fn layout_header_aligns_with_list_and_dispatch() {
-        let area = Rect::new(0, 0, 80, 30);
+        let area = Rect::new(0, 0, 79, 30);
         let layout = compute_layout(area, false);
         assert_eq!(layout.header.x, layout.list.x);
         assert_eq!(layout.header.x, layout.dispatch.x);

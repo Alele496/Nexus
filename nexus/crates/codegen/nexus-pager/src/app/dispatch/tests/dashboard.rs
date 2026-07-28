@@ -4123,6 +4123,7 @@ fn dashboard_upgrade_cta_paints_arms_rect_and_ctrl_o_override() {
             pinned: true,
             caption: Some(CAPTION),
         }),
+        &crate::app::shared_context::SharedContextState::default(),
     );
     assert!(
         state.pinned_upgrade_cta_live,
@@ -4177,6 +4178,7 @@ fn dashboard_upgrade_cta_paints_arms_rect_and_ctrl_o_override() {
             pinned: true,
             caption: None,
         }),
+        &crate::app::shared_context::SharedContextState::default(),
     );
     assert!(state.pinned_upgrade_cta_live);
     let rect = state
@@ -4208,6 +4210,7 @@ fn dashboard_upgrade_cta_paints_arms_rect_and_ctrl_o_override() {
             pinned: false,
             caption: Some(CAPTION),
         }),
+        &crate::app::shared_context::SharedContextState::default(),
     );
     assert!(!state.pinned_upgrade_cta_live);
     let rect = state
@@ -4241,6 +4244,7 @@ fn dashboard_upgrade_cta_paints_arms_rect_and_ctrl_o_override() {
         &[],
         false,
         None,
+        &crate::app::shared_context::SharedContextState::default(),
     );
     assert!(state.upgrade_cta_hit.rect.is_none());
     assert!(!state.pinned_upgrade_cta_live);
@@ -5558,6 +5562,7 @@ fn dashboard_peek_auto_opens_for_selected_row() {
         &[],
         false,
         None,
+        &crate::app::shared_context::SharedContextState::default(),
     );
     assert!(
         app.dashboard.as_ref().unwrap().peek.is_some(),
@@ -5577,6 +5582,7 @@ fn dashboard_peek_auto_opens_for_selected_row() {
         &[],
         false,
         None,
+        &crate::app::shared_context::SharedContextState::default(),
     );
     assert!(
         app.dashboard.as_ref().unwrap().peek.is_none(),
@@ -5615,6 +5621,7 @@ fn dashboard_peek_box_grows_for_multiline_reply() {
                 &[],
                 false,
                 None,
+                &crate::app::shared_context::SharedContextState::default(),
             );
         };
         // Open the peek first — `set_peek` clears the draft on the

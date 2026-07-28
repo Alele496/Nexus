@@ -899,6 +899,19 @@ pub enum SessionUpdate {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         usage: Option<PromptUsage>,
     },
+    /// An agent has modified one or more files.
+    ///
+    /// Sent by the notification bridge after `FileWritten` tool notifications.
+    /// The pager uses this to drive shared-context conflict detection.
+    AgentFilesChanged {
+        /// Agent session ID that modified the files.
+        session_id: String,
+        /// Absolute or relative paths of the files modified.
+        files: Vec<String>,
+        /// The prompt/turn index when the file was written.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        prompt_index: Option<usize>,
+    },
     /// Catch-all for unrecognized session update types.
     /// Allows forward/backward compatibility when variants are added or removed.
     /// All fields from the unrecognized variant are discarded during deserialization.

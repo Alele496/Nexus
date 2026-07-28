@@ -1125,6 +1125,38 @@ pub(crate) async fn persist_setting(
                 .await
                 .map_err(|e| e.to_string())
         }
+        "proxy_http" => {
+            let SettingValue::String(s) = value else {
+                return Err(kind_mismatch("proxy_http", "String", &value));
+            };
+            nexus_shell::util::config::set_proxy_http(s)
+                .await
+                .map_err(|e| e.to_string())
+        }
+        "proxy_https" => {
+            let SettingValue::String(s) = value else {
+                return Err(kind_mismatch("proxy_https", "String", &value));
+            };
+            nexus_shell::util::config::set_proxy_https(s)
+                .await
+                .map_err(|e| e.to_string())
+        }
+        "proxy_no_proxy" => {
+            let SettingValue::String(s) = value else {
+                return Err(kind_mismatch("proxy_no_proxy", "String", &value));
+            };
+            nexus_shell::util::config::set_proxy_no_proxy(s)
+                .await
+                .map_err(|e| e.to_string())
+        }
+        "default_reasoning_effort" => {
+            let SettingValue::Enum(s) = value else {
+                return Err(kind_mismatch("default_reasoning_effort", "Enum", &value));
+            };
+            nexus_shell::util::config::set_default_reasoning_effort(s.to_string())
+                .await
+                .map_err(|e| e.to_string())
+        }
         other => Err(format!("unknown setting key for persist: `{other}`")),
     }
 }

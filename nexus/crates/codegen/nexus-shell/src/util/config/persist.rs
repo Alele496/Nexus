@@ -46,6 +46,18 @@ pub async fn save_config(config: &Config) -> Result<()> {
     merge_ask_user_question_section(table, &config.ask_user_question);
     merge_section(table, "startup", &config.startup);
 
+    // Proxy settings: write under [endpoints].
+    {
+        let endpoints = table
+            .entry("endpoints")
+            .or_insert_with(|| TomlValue::Table(TomlMap::new()));
+        if let TomlValue::Table(ep) = endpoints {
+            set_optional_string(ep, "proxy_http", &config.proxy_http);
+            set_optional_string(ep, "proxy_https", &config.proxy_https);
+            set_optional_string(ep, "proxy_no_proxy", &config.proxy_no_proxy);
+        }
+    }
+
     if config.skills == SkillsConfig::default() {
         table.remove("skills");
     } else {
@@ -196,6 +208,19 @@ fn merge_toml_tables(
             (_, v) => {
                 existing.insert(field_key, v);
             }
+        }
+    }
+}
+
+/// Set or remove an optional string field in a TOML table.
+/// `None` removes the key; `Some(v)` sets it.
+fn set_optional_string(table: &mut TomlMap<String, TomlValue>, key: &str, value: &Option<String>) {
+    match value {
+        Some(v) if !v.is_empty() => {
+            table.insert(key.to_string(), TomlValue::String(v.clone()));
+        }
+        _ => {
+            table.remove(key);
         }
     }
 }

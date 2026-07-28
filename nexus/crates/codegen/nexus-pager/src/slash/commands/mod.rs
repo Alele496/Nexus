@@ -6,6 +6,7 @@
 pub mod agent_graph;
 pub mod always_approve;
 pub mod announcements;
+pub mod approve_scope;
 pub mod auto;
 pub mod btw;
 pub mod cd;
@@ -52,6 +53,7 @@ pub mod recap;
 pub mod release_notes;
 pub mod remember;
 pub mod rename;
+pub mod review;
 pub mod resume;
 pub mod rewind;
 pub mod screen_mode_switch;
@@ -99,6 +101,8 @@ pub fn builtin_commands() -> Vec<Arc<dyn SlashCommand>> {
         Arc::new(model::ModelCommand),
         Arc::new(effort::EffortCommand),
         Arc::new(always_approve::AlwaysApproveCommand),
+        Arc::new(approve_scope::ApproveScopeCommand),
+        Arc::new(review::ReviewCommand),
         Arc::new(auto::AutoCommand),
         Arc::new(multiline::MultilineCommand),
         Arc::new(compact_mode::CompactModeCommand),

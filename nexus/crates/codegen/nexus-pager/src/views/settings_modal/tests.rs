@@ -586,6 +586,8 @@ fn rows_contain_categories_and_settings_through_pr_14() {
             &SettingCategory::Editor,
             &SettingCategory::Agent,
             &SettingCategory::Privacy,
+            &SettingCategory::Proxy,
+            &SettingCategory::Keys,
             &SettingCategory::Models,
             // The Session category has no registered settings, so its
             // header is not emitted.
@@ -669,12 +671,19 @@ fn rows_contain_categories_and_settings_through_pr_14() {
             "plan_mode",
             // SHELL-owned coding_data_sharing (Privacy category).
             "coding_data_sharing",
+            // Phase 1 — Proxy category: HTTP/HTTPS/no-proxy URL entries.
+            "proxy_http",
+            "proxy_https",
+            "proxy_no_proxy",
+            // Phase 1 — Keys category: masked API key entry.
+            "api_key",
             // SHELL-owned default_model (Models category).
             "default_model",
-            // Models category. `default_reasoning_effort`,
-            // `web_search_model`, and `session_summary_model` are
-            // not exposed in the modal.
+            // Models category. `web_search_model` and `session_summary_model`
+            // are not exposed in the modal.
             "fork_secondary_model",
+            // Phase 1 — reasoning effort enum (Models category, exposed).
+            "default_reasoning_effort",
             // `auto_compact_threshold_percent` (Session category) is
             // not exposed in the modal.
             // Advanced category.

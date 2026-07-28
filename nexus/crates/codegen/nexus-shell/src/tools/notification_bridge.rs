@@ -323,6 +323,31 @@ async fn handle_notification(
                 is_new_file = written.is_new_file,
                 "FileWritten notification forwarded to hunk tracker"
             );
+
+            // Notify the pager so shared-context conflict detection stays up-to-date.
+            let files = vec![written.absolute_path.to_string_lossy().to_string()];
+            let mut notification = crate::extensions::notification::SessionNotification {
+                session_id: config.session_id.clone(),
+                update: crate::extensions::notification::SessionUpdate::AgentFilesChanged {
+                    session_id: config.session_id.0.to_string(),
+                    files,
+                    prompt_index: Some(prompt_index),
+                },
+                meta: None,
+            };
+            {
+                let mut meta_map = None;
+                stamp_event_id(config, &mut meta_map);
+                notification.meta = meta_map.map(serde_json::Value::Object);
+            }
+            let params = serde_json::to_value(&notification)
+                .and_then(|v| serde_json::value::to_raw_value(&v))
+                .ok();
+            if let Some(params) = params {
+                let ext_notification =
+                    acp::ExtNotification::new("x.ai/agent_files_changed", params.into());
+                config.gateway.forward_fire_and_forget(ext_notification);
+            }
         }
 
         ToolNotification::TaskCompleted(task_snapshot) => {

@@ -873,6 +873,23 @@ pub fn default_actions(mouse_reporting_toggle_enabled: bool) -> Vec<ActionDef> {
                 "Opens the Agent Dashboard: a list of all your running and recent agents to monitor and switch between.\nWorks from anywhere, including the welcome screen and inside a session.\nFrom there you can dispatch, attach, stop, group, and reorder agents.",
             ),
         },
+        // `Ctrl+G` opens the Agent Graph from any view — a visual tree of
+        // all agent relationships (coordinator → worker → subagent chains).
+        ActionDef {
+            id: ActionId::OpenAgentGraph,
+            label: "agent-graph",
+            description: "Open the Agent Graph visualization",
+            default_key: key!('g', CONTROL),
+            alt_keys: vec![key!(F(3))],
+            category: Category::Dashboard,
+            context: When::Always,
+            hint_priority: None,
+            hint_key_display: Some("Ctrl+G"),
+            requires_confirmation: false,
+            long_help: Some(
+                "Opens a visual tree of all your agents and their relationships: coordinators, workers, subagents, and forks.\nNavigate with arrow keys or mouse; press Enter on a node to open its session.\nWorks from any view — welcome screen, agent session, or dashboard.",
+            ),
+        },
         // Register all in-dashboard shortcuts through
         // the registry under `When::DashboardFocused`. The dispatch
         // path in `dashboard::state::handle_key` looks these up via

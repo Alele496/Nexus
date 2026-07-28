@@ -1379,6 +1379,22 @@ fn move_setting_away_from_default(app: &mut AppView, key: crate::settings::Setti
                 app,
             );
         }
+        // Phase 1: proxy / api_key / reasoning_effort
+        "proxy_http" => {
+            let _ = dispatch(Action::SetProxyHttp("http://localhost:8080".to_string()), app);
+        }
+        "proxy_https" => {
+            let _ = dispatch(Action::SetProxyHttps("https://localhost:8443".to_string()), app);
+        }
+        "proxy_no_proxy" => {
+            let _ = dispatch(Action::SetProxyNoProxy("localhost,127.0.0.1".to_string()), app);
+        }
+        "api_key" => {
+            let _ = dispatch(Action::SetApiKey("sk-test1234".to_string()), app);
+        }
+        "default_reasoning_effort" => {
+            let _ = dispatch(Action::SetDefaultReasoningEffort("xhigh".to_string()), app);
+        }
         other => {
             panic!(
                 "move_setting_away_from_default: no arm for `{other}`. \

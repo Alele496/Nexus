@@ -20,6 +20,7 @@ use crate::views::welcome::WelcomePromptFocus;
 use agent_client_protocol as acp;
 use crossterm::event::{Event, KeyCode, KeyEventKind, MouseButton, MouseEventKind};
 use indexmap::IndexMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -1106,6 +1107,18 @@ pub struct AppView {
     /// Held outside the `ActiveView` discriminant because `DashboardState`
     /// is not `Copy` (owns its prompt widget, peek panel, etc.).
     pub dashboard: Option<crate::views::dashboard::DashboardState>,
+    /// Shared context for multi-agent coordination: tracks what each agent
+    /// is working on and detects edit conflicts.
+    pub shared_context: crate::app::shared_context::SharedContextState,
+    /// User-defined approval scopes that auto-approve permission requests
+    /// matching path/tool-kind filters. Managed via `/approve-scope`.
+    pub approval_scopes: crate::app::approval_scopes::ApprovalScopes,
+    /// Independent verification (reviewer) configuration. Defaults to
+    /// disabled so users opt in consciously — reviews consume extra tokens.
+    pub review_config: crate::app::review::ReviewConfig,
+    /// Set of agent IDs that have been reviewed. Used by the dashboard to
+    /// show a `Reviewed` badge on reviewed agents' rows.
+    pub reviewed_agents: HashSet<AgentId>,
     /// Where to return when leaving the dashboard. See [`DashboardReturn`].
     pub dashboard_return: Option<DashboardReturn>,
     /// Agent graph visualization state. Held here (not on ActiveView discriminant)
@@ -1393,6 +1406,9 @@ impl AppView {
             quit_for_update: false,
             relaunch: None,
             has_claude_import: false,
+            approval_scopes: crate::app::approval_scopes::ApprovalScopes::default(),
+            review_config: crate::app::review::ReviewConfig::default(),
+            reviewed_agents: HashSet::new(),
             import_claude_modal: None,
             welcome_doc_viewer: None,
             screen_mode: ScreenMode::Inline,
@@ -1415,6 +1431,7 @@ impl AppView {
             cancel_rewind_enabled: true,
             session_recap_available: false,
             dashboard: None,
+            shared_context: crate::app::shared_context::SharedContextState::default(),
             dashboard_return: None,
             dashboard_persisted: None,
             agent_graph: None,
@@ -2719,6 +2736,8 @@ impl AppView {
                 git_ref: None,
             },
             ActionId::OpenDashboard => Action::OpenDashboard,
+            ActionId::OpenAgentGraph => Action::OpenAgentGraph,
+            ActionId::ExitAgentGraph => Action::ExitAgentGraph,
             ActionId::VoiceToggle => Action::VoiceToggle,
             _ => return InputOutcome::Unchanged,
         };
@@ -4320,6 +4339,9 @@ impl AppView {
                                     caption: crate::views::announcements::usable_cta_caption(owner),
                                 },
                             );
+                            // Sync reviewed set before render so the dashboard
+                            // can stamp Reviewed badges on reviewed agents.
+                            dashboard.reviewed_agents = self.reviewed_agents.clone();
                             let dash_cursor = crate::views::dashboard::render_dashboard(
                                 f.buffer_mut(),
                                 view_area,
@@ -4330,6 +4352,7 @@ impl AppView {
                                 dashboard_roster,
                                 self.dashboard_sessions_loading,
                                 dash_upgrade_cta,
+                                &self.shared_context,
                             );
                             let (popup_cursor, popup_post_flush, drawn_popup_agent) =
                                 if let Some(agent_id) = dashboard.attached_agent {
@@ -5446,6 +5469,9 @@ pub(crate) mod tests {
             quit_for_update: false,
             relaunch: None,
             has_claude_import: false,
+            approval_scopes: crate::app::approval_scopes::ApprovalScopes::default(),
+            review_config: crate::app::review::ReviewConfig::default(),
+            reviewed_agents: HashSet::new(),
             import_claude_modal: None,
             welcome_doc_viewer: None,
             screen_mode: ScreenMode::Inline,
@@ -5475,6 +5501,7 @@ pub(crate) mod tests {
             cancel_rewind_enabled: true,
             session_recap_available: false,
             dashboard: None,
+            shared_context: crate::app::shared_context::SharedContextState::default(),
             dashboard_return: None,
             dashboard_persisted: None,
             agent_graph: None,

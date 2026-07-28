@@ -140,6 +140,19 @@ pub(super) fn handle_session_notification(notif: &acp::ExtNotification, app: &mu
     };
     let parent_id = matched.agent_id();
     let is_active = is_matched_agent_active(app, parent_id);
+    // M4: snapshot agent labels before we take a mutable borrow on the
+    // matching agent — the TurnCompleted review-detection block needs
+    // to resolve a target label → AgentId without re-borrowing `app.agents`.
+    let agent_labels: Vec<(AgentId, String)> = app
+        .agents
+        .iter()
+        .filter_map(|(id, av)| {
+            av.display_name
+                .clone()
+                .or_else(|| av.generated_session_title.clone())
+                .map(|label| (*id, label))
+        })
+        .collect();
     let agent = app
         .agents
         .get_mut(&parent_id)
@@ -238,6 +251,28 @@ pub(super) fn handle_session_notification(notif: &acp::ExtNotification, app: &mu
                         agent_result.as_deref(),
                         cancel_trigger,
                     ));
+                // M4: Detect review fork completion. Review forks have
+                // display_name "Review: {target_label}". On completion,
+                // push a ReviewCompleted event and mark the target agent.
+                if let Some(ref dn) = agent.display_name
+                    && dn.starts_with("Review: ")
+                {
+                    let target_label = &dn["Review: ".len()..];
+                    if let Some(ref mut dashboard) = app.dashboard {
+                        dashboard.push_event(
+                            crate::views::dashboard::state::DashboardEventKind::ReviewCompleted,
+                            format!("审查完成: {target_label}"),
+                        );
+                    }
+                    // Mark the target agent as reviewed so the dashboard
+                    // renders a Reviewed badge on its row.
+                    if let Some((target_id, _)) = agent_labels
+                        .iter()
+                        .find(|(_, label)| label == target_label)
+                    {
+                        app.reviewed_agents.insert(*target_id);
+                    }
+                }
                 false
             }
         }
@@ -567,6 +602,19 @@ pub(super) fn handle_session_notification(notif: &acp::ExtNotification, app: &mu
                 }
                 entry.invalidate_cache();
             }
+            // M4: Auto-review suggestion. When review is enabled and a
+            // subagent completes successfully, push an event reminding
+            // the user to run /review. We don't auto-spawn because that
+            // would consume tokens without explicit user opt-in.
+            // Placed here — after `info_ref` last use, before `status` move.
+            if status.as_str() == "completed" && app.review_config.enabled {
+                if let Some(ref mut dashboard) = app.dashboard {
+                    dashboard.push_event(
+                        crate::views::dashboard::state::DashboardEventKind::ReviewStarted,
+                        format!("Review suggested: {description}"),
+                    );
+                }
+            }
             if let Some(info) = agent.subagent_sessions.get_mut(&child_session_id) {
                 info.finished = true;
                 info.status = Some(Arc::from(status));
@@ -727,6 +775,37 @@ pub(super) fn handle_session_notification(notif: &acp::ExtNotification, app: &mu
             } else {
                 false
             }
+        }
+        XaiSessionUpdate::AgentFilesChanged { files, .. } => {
+            let label = agent
+                .display_name
+                .clone()
+                .or_else(|| agent.generated_session_title.clone())
+                .unwrap_or_else(|| format!("Agent {}", parent_id.0));
+            for file in files {
+                app.shared_context
+                    .add_agent_file(parent_id, label.clone(), PathBuf::from(file));
+            }
+            // Push conflict events to the dashboard event stream.
+            let conflicts = app.shared_context.conflicts_for_agent(parent_id);
+            if !conflicts.is_empty() {
+                if let Some(dashboard) = app.dashboard.as_mut() {
+                    let conflict_paths: Vec<String> = conflicts
+                        .iter()
+                        .map(|c| c.path.display().to_string())
+                        .collect();
+                    dashboard.push_event(
+                        crate::views::dashboard::state::DashboardEventKind::ConflictDetected,
+                        format!(
+                            "{} conflicts: {} files contested ({})",
+                            label,
+                            conflict_paths.len(),
+                            conflict_paths.join(", "),
+                        ),
+                    );
+                }
+            }
+            true
         }
         XaiSessionUpdate::SessionSummaryGenerated { session_summary } => {
             agent.generated_session_title =

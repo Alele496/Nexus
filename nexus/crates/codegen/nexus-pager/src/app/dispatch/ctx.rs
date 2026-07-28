@@ -5,6 +5,7 @@ use crate::app::agent::AgentId;
 use crate::app::agent_view::AgentView;
 use crate::app::app_view::{ActiveView, AppView, WelcomeAnnouncementState};
 use crate::scrollback::state::ScrollbackState;
+use crate::views::dashboard::state::DashboardEventKind;
 use agent_client_protocol as acp;
 
 /// The active agent's root session id, if any. Used to scope server-queue
@@ -134,9 +135,63 @@ pub(super) fn reseed_tip_for_new_session(app: &mut AppView) {
 /// Switch to the welcome screen, clearing ephemeral per-visit state. Use for
 /// every return-to-welcome transition so a previously-expanded announcement
 /// can't leak into the freshly-shown screen.
+///
+/// For "return to home" transitions (closing a session, etc.), prefer
+/// [`go_home`] — it redirects to the Dashboard when agents exist, making
+/// Welcome a fallback shown only when no agents are present.
 pub(super) fn show_welcome(app: &mut AppView) {
     app.active_view = ActiveView::Welcome;
     app.welcome_announcement = WelcomeAnnouncementState::default();
+}
+
+/// Return to the home screen. When agents exist, the Dashboard is the home
+/// screen; Welcome appears only when no agents have been created yet.
+/// Unlike [`show_welcome`], this does NOT force Welcome — use `show_welcome`
+/// directly for auth flows that must render on the Welcome screen.
+pub(super) fn go_home(app: &mut AppView) {
+    app.welcome_announcement = WelcomeAnnouncementState::default();
+    if !app.agents.is_empty() {
+        app.active_view = ActiveView::AgentDashboard;
+        if app.dashboard.is_none() {
+            let mut dashboard = crate::views::dashboard::DashboardState::new();
+            // Phase 1: show Settings hint toast after first-run wizard.
+            if std::env::var("NEXUS_WIZARD_JUST_COMPLETED").is_ok() {
+                unsafe {
+                    std::env::remove_var("NEXUS_WIZARD_JUST_COMPLETED");
+                }
+                dashboard.error_toast = Some(
+                    "\u{1f4a1} \u{9ad8}\u{7ea7}\u{8bbe}\u{7f6e}\u{ff08}\u{6a21}\u{578b}\u{3001}API \u{7aef}\u{70b9}\u{3001}\u{601d}\u{8003}\u{6df1}\u{5ea6}\u{ff09}\u{53ef}\u{5728} Settings (F2) \u{4e2d}\u{914d}\u{7f6e}"
+                        .to_string(),
+                );
+            }
+            app.dashboard = Some(dashboard);
+        }
+        log_dashboard_opened(app);
+    } else {
+        app.active_view = ActiveView::Welcome;
+    }
+}
+
+/// Push a lifecycle event into the dashboard event stream (if the dashboard
+/// exists). No-op when the dashboard hasn't been opened yet.
+pub(super) fn push_dashboard_event(app: &mut AppView, kind: DashboardEventKind, summary: String) {
+    if let Some(dashboard) = app.dashboard.as_mut() {
+        dashboard.push_event(kind, summary);
+    }
+}
+
+/// Derive a short human-readable label for an agent, suitable for event
+/// summaries.
+pub(super) fn agent_label(app: &AppView, agent_id: AgentId) -> String {
+    if let Some(agent) = app.agents.get(&agent_id) {
+        if let Some(ref name) = agent.display_name {
+            return name.clone();
+        }
+        if let Some(ref title) = agent.generated_session_title {
+            return title.clone();
+        }
+    }
+    format!("Agent {}", agent_id.0)
 }
 
 /// Restore the view a mid-session auth flow launched from, falling back to the
@@ -151,7 +206,7 @@ pub(super) fn restore_auth_return_view(app: &mut AppView, return_view: ActiveVie
             app.active_view = ActiveView::AgentDashboard;
             log_dashboard_opened(app);
         }
-        _ => show_welcome(app),
+        _ => go_home(app),
     }
 }
 

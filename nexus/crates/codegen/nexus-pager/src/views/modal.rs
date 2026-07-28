@@ -698,6 +698,13 @@ fn format_default_for_prompt(
             (*canonical).to_owned()
         }
         SettingValue::String(s) => format!("\"{s}\""),
+        SettingValue::Password(s) => {
+            if s.is_empty() {
+                "(not set)".to_owned()
+            } else {
+                crate::views::settings_modal::render::mask_password(s)
+            }
+        }
         SettingValue::Int(i) => i.to_string(),
     }
 }

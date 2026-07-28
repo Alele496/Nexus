@@ -2,6 +2,9 @@ name: Release
 
 # CD: triggered by version tags (v*), builds and publishes GitHub Release.
 # Usage: git tag v0.3.0 && git push --tags
+#
+# Artifact naming: nexus-{version}-{os}-{arch}[.exe]
+# Matches the auto-update download pattern in nexus-update crate.
 
 on:
   push:
@@ -15,7 +18,7 @@ env:
   CARGO_INCREMENTAL: "0"
 
 jobs:
-  # ── Windows release ────────────────────────────────────────────
+  # ── Windows x86_64 ─────────────────────────────────────────────
   release-windows:
     runs-on: windows-2022
     env:
@@ -39,7 +42,7 @@ jobs:
           version: "27.2"
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Cache cargo home (registry + git)
+      - name: Cache cargo home
         uses: actions/cache@v4
         with:
           path: |
@@ -57,12 +60,21 @@ jobs:
       - name: Build release
         run: cargo build -p nexus-bin --release
 
+      - name: Rename artifact
+        shell: bash
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          ARTIFACT="nexus-${VERSION}-windows-x86_64.exe"
+          cp nexus/target/release/nexus.exe "${ARTIFACT}"
+          echo "ARTIFACT=${ARTIFACT}" >> $GITHUB_ENV
+
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: nexus/target/release/nexus.exe
+          files: ${{ env.ARTIFACT }}
 
-  # ── Linux release ──────────────────────────────────────────────
+  # ── Linux x86_64 ───────────────────────────────────────────────
   release-linux:
     runs-on: ubuntu-24.04
     env:
@@ -85,7 +97,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq protobuf-compiler libssl-dev
 
-      - name: Cache cargo home (registry + git)
+      - name: Cache cargo home
         uses: actions/cache@v4
         with:
           path: |
@@ -97,10 +109,66 @@ jobs:
       - name: Build release
         run: cargo build -p nexus-bin --release
 
-      - name: Create GitHub Release
+      - name: Rename artifact
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          ARTIFACT="nexus-${VERSION}-linux-x86_64"
+          cp nexus/target/release/nexus "${ARTIFACT}"
+          chmod +x "${ARTIFACT}"
+          echo "ARTIFACT=${ARTIFACT}" >> $GITHUB_ENV
+
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Nexus ${{ github.ref_name }}
-          files: nexus/target/release/nexus
+          files: ${{ env.ARTIFACT }}
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # ── macOS ARM64 (Apple Silicon) ─────────────────────────────────
+  release-macos:
+    runs-on: macos-latest
+    env:
+      TMP: /tmp
+      TEMP: /tmp
+      TMPDIR: /tmp
+    defaults:
+      run:
+        working-directory: nexus
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install system deps
+        run: brew install protobuf
+
+      - name: Cache cargo home
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: macos-cargo-${{ hashFiles('nexus/Cargo.lock') }}
+          restore-keys: macos-cargo-
+
+      - name: Build release
+        run: cargo build -p nexus-bin --release
+
+      - name: Rename artifact
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          ARTIFACT="nexus-${VERSION}-macos-aarch64"
+          cp nexus/target/release/nexus "${ARTIFACT}"
+          chmod +x "${ARTIFACT}"
+          echo "ARTIFACT=${ARTIFACT}" >> $GITHUB_ENV
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.ARTIFACT }}

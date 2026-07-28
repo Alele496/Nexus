@@ -86,6 +86,21 @@ pub fn load_config_from_toml(root: &TomlValue) -> Config {
         .and_then(|v| v.get("management_api_key"))
         .and_then(|v| v.as_str())
         .map(str::to_owned);
+    let proxy_http = table
+        .get("endpoints")
+        .and_then(|v| v.get("proxy_http"))
+        .and_then(|v| v.as_str())
+        .map(str::to_owned);
+    let proxy_https = table
+        .get("endpoints")
+        .and_then(|v| v.get("proxy_https"))
+        .and_then(|v| v.as_str())
+        .map(str::to_owned);
+    let proxy_no_proxy = table
+        .get("endpoints")
+        .and_then(|v| v.get("proxy_no_proxy"))
+        .and_then(|v| v.as_str())
+        .map(str::to_owned);
     let permission = table
         .get("permission")
         .and_then(|v| v.clone().try_into::<PermissionConfig>().ok());
@@ -106,6 +121,9 @@ pub fn load_config_from_toml(root: &TomlValue) -> Config {
             .and_then(|t| t.get("ask_user_question"))
             .and_then(|v| v.clone().try_into().ok())
             .unwrap_or_default(),
+        proxy_http,
+        proxy_https,
+        proxy_no_proxy,
     }
 }
 /// Resolve permission config with project override semantics.

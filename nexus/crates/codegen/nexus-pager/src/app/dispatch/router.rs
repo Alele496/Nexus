@@ -13,6 +13,7 @@ use super::agent_graph::{
     dispatch_open_agent_graph,
 };
 use super::dashboard::{
+    dispatch_dashboard_approve_all, dispatch_dashboard_approve_selected,
     dispatch_dashboard_attach, dispatch_dashboard_begin_rename, dispatch_dashboard_change_location,
     dispatch_dashboard_commit_rename, dispatch_dashboard_confirm_worktree,
     dispatch_dashboard_create_new_agent_with_detail, dispatch_dashboard_dispatch,
@@ -21,7 +22,8 @@ use super::dashboard::{
     dispatch_dashboard_overlay_exit, dispatch_dashboard_overlay_stop,
     dispatch_dashboard_peek_cycle_mode, dispatch_dashboard_peek_reply,
     dispatch_dashboard_permission_followup, dispatch_dashboard_permission_select,
-    dispatch_dashboard_question_answer, dispatch_dashboard_reorder, dispatch_dashboard_select,
+    dispatch_dashboard_question_answer, dispatch_dashboard_reject_selected,
+    dispatch_dashboard_reorder, dispatch_dashboard_select,
     dispatch_dashboard_stop, dispatch_dashboard_toggle_auto_approve,
     dispatch_dashboard_toggle_grouping, dispatch_dashboard_toggle_pin,
     dispatch_dashboard_toggle_worktree, dispatch_exit_dashboard, dispatch_open_dashboard,
@@ -90,6 +92,9 @@ use super::settings::setters::{
     set_scroll_lines, set_scroll_mode, set_scroll_speed, set_show_thinking_blocks, set_show_tips,
     set_simple_mode, set_theme, set_timeline, set_timestamps, set_vim_mode, set_voice_capture_mode,
     set_voice_stt_language,
+    // Phase 1
+    set_api_key, clear_api_key, set_proxy_http, set_proxy_https, set_proxy_no_proxy,
+    set_default_reasoning_effort,
 };
 use super::settings::ui::{
     dispatch_confirm_reset_setting, dispatch_open_command_palette, dispatch_open_howto_guides,
@@ -962,6 +967,16 @@ pub(crate) fn dispatch(action: Action, app: &mut AppView) -> Vec<Effect> {
         Action::ToggleTimestamps => dispatch_toggle_timestamps(app),
         Action::SetYoloMode(v) => set_yolo_mode(app, v),
         Action::SetPermissionMode(kind) => set_permission_mode(app, kind),
+        Action::ApproveScopeAdd {
+            path,
+            tool_kind,
+            duration_mins,
+        } => dispatch_approve_scope_add(app, path, tool_kind, duration_mins),
+        Action::ApproveScopeClear => dispatch_approve_scope_clear(app),
+        Action::ApproveScopeList => dispatch_approve_scope_list(app),
+        Action::DashboardApproveSelected => dispatch_dashboard_approve_selected(app),
+        Action::DashboardRejectSelected => dispatch_dashboard_reject_selected(app),
+        Action::DashboardApproveAll => dispatch_dashboard_approve_all(app),
         Action::SetMultilineMode(v) => set_multiline_mode(app, v),
         Action::SetRenderMermaid(kind) => set_render_mermaid(app, kind),
         Action::SetCompactMode(v) => set_compact_mode(app, v),
@@ -987,6 +1002,12 @@ pub(crate) fn dispatch(action: Action, app: &mut AppView) -> Vec<Effect> {
         Action::SetShowTips(v) => set_show_tips(app, v),
         Action::SetAutoUpdate(v) => set_auto_update(app, v),
         Action::SetDisplayRefreshAutoCadence(v) => set_display_refresh_auto_cadence(app, v),
+        Action::SetApiKey(v) => set_api_key(app, v),
+        Action::ClearApiKey => clear_api_key(app),
+        Action::SetProxyHttp(v) => set_proxy_http(app, v),
+        Action::SetProxyHttps(v) => set_proxy_https(app, v),
+        Action::SetProxyNoProxy(v) => set_proxy_no_proxy(app, v),
+        Action::SetDefaultReasoningEffort(v) => set_default_reasoning_effort(app, v),
         Action::PreviewTheme(v) => preview_theme(app, v),
         Action::PreviewAutoDarkTheme(v) => preview_auto_dark_theme(app, v),
         Action::PreviewAutoLightTheme(v) => preview_auto_light_theme(app, v),
@@ -1319,11 +1340,213 @@ pub(crate) fn dispatch(action: Action, app: &mut AppView) -> Vec<Effect> {
         Action::JumpShowPicker => dispatch_jump_show_picker(app),
         Action::JumpPickerSelect(turn_idx) => dispatch_jump_picker_select(app, turn_idx),
         Action::JumpDismiss => dispatch_jump_dismiss(app),
+        Action::ReviewStart {
+            target_agent_name,
+        } => dispatch_review_start(app, &target_agent_name),
+        Action::ReviewConfig { subcommand } => dispatch_review_config(app, subcommand),
     };
     app.reconcile_foreign_resume_launch();
     sync_sleep_inhibitor(app);
     effects
 }
+
+// ── Approval scope dispatch ──────────────────────────────────────────
+
+fn dispatch_approve_scope_add(
+    app: &mut AppView,
+    path: Option<String>,
+    tool_kind: Option<String>,
+    duration_mins: u64,
+) -> Vec<Effect> {
+    let path_buf = path.map(std::path::PathBuf::from);
+    let kind = tool_kind.map(|k| k.to_lowercase());
+    let duration = std::time::Duration::from_secs(duration_mins * 60);
+    app.approval_scopes.add(path_buf, kind, duration);
+
+    let desc = app
+        .approval_scopes
+        .active_scopes()
+        .last()
+        .map(|s| s.describe())
+        .unwrap_or_default();
+    app.show_toast(&format!("审批作用域已添加: {desc}"));
+    vec![]
+}
+
+fn dispatch_approve_scope_clear(app: &mut AppView) -> Vec<Effect> {
+    let count = app.approval_scopes.active_scopes().len();
+    app.approval_scopes.clear();
+    app.show_toast(&format!("已清除 {count} 个审批作用域"));
+    vec![]
+}
+
+fn dispatch_approve_scope_list(app: &mut AppView) -> Vec<Effect> {
+    let active: Vec<String> = app
+        .approval_scopes
+        .active_scopes()
+        .iter()
+        .map(|s| s.describe())
+        .collect();
+    if active.is_empty() {
+        app.show_toast("无活跃的审批作用域");
+    } else {
+        let msg = format!("审批作用域 ({} 个):\n{}", active.len(), active.join("\n"));
+        app.show_toast(&msg);
+    }
+    vec![]
+}
+
+// ── Review dispatch ─────────────────────────────────────────────────
+
+fn dispatch_review_start(app: &mut AppView, target_agent_name: &str) -> Vec<Effect> {
+    use super::session::fork::dispatch_fork_resolved;
+
+    // Find the target agent by display name or generated title.
+    let target_id = app
+        .agents
+        .iter()
+        .find(|(_, v)| {
+            v.display_name
+                .as_deref()
+                .or(v.generated_session_title.as_deref())
+                .is_some_and(|n| n.eq_ignore_ascii_case(target_agent_name))
+        })
+        .map(|(id, _)| *id);
+
+    let Some(target_id) = target_id else {
+        app.show_toast(&format!("找不到 Agent: {target_agent_name}"));
+        return vec![];
+    };
+
+    // Ensure the target agent has a session to fork from.
+    let has_session = app
+        .agents
+        .get(&target_id)
+        .is_some_and(|a| a.session.session_id.is_some());
+    if !has_session {
+        app.show_toast("目标 Agent 尚未初始化会话，无法创建审查");
+        return vec![];
+    }
+
+    let target_label = app
+        .agents
+        .get(&target_id)
+        .and_then(|a| {
+            a.display_name
+                .clone()
+                .or_else(|| a.generated_session_title.clone())
+        })
+        .unwrap_or_else(|| target_agent_name.to_string());
+
+    // Build the review directive — this becomes the fork's initial prompt.
+    let files_hint = app
+        .shared_context
+        .manifests
+        .get(&target_id)
+        .map(|m| {
+            let files: Vec<String> = m
+                .modified_files
+                .iter()
+                .map(|p| format!("`{}`", p.display()))
+                .collect();
+            if files.is_empty() {
+                String::new()
+            } else {
+                format!("\n\nModified files: {}", files.join(", "))
+            }
+        })
+        .unwrap_or_default();
+
+    let directive = format!(
+        "Code Review\n\n\
+         You are a code reviewer. Critically examine the work done by {target_label}.\
+         Look for bugs, logic errors, style issues, and security concerns.\
+         {files_hint}\
+         \n\nAfter your review, clearly state your verdict: PASS (no issues), \
+         NEEDS_FIX (minor issues), or REJECT (serious problems)."
+    );
+
+    // Switch to the target agent so dispatch_fork_resolved can read its
+    // session info from the active view.
+    let prev_view = app.active_view;
+    app.active_view = ActiveView::Agent(target_id);
+
+    let effects = dispatch_fork_resolved(app, false, Some(directive));
+
+    // If forking succeeded, rename the new agent to "Review: ..."
+    if let ActiveView::Agent(new_id) = app.active_view {
+        if new_id != target_id {
+            if let Some(agent) = app.agents.get_mut(&new_id) {
+                agent.display_name = Some(format!("Review: {target_label}"));
+            }
+        }
+    } else {
+        // Restore previous view if fork didn't navigate away.
+        app.active_view = prev_view;
+    }
+
+    effects
+}
+
+fn dispatch_review_config(
+    app: &mut AppView,
+    subcommand: crate::app::actions::ReviewConfigSubcommand,
+) -> Vec<Effect> {
+    match subcommand {
+        crate::app::actions::ReviewConfigSubcommand::On => {
+            app.review_config.enabled = true;
+            let model_note = app
+                .review_config
+                .model
+                .as_deref()
+                .map(|m| format!("，模型: {m}"))
+                .unwrap_or_default();
+            app.show_toast(&format!(
+                "自动审查已开启。Worker 完成任务后会自动触发审查{model_note}"
+            ));
+        }
+        crate::app::actions::ReviewConfigSubcommand::Off => {
+            app.review_config.enabled = false;
+            app.show_toast("自动审查已关闭");
+        }
+        crate::app::actions::ReviewConfigSubcommand::Status => {
+            let status = if app.review_config.enabled {
+                let model_note = app
+                    .review_config
+                    .model
+                    .as_deref()
+                    .unwrap_or("继承父 Agent");
+                let mode = if matches!(
+                    app.review_config.mode,
+                    crate::app::review::ReviewMode::Light
+                ) {
+                    "快速"
+                } else {
+                    "深度"
+                };
+                format!("自动审查: 开启 | 模型: {model_note} | 模式: {mode}")
+            } else {
+                "自动审查: 关闭 (使用 /review --on 开启)".into()
+            };
+            app.show_toast(&status);
+        }
+        crate::app::actions::ReviewConfigSubcommand::SetModel(model) => {
+            app.review_config.model = Some(model.clone());
+            app.show_toast(&format!("审查模型已设为: {model}"));
+        }
+        crate::app::actions::ReviewConfigSubcommand::SetMode(mode) => {
+            let label = match mode {
+                crate::app::review::ReviewMode::Light => "快速",
+                crate::app::review::ReviewMode::Full => "深度",
+            };
+            app.review_config.mode = mode;
+            app.show_toast(&format!("审查深度已设为: {label}"));
+        }
+    }
+    vec![]
+}
+
+
 pub(super) fn dispatch_action_result(
     app: &mut AppView,
     agent_id: crate::app::agent::AgentId,

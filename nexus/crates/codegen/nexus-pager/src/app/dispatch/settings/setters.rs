@@ -2034,3 +2034,115 @@ pub(in crate::app::dispatch) fn set_display_refresh_auto_cadence(
         rollback_value: crate::settings::SettingValue::Bool(prev_effective),
     }]
 }
+
+// ---------------------------------------------------------------------------
+// Phase 1: API key, proxy, reasoning effort — new settings handlers
+// ---------------------------------------------------------------------------
+
+/// Store an API key via auth storage (auth.json, not config.toml).
+/// Synchronous — no Effect needed since auth storage is sync IO and
+/// separate from the config persistence pipeline.
+pub(in crate::app::dispatch) fn set_api_key(app: &mut AppView, key: String) -> Vec<Effect> {
+    let nexus_home = nexus_tools::util::nexus_home::nexus_home();
+    match nexus_shell::auth::storage::store_api_key(&nexus_home, &key) {
+        Ok(()) => {
+            tracing::info!(target: "settings", key = "api_key", "stored");
+            app.show_toast("\u{2713} API key saved");
+        }
+        Err(e) => {
+            tracing::error!(target: "settings", key = "api_key", error = %e, "failed to store");
+            app.show_toast("Failed to save API key");
+        }
+    }
+    refresh_open_settings_modals(app);
+    vec![]
+}
+
+/// Remove the stored API key.
+pub(in crate::app::dispatch) fn clear_api_key(app: &mut AppView) -> Vec<Effect> {
+    let nexus_home = nexus_tools::util::nexus_home::nexus_home();
+    match nexus_shell::auth::storage::clear_api_key(&nexus_home) {
+        Ok(()) => {
+            tracing::info!(target: "settings", key = "api_key", "cleared");
+            app.show_toast("\u{2713} API key removed");
+        }
+        Err(e) => {
+            tracing::error!(target: "settings", key = "api_key", error = %e, "failed to clear");
+            app.show_toast("Failed to remove API key");
+        }
+    }
+    refresh_open_settings_modals(app);
+    vec![]
+}
+
+/// Set HTTP proxy URL. Persisted via `Effect::PersistSetting`.
+pub(in crate::app::dispatch) fn set_proxy_http(app: &mut AppView, value: String) -> Vec<Effect> {
+    let prev = String::new(); // No live mirror — rollback is a clear.
+    tracing::info!(target: "settings", key = "proxy_http", value = %value, "setting changed");
+    app.show_toast(&format!("\u{2713} HTTP proxy: {value}"));
+    refresh_open_settings_modals(app);
+    vec![Effect::PersistSetting {
+        key: "proxy_http",
+        value: crate::settings::SettingValue::String(value),
+        rollback_value: crate::settings::SettingValue::String(prev),
+    }]
+}
+
+/// Set HTTPS proxy URL. Persisted via `Effect::PersistSetting`.
+pub(in crate::app::dispatch) fn set_proxy_https(app: &mut AppView, value: String) -> Vec<Effect> {
+    let prev = String::new();
+    tracing::info!(target: "settings", key = "proxy_https", value = %value, "setting changed");
+    app.show_toast(&format!("\u{2713} HTTPS proxy: {value}"));
+    refresh_open_settings_modals(app);
+    vec![Effect::PersistSetting {
+        key: "proxy_https",
+        value: crate::settings::SettingValue::String(value),
+        rollback_value: crate::settings::SettingValue::String(prev),
+    }]
+}
+
+/// Set NO_PROXY list. Persisted via `Effect::PersistSetting`.
+pub(in crate::app::dispatch) fn set_proxy_no_proxy(app: &mut AppView, value: String) -> Vec<Effect> {
+    let prev = String::new();
+    tracing::info!(target: "settings", key = "proxy_no_proxy", value = %value, "setting changed");
+    app.show_toast(&format!("\u{2713} No proxy: {value}"));
+    refresh_open_settings_modals(app);
+    vec![Effect::PersistSetting {
+        key: "proxy_no_proxy",
+        value: crate::settings::SettingValue::String(value),
+        rollback_value: crate::settings::SettingValue::String(prev),
+    }]
+}
+
+/// Set default reasoning effort. Persisted via `Effect::PersistSetting`.
+pub(in crate::app::dispatch) fn set_default_reasoning_effort(
+    app: &mut AppView,
+    value: String,
+) -> Vec<Effect> {
+    let canonical: &'static str = match value.as_str() {
+        "high" => "high",
+        "xhigh" => "xhigh",
+        other => {
+            tracing::error!(
+                target: "settings",
+                key = "default_reasoning_effort",
+                value = other,
+                "unknown reasoning effort — no-op",
+            );
+            return vec![];
+        }
+    };
+    tracing::info!(
+        target: "settings",
+        key = "default_reasoning_effort",
+        value = canonical,
+        "setting changed",
+    );
+    app.show_toast(&format!("\u{2713} Reasoning effort: {canonical}"));
+    refresh_open_settings_modals(app);
+    vec![Effect::PersistSetting {
+        key: "default_reasoning_effort",
+        value: crate::settings::SettingValue::Enum(canonical),
+        rollback_value: crate::settings::SettingValue::Enum("high"),
+    }]
+}

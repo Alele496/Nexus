@@ -61,6 +61,10 @@ pub struct Config {
     pub ask_user_question: crate::tools::config::AskUserQuestionToolConfig,
     /// `[startup]` section — tracks first-run wizard completion.
     pub startup: StartupWizardConfig,
+    /// Proxy settings from `[endpoints]` — persisted individually.
+    pub proxy_http: Option<String>,
+    pub proxy_https: Option<String>,
+    pub proxy_no_proxy: Option<String>,
 }
 
 pub fn get_mcp_server_config(name: &str) -> Option<McpServerConfig> {

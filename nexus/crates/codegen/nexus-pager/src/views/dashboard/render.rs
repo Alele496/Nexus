@@ -116,6 +116,9 @@ pub fn render_dashboard(
     // Promo upgrade CTA to paint in the header after the location label
     // (`None` = no CTA); field meanings live on [`HeaderUpgradeCta`].
     upgrade_cta: Option<HeaderUpgradeCta<'_>>,
+    // Shared context for multi-agent coordination; used to detect and
+    // surface file-edit conflicts on dashboard rows.
+    shared_context: &crate::app::shared_context::SharedContextState,
 ) -> Option<(u16, u16)> {
     // Cache whether a pinned (non-dismissible) promo CTA is live so the key
     // handler can steal Ctrl+O for it; the dispatch re-resolves the gate.
@@ -143,7 +146,7 @@ pub fn render_dashboard(
     // comparators that want to know what view the user came from (None
     // in fresh dashboard renders).
     let active: Option<AgentId> = None;
-    let rows = build_rows_with_roster(
+    let mut rows = build_rows_with_roster(
         agents,
         &state.pinned,
         &state.reorder,
@@ -153,6 +156,60 @@ pub fn render_dashboard(
         home,
         roster,
     );
+
+    // Stamp conflict badges on rows whose agents appear in shared_context conflicts.
+    for row in &mut rows {
+        let agent_id = match &row.id {
+            DashboardRowId::TopLevel(id) => Some(*id),
+            DashboardRowId::Subagent { parent, .. } => Some(*parent),
+            _ => None,
+        };
+        if let Some(agent_id) = agent_id {
+            let conflicts = shared_context.conflicts_for_agent(agent_id);
+            if !conflicts.is_empty() {
+                row.badges.push(RowBadge::Conflict);
+                // Enhance secondary line with conflict details so the user
+                // can see at a glance which files are contested and who
+                // else is involved — no need to open the agent to triage.
+                let conflict_details: Vec<String> = conflicts
+                    .iter()
+                    .map(|c| {
+                        let others: Vec<&str> = c
+                            .agents
+                            .iter()
+                            .filter(|id| **id != agent_id)
+                            .filter_map(|id| shared_context.manifests.get(id))
+                            .map(|m| m.label.as_str())
+                            .collect();
+                        if others.is_empty() {
+                            format!("`{}`", c.path.display())
+                        } else {
+                            format!("`{}` with {}", c.path.display(), others.join(", "))
+                        }
+                    })
+                    .collect();
+                let hint =
+                    format!("\u{26A0} CONFLICT: {} \u{2014} Enter to review", conflict_details.join("; "));
+                row.secondary_line = Some(hint);
+            }
+        }
+    }
+
+    // Stamp Reviewed badges on rows whose agent IDs are in the
+    // reviewed_agents set (M4: review completion tracking).
+    for row in &mut rows {
+        let agent_id = match &row.id {
+            DashboardRowId::TopLevel(id) => Some(*id),
+            DashboardRowId::Subagent { parent, .. } => Some(*parent),
+            _ => None,
+        };
+        if let Some(agent_id) = agent_id {
+            if state.reviewed_agents.contains(&agent_id) {
+                row.badges.push(RowBadge::Reviewed);
+            }
+        }
+    }
+
     state.reanchor_selection(&rows);
 
     // DO NOT GC pinned/reorder at render time. The old
@@ -286,6 +343,10 @@ pub fn render_dashboard(
 
     // Header.
     render_header(buf, layout.header, &theme, &rows, state, upgrade_cta);
+
+    // Event stream — right-side panel showing recent agent lifecycle events.
+    // No-op when the terminal is too narrow (event_stream area is zero).
+    render_event_stream(buf, layout.event_stream, &theme, state);
 
     // Body: key off visible rows (local agents + roster), not the local map alone.
     if rows.is_empty() {
@@ -2059,10 +2120,17 @@ fn render_row(
     let selected = state.selected.as_ref().is_some_and(|s| *s == row.id);
     let hovered = state.hovered_row.as_ref().is_some_and(|h| *h == row.id);
     let renaming = state.rename.as_ref().is_some_and(|r| r.row == row.id);
+    let has_conflict = row.badges.contains(&RowBadge::Conflict);
     let bg = if selected {
         theme.bg_highlight
     } else if hovered {
         theme.bg_hover
+    } else if has_conflict {
+        // Subtle warning tint for rows with edit conflicts so they
+        // stand out visually on the dashboard without the user needing
+        // to read each row's badges.
+        crate::render::color::blend_color(theme.bg_base, theme.warning, 0.08)
+            .unwrap_or(theme.bg_base)
     } else {
         theme.bg_base
     };
@@ -2281,6 +2349,8 @@ fn render_row(
                 RowBadge::NeedsInput | RowBadge::Worktree | RowBadge::Pinned => continue,
                 RowBadge::Failed => "failed",
                 RowBadge::BgTask => "bg",
+                RowBadge::Conflict => "CONFLICT",
+                RowBadge::Reviewed => "reviewed",
             };
             let chip = format!(" [{label}]");
             let cw = UnicodeWidthStr::width(chip.as_str()) as u16;
@@ -3685,6 +3755,8 @@ fn badge_color(badge: RowBadge, theme: &Theme) -> Color {
         RowBadge::BgTask => theme.command,
         RowBadge::Pinned => theme.accent_running,
         RowBadge::Failed => theme.accent_error,
+        RowBadge::Conflict => theme.accent_error,
+        RowBadge::Reviewed => theme.accent_success,
     }
 }
 
@@ -4235,6 +4307,101 @@ pub struct DashboardOverlayChrome {
     pub next_rect: Option<Rect>,
 }
 
+// ── Event stream (right-side panel) ──────────────────────────────────
+
+/// Render the event stream panel — a narrow right-side column showing
+/// recent agent lifecycle events with category icons and timestamps.
+/// No-op when `area` is zero (terminal too narrow).
+fn render_event_stream(
+    buf: &mut Buffer,
+    area: Rect,
+    theme: &Theme,
+    state: &DashboardState,
+) {
+    if area.area() == 0 || state.event_stream.is_empty() {
+        return;
+    }
+    use super::state::DashboardEventKind;
+    use ratatui::text::Line;
+    use ratatui::widgets::{Paragraph, Widget, Wrap};
+
+    let title = Line::from(Span::styled(
+        " Events ",
+        Style::default()
+            .fg(theme.text_primary)
+            .add_modifier(Modifier::BOLD),
+    ));
+    let mut lines: Vec<Line> = vec![title];
+
+    // Show the most recent events that fit in the panel.
+    let max_events = (area.height.saturating_sub(2)) as usize; // title + breathing
+    let events: Vec<&super::state::DashboardEvent> = state
+        .event_stream
+        .iter()
+        .rev()
+        .take(max_events.min(state.event_stream.len()))
+        .collect();
+
+    for ev in events.iter().rev() {
+        let icon = match ev.kind {
+            DashboardEventKind::AgentCreated => "+",
+            DashboardEventKind::AgentCompleted => "\u{2713}", // checkmark
+            DashboardEventKind::AgentFailed => "\u{2717}",     // cross
+            DashboardEventKind::MessageReceived => "\u{2709}", // envelope
+            DashboardEventKind::SubagentSpawned => "\u{2192}", // arrow
+            DashboardEventKind::ConflictDetected => "\u{26A0}", // warning sign
+            DashboardEventKind::ReviewStarted => "\u{1F50D}",   // magnifying glass
+            DashboardEventKind::ReviewCompleted => "\u{2705}",  // white check mark
+        };
+        let color = match ev.kind {
+            DashboardEventKind::AgentCreated => theme.text_primary,
+            DashboardEventKind::AgentCompleted => theme.accent_success,
+            DashboardEventKind::AgentFailed => theme.accent_error,
+            DashboardEventKind::MessageReceived => theme.warning,
+            DashboardEventKind::SubagentSpawned => theme.accent_running,
+            DashboardEventKind::ConflictDetected => theme.accent_error,
+            DashboardEventKind::ReviewStarted => theme.accent_running,
+            DashboardEventKind::ReviewCompleted => theme.accent_success,
+        };
+        let elapsed = ev.when.elapsed().as_secs();
+        let time_str = if elapsed < 60 {
+            format!("{elapsed}s")
+        } else if elapsed < 3600 {
+            format!("{}m", elapsed / 60)
+        } else {
+            format!("{}h", elapsed / 3600)
+        };
+        let prefix = format!(" {icon} ");
+        let body = truncate_str(
+            &ev.summary,
+            area.width.saturating_sub(prefix.len() as u16 + time_str.len() as u16 + 3)
+                as usize,
+        );
+        let line = Line::from(vec![
+            Span::styled(prefix, Style::default().fg(color)),
+            Span::styled(body, Style::default().fg(theme.gray)),
+            Span::styled(
+                format!(" {time_str}"),
+                Style::default().fg(theme.gray).add_modifier(Modifier::DIM),
+            ),
+        ]);
+        lines.push(line);
+    }
+
+    // If no events fit, show a placeholder.
+    if lines.len() == 1 {
+        lines.push(Line::from(Span::styled(
+            " (no events yet)",
+            Style::default().fg(theme.gray).add_modifier(Modifier::DIM),
+        )));
+    }
+
+    let panel = Paragraph::new(lines)
+        .wrap(Wrap { trim: false })
+        .style(Style::default().bg(theme.bg_dark));
+    panel.render(area, buf);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -4324,6 +4491,7 @@ mod tests {
             &roster,
             false,
             None,
+            &crate::app::shared_context::SharedContextState::default(),
         );
 
         let content = buf_to_text(&buf);
@@ -7126,6 +7294,7 @@ mod tests {
             &[],
             false,
             None,
+            &crate::app::shared_context::SharedContextState::default(),
         );
 
         // Sample cells across the area; none should retain the seed

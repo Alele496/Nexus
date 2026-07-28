@@ -970,6 +970,56 @@ pub enum Action {
     JumpPickerSelect(EntryId),
     /// Close the picker and restore the stashed viewport.
     JumpDismiss,
+    /// Add an approval scope for auto-approving permission requests.
+    ApproveScopeAdd {
+        path: Option<String>,
+        tool_kind: Option<String>,
+        duration_mins: u64,
+    },
+    /// Clear all approval scopes.
+    ApproveScopeClear,
+    /// List currently active approval scopes.
+    ApproveScopeList,
+    /// Dashboard: approve the selected row's pending permission.
+    DashboardApproveSelected,
+    /// Dashboard: reject the selected row's pending permission.
+    DashboardRejectSelected,
+    /// Dashboard: approve all pending permissions across all agents.
+    DashboardApproveAll,
+    // ── M4: Independent verification ──
+    /// Start a review of the target agent's work by spawning a reviewer fork.
+    ReviewStart {
+        target_agent_name: String,
+    },
+    /// Toggle auto-review on/off or query status.
+    ReviewConfig { subcommand: ReviewConfigSubcommand },
+    // ── Phase 1: Settings enhancements ──
+    /// Set the API key for the active provider.
+    SetApiKey(String),
+    /// Clear the stored API key.
+    ClearApiKey,
+    /// Set the HTTP proxy URL.
+    SetProxyHttp(String),
+    /// Set the HTTPS proxy URL.
+    SetProxyHttps(String),
+    /// Set the no-proxy exclusion list.
+    SetProxyNoProxy(String),
+    /// Set the default reasoning effort (high / xhigh).
+    SetDefaultReasoningEffort(String),
+}
+/// Subcommand for [`Action::ReviewConfig`].
+#[derive(Debug)]
+pub enum ReviewConfigSubcommand {
+    /// Enable auto-review.
+    On,
+    /// Disable auto-review.
+    Off,
+    /// Show current review config status as a toast.
+    Status,
+    /// Set the review model override (e.g. "claude-sonnet-4-6").
+    SetModel(String),
+    /// Set the review depth mode.
+    SetMode(crate::app::review::ReviewMode),
 }
 /// Persist-and-notify semantics for [`Effect::PersistPermissionMode`].
 ///
@@ -1349,6 +1399,10 @@ pub enum Effect {
         /// or CLI `--chat` via `SessionFlags.chat_mode`). Does not sticky-set
         /// process-wide mode.
         chat_kind: bool,
+        /// Optional shared-context markdown section (M2.3) injected into
+        /// the agent's system prompt at session startup so it knows about
+        /// sibling agents, their file activity, and any edit conflicts.
+        shared_context_section: Option<String>,
     },
     /// Change the process working directory (project-picker selection).
     SetWorkingDir { path: std::path::PathBuf },

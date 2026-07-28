@@ -24,7 +24,7 @@
 //! filter mode without closing.
 
 mod input;
-mod render;
+pub(crate) mod render;
 mod state;
 
 #[cfg(test)]

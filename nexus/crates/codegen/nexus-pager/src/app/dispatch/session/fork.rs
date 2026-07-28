@@ -5,7 +5,8 @@ use crate::app::actions::Effect;
 use crate::app::agent::{AgentCommand, AgentId, AgentSession, AgentState};
 use crate::app::agent_view::{AgentView, McpInitProgress};
 use crate::app::app_view::{ActiveView, AppView};
-use crate::app::dispatch::ctx::{SwitchCause, switch_to_agent};
+use crate::app::dispatch::ctx::{SwitchCause, agent_label, push_dashboard_event, switch_to_agent};
+use crate::views::dashboard::state::DashboardEventKind;
 use crate::app::dispatch::modes::inherit_auto_mode;
 use crate::app::dispatch::prompt::{
     consume_chat_kind, dispatch_send_prompt, supersede_open_reload_window,
@@ -195,8 +196,21 @@ pub(in crate::app::dispatch) fn dispatch_fork_resolved(
         Some(d) => format!("Forked: {d}"),
         None => "Forked".to_string(),
     };
+    let parent_label = parent
+        .display_name
+        .clone()
+        .or_else(|| parent.generated_session_title.clone())
+        .unwrap_or_else(|| format!("Agent {}", parent_id.0));
     let parent_chat_kind = parent.chat_kind || app.chat_mode;
     app.agents.insert(new_id, new_agent);
+    let fork_label = directive
+        .as_deref()
+        .unwrap_or("subagent");
+    push_dashboard_event(
+        app,
+        DashboardEventKind::SubagentSpawned,
+        format!("{parent_label} spawned {fork_label}"),
+    );
     {
         let agent = app
             .agents
@@ -365,6 +379,7 @@ pub(in crate::app::dispatch) fn dispatch_project_selected(
         model_id: None,
         preferred_session_id,
         chat_kind,
+        shared_context_section: None,
     });
     effects.extend(dispatch_send_prompt(app, stashed_prompt));
     effects
@@ -601,6 +616,12 @@ pub(in crate::app::dispatch) fn handle_fork_session_failed(
     error: String,
 ) -> Vec<Effect> {
     tracing::error!(agent = ? agent_id, error = % error, "Fork session failed");
+    let label = agent_label(app, agent_id);
+    push_dashboard_event(
+        app,
+        DashboardEventKind::AgentFailed,
+        format!("{label} fork failed: {error}"),
+    );
     if let Some(agent) = app.agents.get_mut(&agent_id) {
         agent.pending_extensions_fetch = false;
         agent.session.finish_command();

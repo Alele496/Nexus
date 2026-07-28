@@ -14,7 +14,7 @@ pub mod oidc;
 pub(crate) mod recovery;
 pub(crate) mod refresh;
 pub(crate) mod single_flight;
-mod storage;
+pub mod storage;
 pub(crate) mod token_type;
 pub(crate) use config::LEGACY_AUTH_SCOPE;
 pub use config::{

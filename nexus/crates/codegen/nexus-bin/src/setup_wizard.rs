@@ -1,7 +1,10 @@
 //! Nexus 首次运行设置向导。
 //!
 //! 在 `~/.nexus/config.toml` 不存在或 `[startup].wizard_completed` 未设置时，
-//! 引导用户完成初始配置：数据目录、提供商选择、API Key、模型选择、思考深度。
+//! 引导用户完成初始配置：提供商选择、API Key。
+//!
+//! 用户名、数据目录、模型、API 端点和思考深度等高级设置均使用智能默认值，
+//! 用户可在进入 Nexus 后通过 F2 → Settings 随时修改。
 
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -182,36 +185,45 @@ fn config_toml_path() -> PathBuf {
     default_nexus_home().join("config.toml")
 }
 
-/// 运行首次设置向导，引导用户完成基本配置，写入 `config.toml`，
-/// 返回选择的 Nexus 数据目录。
+/// 运行首次设置向导（3 步），返回 Nexus 数据目录路径。
+///
+/// 步骤：
+/// 1. 选择 AI 提供商
+/// 2. 输入 API Key（可跳过）
+/// 3. 检查工具 → Done!
+///
+/// 用户名、数据目录、模型、API 端点、思考深度使用智能默认值。
 pub fn run_setup_wizard() -> io::Result<PathBuf> {
     print_banner();
 
-    // ── 第 1 步：用户名 ───────────────────────────────────────────────
-    let username = step_username()?;
-
-    // ── 第 2 步：数据目录 ─────────────────────────────────────────────
-    let nexus_home = step_data_directory()?;
-
-    // ── 第 3 步：选择 AI 提供商 ───────────────────────────────────────
+    // ── 第 1 步：选择 AI 提供商 ───────────────────────────────────────
     let provider_idx = step_provider()?;
     let provider = &PROVIDERS[provider_idx];
 
-    // ── 第 4 步：API Key ───────────────────────────────────────────────
+    // ── 第 2 步：API Key ───────────────────────────────────────────────
+    let nexus_home = default_nexus_home();
+    std::fs::create_dir_all(&nexus_home)?;
+    if let Err(e) = save_nexus_home_redirect(&nexus_home) {
+        eprintln!("  ⚠ 无法保存目录重定向文件: {e}");
+    }
     let api_key = step_api_key(provider, &nexus_home)?;
 
-    // ── 第 5 步：选择模型 ─────────────────────────────────────────────
-    let (model_id, model_name, context_window) = step_model_selection(provider)?;
-
-    // ── 第 6 步：API 端点 ─────────────────────────────────────────────
-    let api_base_url = step_api_endpoint(provider)?;
-
-    // ── 第 7 步：思考深度（仅支持推理的提供商） ──────────────────────────
-    let reasoning_effort = if provider.supports_reasoning {
-        step_thinking_depth()?
+    // ── 智能默认值（基于提供商预设）───────────────────────────────────
+    let username = "Developer";
+    let (model_id, model_name, context_window) = smart_default_model(provider);
+    let api_base_url = if provider.base_url.is_empty() {
+        "https://api.deepseek.com/v1"
     } else {
-        String::new()
+        provider.base_url
     };
+    let reasoning_effort = if provider.supports_reasoning {
+        "high"
+    } else {
+        ""
+    };
+
+    // ── 第 3 步：工具检查 ─────────────────────────────────────────────
+    step_tool_check()?;
 
     // ── 写入配置 ──────────────────────────────────────────────────────
     println!();
@@ -220,15 +232,15 @@ pub fn run_setup_wizard() -> io::Result<PathBuf> {
     let has_api_key = !api_key.is_empty();
     write_config_toml(
         &config_path,
-        &username,
+        username,
         model_id,
         model_name,
         &api_key,
-        &api_base_url,
+        api_base_url,
         provider.api_backend,
         context_window,
         provider.supports_reasoning,
-        &reasoning_effort,
+        reasoning_effort,
     )?;
 
     // 设 NEXUS_HOME 环境变量
@@ -255,7 +267,7 @@ pub fn run_setup_wizard() -> io::Result<PathBuf> {
             "key": &api_key,
             "auth_mode": "api_key",
             "create_time": ts,
-            "user_id": &username,
+            "user_id": username,
             "email": serde_json::Value::Null,
         });
         let auth_map = serde_json::json!({
@@ -274,11 +286,18 @@ pub fn run_setup_wizard() -> io::Result<PathBuf> {
     if has_api_key {
         println!("  Nexus 已准备就绪，正在进入主界面……");
     } else {
-        println!("  ⚠ 未设置 API Key，进入主界面后请按 F2 → 设置 → API Key 进行配置。");
+        println!("  ⚠ 未设置 API Key，进入主界面后请按 F2 → 设置 → Keys 进行配置。");
         println!("  （没有 API Key 将无法使用 AI 对话功能）");
     }
     println!();
+    println!("  💡 提示：高级设置（模型、API 端点、思考深度）可在 Settings (F2) 中配置。");
+    println!();
     print_separator("");
+
+    // 标记首次运行完成，让 Pager 在 Dashboard 中显示 Settings 提示 toast。
+    unsafe {
+        std::env::set_var("NEXUS_WIZARD_JUST_COMPLETED", "1");
+    }
 
     Ok(nexus_home)
 }
@@ -291,8 +310,8 @@ fn print_banner() {
     println!("  ║                                                  ║");
     println!("  ║      N E X U S  —  你的 AI 编程搭档              ║");
     println!("  ║                                                  ║");
-    println!("  ║      欢迎首次使用！请花一分钟完成初始设置。       ║");
-    println!("  ║      (所有设置后续均可通过 /settings 修改)        ║");
+    println!("  ║   欢迎首次使用！只需 3 步即可完成初始设置。       ║");
+    println!("  ║      (高级设置后续可通过 F2 → Settings 修改)      ║");
     println!("  ║                                                  ║");
     println!("  ╚══════════════════════════════════════════════════╝");
 }
@@ -305,67 +324,23 @@ fn print_separator(title: &str) {
     }
 }
 
-// ── 步骤 1：用户名 ───────────────────────────────────────────────────────
+// ── 智能默认模型 ──────────────────────────────────────────────────────────
 
-fn step_username() -> io::Result<String> {
-    println!();
-    print_separator("第 1 步：你是谁？");
-    println!();
-    println!("  请输入你的名字（任意名字即可，仅用于本地标识）：");
-    println!();
-    let username = read_line_with_default("  用户名", "Developer")?;
-    println!("  ✓ 你好，{}！", username);
-    Ok(username)
-}
-
-// ── 步骤 2：数据目录 ─────────────────────────────────────────────────────
-
-fn step_data_directory() -> io::Result<PathBuf> {
-    println!();
-    print_separator("第 2 步：数据目录");
-    println!();
-    println!("  Nexus 的所有数据（配置、会话记录、插件等）都存放在一个");
-    println!("  目录中。建议选一个空间充足的位置（如 F:\\nexus-home）。");
-    println!();
-    let default = default_nexus_home();
-    loop {
-        let answer = read_line_with_default(
-            "  请输入数据目录路径",
-            &default.display().to_string(),
-        )?;
-        let nexus_home = PathBuf::from(&answer);
-        let nexus_home = if answer.starts_with("~") {
-            if let Some(home) = user_home_dir() {
-                let stripped = answer.strip_prefix("~/").unwrap_or(&answer);
-                let stripped = stripped.strip_prefix("~").unwrap_or(stripped);
-                home.join(stripped)
-            } else {
-                nexus_home
-            }
-        } else {
-            nexus_home
-        };
-        match std::fs::create_dir_all(&nexus_home) {
-            Ok(()) => {
-                if let Err(e) = save_nexus_home_redirect(&nexus_home) {
-                    eprintln!("  ⚠ 无法保存目录重定向文件: {e}");
-                }
-                println!("  ✓ 使用目录: {}", nexus_home.display());
-                return Ok(nexus_home);
-            }
-            Err(e) => {
-                println!("  ✗ 无法创建目录: {e}");
-                println!("  请检查路径是否正确，或换一个位置重试。");
-            }
-        }
+/// 根据提供商预设自动选择首个模型作为默认值。
+fn smart_default_model(provider: &ProviderPreset) -> (&'static str, &'static str, u64) {
+    if let Some(&(id, name, ctx)) = provider.models.first() {
+        (id, name, ctx)
+    } else {
+        // 自定义提供商：默认使用 DeepSeek V4 Pro
+        ("deepseek-v4-pro", "DeepSeek V4 Pro", 1_000_000)
     }
 }
 
-// ── 步骤 3：选择 AI 提供商 ───────────────────────────────────────────────
+// ── 步骤 1：选择 AI 提供商 ───────────────────────────────────────────────
 
 fn step_provider() -> io::Result<usize> {
     println!();
-    print_separator("第 3 步：选择 AI 提供商");
+    print_separator("第 1 步：选择 AI 提供商");
     println!();
     println!("  Nexus 支持多种 AI 模型提供商。请选择你使用的服务：");
     println!();
@@ -401,7 +376,7 @@ fn step_provider() -> io::Result<usize> {
 
 fn step_api_key(provider: &ProviderPreset, nexus_home: &Path) -> io::Result<String> {
     println!();
-    print_separator("第 4 步：API Key");
+    print_separator("第 2 步：API Key");
     println!();
     println!("  请输入你的 {} API Key。", provider.name);
     if !provider.key_url.is_empty() {
@@ -423,82 +398,34 @@ fn step_api_key(provider: &ProviderPreset, nexus_home: &Path) -> io::Result<Stri
     Ok(api_key)
 }
 
-// ── 步骤 5：选择模型 ─────────────────────────────────────────────────────
+// ── 步骤 3：工具检查 ────────────────────────────────────────────────────
 
-fn step_model_selection(provider: &ProviderPreset) -> io::Result<(&'static str, &'static str, u64)> {
+fn step_tool_check() -> io::Result<()> {
     println!();
-    print_separator("第 5 步：默认模型");
+    print_separator("第 3 步：检查系统工具");
     println!();
-
-    if provider.models.is_empty() {
-        // 自定义提供商：让用户手动输入
-        println!("  请输入模型 ID（如 deepseek-v4-pro、gpt-5.2 等）：");
-        println!();
-        let model_id = read_line_with_default("  模型 ID", "deepseek-v4-pro")?;
-        println!("  请输入该模型的上下文窗口大小（tokens）：");
-        println!();
-        let ctx_str = read_line_with_default("  上下文窗口", "128000")?;
-        let ctx: u64 = ctx_str.parse().unwrap_or(128_000);
-        println!("  ✓ 模型: {}, 上下文窗口: {} tokens", model_id, ctx);
-        // 使用 model_id 的克隆作为显示名称
-        let leaked_name: &'static str = Box::leak(model_id.clone().into_boxed_str());
-        let leaked_id: &'static str = Box::leak(model_id.into_boxed_str());
-        return Ok((leaked_id, leaked_name, ctx));
-    }
-
-    println!("  选择每次启动时默认使用的模型（进入 Nexus 后可随时切换）:");
+    check_tool("rg", "ripgrep", "https://github.com/BurntSushi/ripgrep");
+    check_tool("git", "Git", "https://git-scm.com/downloads");
+    println!("  ✓ 核心工具检查完成。");
     println!();
-    for (i, &(_, display_name, _)) in provider.models.iter().enumerate() {
-        println!("    {}. {}", i + 1, display_name);
-    }
-    println!();
-
-    let default_choice = "1";
-    let choice = read_line_with_default("  请输入编号", default_choice)?;
-    let idx: usize = choice.parse::<usize>().unwrap_or(1).saturating_sub(1);
-    let idx = idx.min(provider.models.len() - 1);
-
-    let &(model_id, model_name, context_window) = &provider.models[idx];
-    println!("  ✓ 默认模型: {}", model_name);
-    Ok((model_id, model_name, context_window))
+    println!("  高级设置（模型、API 端点、思考深度、代理）");
+    println!("  可在进入 Nexus 后按 F2 → Settings 随时修改。");
+    Ok(())
 }
 
-// ── 步骤 6：API 端点 ─────────────────────────────────────────────────────
-
-fn step_api_endpoint(provider: &ProviderPreset) -> io::Result<String> {
-    println!();
-    print_separator("第 6 步：API 端点");
-    println!();
-
-    if provider.base_url.is_empty() {
-        // 自定义提供商：让用户输入
-        println!("  请输入 API 端点地址：");
-        println!("  (如 https://api.deepseek.com/v1 或 http://localhost:11434/v1)");
-        println!();
-        read_line_with_default("  API 端点", "https://api.deepseek.com/v1")
+fn check_tool(binary: &str, name: &str, url: &str) {
+    let found = std::process::Command::new(binary)
+        .arg("--version")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .map(|s| s.success())
+        .unwrap_or(false);
+    if found {
+        println!("  ✓ {} 已安装", name);
     } else {
-        println!("  {} API 地址，一般无需修改。", provider.name);
-        println!();
-        read_line_with_default("  请输入 API 地址", provider.base_url)
+        println!("  ⚠ {} 未找到 — 建议从 {} 安装", name, url);
     }
-}
-
-// ── 步骤 7：思考深度 ─────────────────────────────────────────────────────
-
-fn step_thinking_depth() -> io::Result<String> {
-    println!();
-    print_separator("第 7 步：思考深度");
-    println!();
-    println!("  推理模型支持两种思考深度:");
-    println!();
-    println!("    1. 标准 (high) — 平衡速度与质量，适合大多数任务 (推荐)");
-    println!("    2. 深度 (max)  — 更深推理，适合复杂算法/调试，速度较慢");
-    println!();
-    let choice = read_line_with_default("  请输入编号 1 或 2", "1")?;
-    Ok(match choice.as_str() {
-        "2" => "xhigh".to_string(),
-        _ => "high".to_string(),
-    })
 }
 
 // ── 写入 config.toml ─────────────────────────────────────────────────────

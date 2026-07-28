@@ -6,6 +6,7 @@
 
 use super::registry::{
     DynamicEnumSource, EnumChoice, SettingCategory, SettingKind, SettingMeta, SettingOwner,
+    StringValidator,
 };
 use crate::appearance::ScrollMode;
 use crate::appearance::TextSelection;
@@ -140,6 +141,19 @@ const CODING_DATA_SHARING_CHOICES: &[EnumChoice] = &[
         canonical: "opt-out",
         display: "Opt out",
         description: "Do not retain coding session data for training. Does not disable product analytics.",
+    },
+];
+
+const REASONING_EFFORT_CHOICES: &[EnumChoice] = &[
+    EnumChoice {
+        canonical: "high",
+        display: "Standard (high)",
+        description: "Balanced speed and reasoning quality",
+    },
+    EnumChoice {
+        canonical: "xhigh",
+        display: "Deep (xhigh)",
+        description: "Deeper reasoning for complex tasks, slower",
     },
 ];
 
@@ -1543,6 +1557,80 @@ pub fn default_settings() -> Vec<SettingMeta> {
             kind: SettingKind::DynamicEnum {
                 default: "",
                 source: DynamicEnumSource::ActiveModelCatalog,
+                supports_preview: false,
+            },
+            restart_required: false,
+            hidden_in_minimal: false,
+        },
+        // ── Proxy ──────────────────────────────────────────────────────────
+        SettingMeta {
+            key: "proxy_http",
+            category: SettingCategory::Proxy,
+            owner: SettingOwner::Shell,
+            label: "HTTP proxy",
+            description: "HTTP proxy URL (e.g. http://127.0.0.1:8080). Leave empty for none.",
+            keywords: &["proxy", "http", "url", "network"],
+            kind: SettingKind::String {
+                default: "",
+                validator: StringValidator::Any,
+            },
+            restart_required: true,
+            hidden_in_minimal: false,
+        },
+        SettingMeta {
+            key: "proxy_https",
+            category: SettingCategory::Proxy,
+            owner: SettingOwner::Shell,
+            label: "HTTPS proxy",
+            description: "HTTPS proxy URL. Falls back to the HTTP proxy when left empty.",
+            keywords: &["proxy", "https", "url", "network"],
+            kind: SettingKind::String {
+                default: "",
+                validator: StringValidator::Any,
+            },
+            restart_required: true,
+            hidden_in_minimal: false,
+        },
+        SettingMeta {
+            key: "proxy_no_proxy",
+            category: SettingCategory::Proxy,
+            owner: SettingOwner::Shell,
+            label: "No-proxy",
+            description: "Comma-separated list of hosts that bypass the proxy (e.g. localhost,127.0.0.1).",
+            keywords: &["proxy", "no-proxy", "bypass", "hosts", "exclude"],
+            kind: SettingKind::String {
+                default: "",
+                validator: StringValidator::Any,
+            },
+            restart_required: true,
+            hidden_in_minimal: false,
+        },
+        // ── API Keys ───────────────────────────────────────────────────────
+        SettingMeta {
+            key: "api_key",
+            category: SettingCategory::Keys,
+            owner: SettingOwner::Shell,
+            label: "API key",
+            description: "API key for the active model provider. Stored masked in UI.",
+            keywords: &["api", "key", "secret", "token", "auth", "credential"],
+            kind: SettingKind::Password {
+                default: "",
+                validator: StringValidator::NonEmptyToken,
+            },
+            restart_required: false,
+            hidden_in_minimal: false,
+        },
+        // ── Models ─────────────────────────────────────────────────────────
+        SettingMeta {
+            key: "default_reasoning_effort",
+            category: SettingCategory::Models,
+            owner: SettingOwner::Shell,
+            label: "Default reasoning effort",
+            description: "Thinking depth for models that support reasoning (DeepSeek, etc).",
+            keywords: &["reasoning", "effort", "thinking", "depth", "high", "xhigh"],
+            kind: SettingKind::Enum {
+                default: "high",
+                choices: REASONING_EFFORT_CHOICES,
                 supports_preview: false,
             },
             restart_required: false,

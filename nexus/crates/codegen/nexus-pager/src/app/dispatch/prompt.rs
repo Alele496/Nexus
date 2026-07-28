@@ -463,6 +463,11 @@ pub(super) fn dispatch_send_prompt_inner(
                     auto_mode_gate: auto_mode_gate_from_app,
                     ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
                     voice_stt_language: voice_stt_language_from_app,
+                    api_key_masked: None,
+                    proxy_http: None,
+                    proxy_https: None,
+                    proxy_no_proxy: None,
+                    default_reasoning_effort: None,
                 },
             };
 

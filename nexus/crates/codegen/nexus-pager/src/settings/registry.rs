@@ -39,6 +39,8 @@ pub enum SettingCategory {
     Editor,
     Agent,
     Privacy,
+    Proxy,
+    Keys,
     Models,
     Session,
     Advanced,
@@ -52,6 +54,8 @@ impl SettingCategory {
         Self::Editor,
         Self::Agent,
         Self::Privacy,
+        Self::Proxy,
+        Self::Keys,
         Self::Models,
         Self::Session,
         Self::Advanced,
@@ -65,6 +69,8 @@ impl SettingCategory {
             Self::Editor => "Editor & Input",
             Self::Agent => "Agent & Approval",
             Self::Privacy => "Privacy",
+            Self::Proxy => "Proxy",
+            Self::Keys => "API Keys",
             Self::Models => "Models",
             Self::Session => "Session",
             Self::Advanced => "Advanced",
@@ -189,6 +195,12 @@ pub enum SettingKind {
     Group {
         children: &'static [SettingKey],
     },
+    /// Masked string — edits/validates like `String`, but renders as `••••`.
+    /// Used for API keys and other secrets.
+    Password {
+        default: &'static str,
+        validator: StringValidator,
+    },
 }
 
 /// One row in the registry. Pure metadata — no function pointers, no
@@ -224,6 +236,7 @@ pub enum SettingValue {
     String(String),
     Enum(&'static str),
     Int(i64),
+    Password(String),
 }
 
 /// Snapshot of pager-local state captured when the modal opens.
@@ -280,6 +293,16 @@ pub struct PagerLocalSnapshot {
     /// language actually in effect when `[ui].voice_stt_language` is unset but
     /// an explicit `[voice].language` applies.
     pub voice_stt_language: String,
+    /// Phase 1: masked API key (read from auth.json, masked for display).
+    pub api_key_masked: Option<String>,
+    /// Phase 1: HTTP proxy from `[endpoints].proxy_http`.
+    pub proxy_http: Option<String>,
+    /// Phase 1: HTTPS proxy from `[endpoints].proxy_https`.
+    pub proxy_https: Option<String>,
+    /// Phase 1: no-proxy list from `[endpoints].proxy_no_proxy`.
+    pub proxy_no_proxy: Option<String>,
+    /// Phase 1: default reasoning effort from `[models].default_reasoning_effort`.
+    pub default_reasoning_effort: Option<String>,
 }
 
 impl Default for PagerLocalSnapshot {
@@ -303,6 +326,11 @@ impl Default for PagerLocalSnapshot {
             auto_mode_gate: false,
             ask_user_question_timeout_enabled: None,
             voice_stt_language: nexus_voice::STT_LANGUAGE_DEFAULT.to_string(),
+            api_key_masked: None,
+            proxy_http: None,
+            proxy_https: None,
+            proxy_no_proxy: None,
+            default_reasoning_effort: None,
         }
     }
 }
@@ -671,6 +699,26 @@ pub fn current_value_for(
             }
         })),
 
+        // Phase 1: new settings read from pager snapshot.
+        "api_key" => Some(SettingValue::Password(
+            pager.api_key_masked.clone().unwrap_or_default(),
+        )),
+        "proxy_http" => Some(SettingValue::String(
+            pager.proxy_http.clone().unwrap_or_default(),
+        )),
+        "proxy_https" => Some(SettingValue::String(
+            pager.proxy_https.clone().unwrap_or_default(),
+        )),
+        "proxy_no_proxy" => Some(SettingValue::String(
+            pager.proxy_no_proxy.clone().unwrap_or_default(),
+        )),
+        "default_reasoning_effort" => Some(SettingValue::Enum(
+            match pager.default_reasoning_effort.as_deref() {
+                Some("xhigh") => "xhigh",
+                _ => "high",
+            },
+        )),
+
         _ => None,
     }
 }
@@ -687,6 +735,7 @@ pub fn default_value_for(meta: &SettingMeta) -> SettingValue {
         // Group rows carry no scalar value; the render/reset paths special-case
         // them before calling this, so the returned value is never observed.
         SettingKind::Group { .. } => SettingValue::Bool(false),
+        SettingKind::Password { default, .. } => SettingValue::Password((*default).to_string()),
     }
 }
 
@@ -1114,6 +1163,31 @@ mod tests {
                     );
                 }
 
+                // proxy settings: no UiConfig mirror, pinned literally.
+                ("proxy_http", SettingKind::String { default, .. }) => {
+                    assert_eq!(*default, "", "proxy_http registry default must be empty string");
+                }
+                ("proxy_https", SettingKind::String { default, .. }) => {
+                    assert_eq!(*default, "", "proxy_https registry default must be empty string");
+                }
+                ("proxy_no_proxy", SettingKind::String { default, .. }) => {
+                    assert_eq!(
+                        *default, "",
+                        "proxy_no_proxy registry default must be empty string"
+                    );
+                }
+                // api_key: Password kind, no UiConfig mirror, default empty.
+                ("api_key", SettingKind::Password { default, .. }) => {
+                    assert_eq!(*default, "", "api_key registry default must be empty string");
+                }
+                // default_reasoning_effort: no UiConfig mirror, default "high".
+                ("default_reasoning_effort", SettingKind::Enum { default, .. }) => {
+                    assert_eq!(
+                        *default, "high",
+                        "default_reasoning_effort registry default must be 'high'"
+                    );
+                }
+
                 _ => panic!(
                     "settings::defs::default_settings() contains entry `{}` with no \
                      matching arm in defaults_match_ui_config_default. Add an arm.",
@@ -1198,6 +1272,7 @@ mod tests {
                     | (SettingKind::Int { .. }, SettingValue::Int(_))
                     // `DynamicEnum` uses `SettingValue::String`.
                     | (SettingKind::DynamicEnum { .. }, SettingValue::String(_))
+                    | (SettingKind::Password { .. }, SettingValue::Password(_))
             );
             assert!(
                 kind_matches,
@@ -1493,6 +1568,9 @@ mod tests {
                 }
                 // `DynamicEnum` widens to `String`.
                 (SettingKind::DynamicEnum { default, .. }, SettingValue::String(s)) => {
+                    assert_eq!(s, default);
+                }
+                (SettingKind::Password { default, .. }, SettingValue::Password(s)) => {
                     assert_eq!(s, default);
                 }
                 _ => panic!("default_value_for kind mismatch for `{}`", meta.key),

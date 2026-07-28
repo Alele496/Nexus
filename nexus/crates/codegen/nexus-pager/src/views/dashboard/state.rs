@@ -712,6 +712,60 @@ pub struct DashboardState {
     /// Surface-local compose mode for dispatch + peek (not persisted; not
     /// shared with agent sessions). `/multiline` or Ctrl+M.
     pub multiline_mode: bool,
+    /// Ring buffer of recent agent lifecycle events for the right-side
+    /// event stream panel. Pushed by `AppView` when agents are created,
+    /// complete tasks, fail, or receive mailbox messages.
+    pub event_stream: Vec<DashboardEvent>,
+    /// Set of agent IDs that have been reviewed. Synced from
+    /// `AppView::reviewed_agents` before each render so the renderer
+    /// can stamp `Reviewed` badges without threading extra params.
+    pub reviewed_agents: std::collections::HashSet<super::super::super::app::agent::AgentId>,
+}
+
+/// A single entry in the dashboard's right-side event stream panel.
+#[derive(Debug, Clone)]
+pub struct DashboardEvent {
+    /// Wall-clock time of the event.
+    pub when: std::time::Instant,
+    /// Human-readable summary line (≤ 80 chars).
+    pub summary: String,
+    /// Visual category for the icon/color.
+    pub kind: DashboardEventKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DashboardEventKind {
+    /// An agent session was created.
+    AgentCreated,
+    /// An agent completed a turn successfully.
+    AgentCompleted,
+    /// An agent turn failed with an error.
+    AgentFailed,
+    /// A mailbox message was received.
+    MessageReceived,
+    /// A subagent was spawned.
+    SubagentSpawned,
+    /// Edit conflict detected between two or more agents.
+    ConflictDetected,
+    /// A code review was started for an agent.
+    ReviewStarted,
+    /// A code review completed with a verdict.
+    ReviewCompleted,
+}
+
+impl DashboardState {
+    /// Push an event onto the stream, keeping the buffer bounded.
+    pub fn push_event(&mut self, kind: DashboardEventKind, summary: String) {
+        self.event_stream.push(DashboardEvent {
+            when: std::time::Instant::now(),
+            summary,
+            kind,
+        });
+        // Cap at 50 events so the panel never overflows.
+        if self.event_stream.len() > 50 {
+            self.event_stream.remove(0);
+        }
+    }
 }
 
 /// Mode staged for the next agent the dashboard spawns. Mirrors the agent
@@ -1391,6 +1445,8 @@ impl DashboardState {
             voice_listening: false,
             voice_interim: None,
             multiline_mode: false,
+            event_stream: Vec::new(),
+            reviewed_agents: std::collections::HashSet::new(),
             // Fresh dashboard with no rows seeded → the `[+ New
             // Agent]` button is the default cursor target. Open
             // sites that want a specific row seeded call
@@ -3286,6 +3342,23 @@ impl DashboardState {
             return InputOutcome::Changed;
         }
 
+        // Approval shortcuts: a = approve, r = reject, Shift+A = approve all.
+        // Works on the selected row when it's a NeedsInput agent.
+        // Skip during search/filter mode so typing 'a' or 'r' enters search text.
+        if !self.search_mode
+            && (key.modifiers.is_empty() || key.modifiers.contains(KeyModifiers::SHIFT))
+        {
+            match key.code {
+                KeyCode::Char('a') => {
+                    return self.handle_dashboard_approval_key(key, registry);
+                }
+                KeyCode::Char('r') if key.modifiers.is_empty() => {
+                    return self.handle_dashboard_approval_key(key, registry);
+                }
+                _ => {}
+            }
+        }
+
         // Esc precedence: search → peek → clear filter → unfocus the
         // input (→ overview list) → deselect → exit dashboard. This sits
         // between the registry lookup and the action emission because Esc
@@ -3546,6 +3619,38 @@ impl DashboardState {
         } else {
             InputOutcome::Unchanged
         }
+    }
+
+    /// Handle the `a` (approve), `r` (reject), and `Shift+A` (approve all)
+    /// dashboard shortcut keys. Delegates to the dispatch layer via Actions.
+    fn handle_dashboard_approval_key(
+        &mut self,
+        key: &KeyEvent,
+        _registry: &ActionRegistry,
+    ) -> InputOutcome {
+        use crate::app::actions::Action;
+
+        // Shift+A: approve all pending permissions across all agents.
+        if key.modifiers.contains(KeyModifiers::SHIFT)
+            && matches!(key.code, KeyCode::Char('A') | KeyCode::Char('a'))
+        {
+            return InputOutcome::Action(Action::DashboardApproveAll);
+        }
+
+        // a: approve the selected row's pending permission (if NeedsInput).
+        // r: reject the selected row's pending permission.
+        if self.selected.is_some() {
+            match key.code {
+                KeyCode::Char('a') => {
+                    return InputOutcome::Action(Action::DashboardApproveSelected);
+                }
+                KeyCode::Char('r') => {
+                    return InputOutcome::Action(Action::DashboardRejectSelected);
+                }
+                _ => {}
+            }
+        }
+        InputOutcome::Unchanged
     }
 
     fn handle_mouse(&mut self, mouse: &crossterm::event::MouseEvent) -> InputOutcome {
@@ -4458,6 +4563,8 @@ fn dashboard_action_for_id(
         | ActionId::ShortcutsHelp
         | ActionId::OpenSettings
         | ActionId::OpenDashboard
+        | ActionId::OpenAgentGraph
+        | ActionId::ExitAgentGraph
         | ActionId::EnableVoiceMode
         | ActionId::VoiceToggle
         // Overlay actions are intercepted at the AppView level

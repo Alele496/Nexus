@@ -113,6 +113,8 @@ pub enum ActionId {
 
     // Agent Dashboard
     OpenDashboard,
+    OpenAgentGraph,
+    ExitAgentGraph,
     DashboardSelectNext,
     DashboardSelectPrev,
     DashboardTogglePin,

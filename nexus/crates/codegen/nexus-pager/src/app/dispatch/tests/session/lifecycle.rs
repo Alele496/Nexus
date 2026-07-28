@@ -746,6 +746,7 @@ fn exit_session_unregisters_active_session() {
             .any(|e| matches!(e, Effect::UnregisterActiveSession { .. })),
         "ExitSession must emit UnregisterActiveSession, got: {effects:?}"
     );
+    // Only agent was closed → back to Welcome.
     assert!(matches!(app.active_view, ActiveView::Welcome));
 }
 #[test]
@@ -1890,6 +1891,7 @@ fn dashboard_stop_with_peek_open_moves_selection_and_peek_down_one() {
             &[],
             false,
             None,
+            &crate::app::shared_context::SharedContextState::default(),
         );
     };
     render(&mut app);

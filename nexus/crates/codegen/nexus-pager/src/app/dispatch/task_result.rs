@@ -14,8 +14,10 @@ use super::cta::{
     handle_plugin_cta_mcps_loaded,
 };
 use super::ctx::{
-    find_agent_by_session_id, get_active_agent_mut, show_welcome, switch_to_agent, SwitchCause,
+    agent_label, find_agent_by_session_id, get_active_agent_mut, go_home,
+    push_dashboard_event, switch_to_agent, SwitchCause,
 };
+use crate::views::dashboard::state::DashboardEventKind;
 use super::notes::{handle_btw_response, handle_memory_note_saved};
 use super::prompt::{
     defer_to_open_reload_window, handle_compact_complete, handle_prompt_response,
@@ -193,12 +195,18 @@ pub(super) fn dispatch_task_result(result: TaskResult, app: &mut AppView) -> Vec
                 .get(&agent_id)
                 .is_some_and(|a| a.session.session_id.is_none() && a.session.forked_from.is_none());
             if is_orphan_zombie {
+                let label = agent_label(app, agent_id);
+                push_dashboard_event(
+                    app,
+                    DashboardEventKind::AgentFailed,
+                    format!("{label} failed: {error}"),
+                );
                 let fallback = app.agents.keys().copied().find(|id| *id != agent_id);
                 remove_agent_and_cleanup(app, agent_id);
                 if let Some(target) = fallback {
                     switch_to_agent(app, target, SwitchCause::Picker);
                 } else {
-                    show_welcome(app);
+                    go_home(app);
                     app.welcome_prompt_focused = true;
                     app.session_picker_entries = None;
                     app.session_picker_loading = false;

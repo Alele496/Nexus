@@ -616,6 +616,12 @@ pub struct StartupHints {
     /// holds the parent's System and overwriting it would bust the cache prefix.
     #[serde(default)]
     pub preserve_inherited_system: bool,
+    /// Optional Team Context markdown section (M2.3) for multi-agent
+    /// coordination. Injected into the agent's system prompt at startup
+    /// so it knows about sibling agents, their file activity, and any
+    /// edit conflicts.
+    #[serde(default)]
+    pub shared_context_section: Option<String>,
 }
 
 #[cfg(test)]

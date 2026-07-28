@@ -64,6 +64,46 @@ pub(super) fn handle_permission_request(
         return false; // no redraw needed
     }
 
+    // 2.5. Approval-scope check: if the user has defined a scope matching this
+    //      tool call, auto-approve it silently (same semantics as YOLO:
+    //      pick AllowOnce, don't redraw).
+    {
+        let tool_kind_str = perm
+            .request
+            .tool_call
+            .fields
+            .kind
+            .as_ref()
+            .map(|k| tool_kind_to_str(k));
+        let file_path = perm
+            .request
+            .tool_call
+            .fields
+            .raw_input
+            .as_ref()
+            .and_then(|v| v.get("file_path"))
+            .and_then(|v| v.as_str());
+        if app
+            .approval_scopes
+            .is_auto_approved(tool_kind_str.as_deref(), file_path)
+            && let Some(allow) = perm
+                .request
+                .options
+                .iter()
+                .find(|o| o.kind == acp::PermissionOptionKind::AllowOnce)
+        {
+            let option_id = allow.option_id.clone();
+            perm.response_tx
+                .send(Ok(acp::RequestPermissionResponse::new(
+                    acp::RequestPermissionOutcome::Selected(
+                        acp::SelectedPermissionOutcome::new(option_id),
+                    ),
+                )))
+                .ok();
+            return false; // no redraw needed
+        }
+    }
+
     // 3. Fire notification so the user notices the pending approval.
     //    Rate-limit: only fire the bell/popup on the empty→non-empty
     //    transition to avoid stacking notifications during concurrent
@@ -421,4 +461,11 @@ pub(super) fn apply_recap_block(agent: &mut AgentView, auto: bool, recap_block: 
             agent.scrollback.push_block(recap_block);
         }
     }
+}
+
+/// Convert an ACP `ToolKind` to a lowercase string suitable for
+/// approval-scope matching (e.g. `ToolKind::Edit` → `"edit"`).
+fn tool_kind_to_str(kind: &acp::ToolKind) -> String {
+    // Use the Debug format which yields the variant name (e.g. "Edit", "Execute").
+    format!("{kind:?}").to_lowercase()
 }

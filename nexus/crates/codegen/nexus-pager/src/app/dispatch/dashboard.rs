@@ -1,6 +1,6 @@
 //! Dashboard dispatchers: attach, overlays, rows, renames, and permissions.
 
-use super::ctx::{show_welcome, surface_yolo_launch_block_notice};
+use super::ctx::{go_home, surface_yolo_launch_block_notice};
 use super::dashboard_telemetry::{
     log_dashboard_attached, log_dashboard_closed, log_dashboard_launched, log_dashboard_opened,
 };
@@ -8,6 +8,7 @@ use super::modes::{dispatch_cycle_mode_and_sync, set_yolo_mode, yolo_enable_bloc
 use super::permissions::resolve_permission_queue_transition;
 use super::queue::{maybe_drain_queue, note_peek_page_flip};
 use super::router::dispatch;
+use crate::views::dashboard::DashboardRowId;
 use super::session::lifecycle::{
     dispatch_new_session_inner_with_id, dispatch_new_worktree_session,
 };
@@ -260,7 +261,7 @@ pub(super) fn dispatch_exit_dashboard(app: &mut AppView) -> Vec<Effect> {
         }
         surface_yolo_launch_block_notice(app, id);
     } else {
-        show_welcome(app);
+        go_home(app);
     }
     vec![]
 }
@@ -1399,6 +1400,11 @@ pub(super) fn dispatch_dashboard_dispatch_slash(app: &mut AppView, text: String)
                 auto_mode_gate: auto_mode_gate_from_app,
                 ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
                 voice_stt_language: voice_stt_language_from_app,
+                api_key_masked: None,
+                proxy_http: None,
+                proxy_https: None,
+                proxy_no_proxy: None,
+                default_reasoning_effort: None,
             },
         };
         command.run(&mut ctx, invocation.args)
@@ -1994,6 +2000,101 @@ pub(super) fn dispatch_dashboard_stop(app: &mut AppView) -> Vec<Effect> {
         // them.
         DashboardRowId::Roster { .. } => vec![],
     }
+}
+
+/// Approve the pending permission for the currently selected dashboard row's
+/// agent (AllowOnce). No-op if the row isn't a NeedsInput agent.
+pub(super) fn dispatch_dashboard_approve_selected(app: &mut AppView) -> Vec<Effect> {
+    let Some(d) = app.dashboard.as_ref() else {
+        return vec![];
+    };
+    let Some(selected) = d.selected.as_ref() else {
+        return vec![];
+    };
+    let target_id = match selected {
+        DashboardRowId::TopLevel(id) => *id,
+        DashboardRowId::Subagent { parent, .. } => *parent,
+        DashboardRowId::Roster { .. } => return vec![],
+    };
+    let Some(agent) = app.agents.get_mut(&target_id) else {
+        return vec![];
+    };
+    // Find the AllowOnce option ID from the front of the queue.
+    let allow_id = agent
+        .permission_queue
+        .front()
+        .and_then(|p| {
+            p.options
+                .iter()
+                .find(|o| o.kind == acp::PermissionOptionKind::AllowOnce)
+                .map(|o| (p.id, o.option_id.clone()))
+        });
+    let Some((req_id, option_id)) = allow_id else {
+        return vec![];
+    };
+    // Delegate to the existing permission_select logic.
+    dispatch_dashboard_permission_select(app, selected.clone(), req_id, option_id)
+}
+
+/// Reject the pending permission for the currently selected dashboard row's
+/// agent (RejectOnce). No-op if not a NeedsInput agent.
+pub(super) fn dispatch_dashboard_reject_selected(app: &mut AppView) -> Vec<Effect> {
+    let Some(d) = app.dashboard.as_ref() else {
+        return vec![];
+    };
+    let Some(selected) = d.selected.as_ref() else {
+        return vec![];
+    };
+    let target_id = match selected {
+        DashboardRowId::TopLevel(id) => *id,
+        DashboardRowId::Subagent { parent, .. } => *parent,
+        DashboardRowId::Roster { .. } => return vec![],
+    };
+    let Some(agent) = app.agents.get_mut(&target_id) else {
+        return vec![];
+    };
+    let reject_id = agent
+        .permission_queue
+        .front()
+        .and_then(|p| {
+            p.options
+                .iter()
+                .find(|o| o.kind == acp::PermissionOptionKind::RejectOnce)
+                .map(|o| (p.id, o.option_id.clone()))
+        });
+    let Some((req_id, option_id)) = reject_id else {
+        return vec![];
+    };
+    dispatch_dashboard_permission_select(app, selected.clone(), req_id, option_id)
+}
+
+/// Approve ALL pending permissions across all agents.
+pub(super) fn dispatch_dashboard_approve_all(app: &mut AppView) -> Vec<Effect> {
+    let mut effects = Vec::new();
+    // Collect the work first to avoid borrow conflicts.
+    let approvals: Vec<(AgentId, DashboardRowId, usize, acp::PermissionOptionId)> = app
+        .agents
+        .iter()
+        .filter_map(|(id, agent)| {
+            let perm = agent.permission_queue.front()?;
+            let allow = perm
+                .options
+                .iter()
+                .find(|o| o.kind == acp::PermissionOptionKind::AllowOnce)?;
+            Some((
+                *id,
+                DashboardRowId::TopLevel(*id),
+                perm.id,
+                allow.option_id.clone(),
+            ))
+        })
+        .collect();
+    for (_agent_id, row, req_id, option_id) in approvals {
+        effects.extend(dispatch_dashboard_permission_select(
+            app, row, req_id, option_id,
+        ));
+    }
+    effects
 }
 
 pub(super) fn dispatch_dashboard_toggle_grouping(app: &mut AppView) -> Vec<Effect> {

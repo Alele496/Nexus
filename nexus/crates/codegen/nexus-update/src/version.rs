@@ -10,8 +10,8 @@ use nexus_shell::env::NexusBuildEnvironment;
 use nexus_shell::util::nexus_home::nexus_home;
 
 const TTL_SECONDS_BEFORE_AUTO_UPDATE: Duration = Duration::from_secs(60 * 30);
-const NPM_PACKAGE: &str = "@xai-official/sage";
-pub const GH_RELEASE_REPO: &str = "xai-org-shared/sage-build";
+const NPM_PACKAGE: &str = "@alele496/nexus";
+pub const GH_RELEASE_REPO: &str = "Alele496/Nexus";
 
 /// Primary CLI base URL: Cloudflare-fronted x.ai endpoint with edge caching
 /// for binaries and origin-respecting no-cache for channel pointers.

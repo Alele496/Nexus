@@ -685,6 +685,7 @@ pub(super) fn render_rows(
                         }
                     }
                     SettingValue::Enum(e) => display_for_enum_canonical(&meta.kind, e).to_string(),
+                    SettingValue::Password(s) => mask_password(s),
                     SettingValue::Int(i) => i.to_string(),
                 };
                 let show_restart_pill_for_layout = meta.restart_required && is_expanded;
@@ -850,6 +851,7 @@ fn compute_filtered_row_heights(state: &SettingsModalState, area_width: u16) -> 
                         }
                     }
                     SettingValue::Enum(e) => display_for_enum_canonical(&meta.kind, e).to_string(),
+                    SettingValue::Password(s) => mask_password(s),
                     SettingValue::Int(i) => i.to_string(),
                 };
                 let show_restart_pill = meta.restart_required && is_expanded;
@@ -2180,6 +2182,22 @@ fn compute_settings_max_label_w(metas: &[SettingMeta], content_w: u16) -> u16 {
 /// renders without an empty string, mirroring
 /// `display_name_for_canonical`'s pattern).
 ///
+/// Mask a password value for display. Short values → full mask;
+/// longer values → `prefix••••suffix` (first 4 + last 4).
+pub(crate) fn mask_password(value: &str) -> String {
+    if value.is_empty() {
+        return "(empty)".to_string();
+    }
+    if value.len() <= 8 {
+        return "\u{2022}\u{2022}\u{2022}\u{2022}".to_string();
+    }
+    format!(
+        "{}\u{2022}\u{2022}\u{2022}\u{2022}{}",
+        &value[..4],
+        &value[value.len() - 4..],
+    )
+}
+
 /// Look up the display name for an Enum canonical via the registry.
 fn display_for_enum_canonical<'a>(kind: &'a SettingKind, canonical: &'a str) -> &'a str {
     if let SettingKind::Enum { choices, .. } = kind {
@@ -2345,6 +2363,10 @@ pub(super) fn render_setting_row(
             }
         }
         SettingValue::Enum(e) => display_for_enum_canonical(&meta.kind, e),
+        SettingValue::Password(s) => {
+            value_text_owned = mask_password(s);
+            &value_text_owned
+        }
         SettingValue::Int(i) => {
             value_text_owned = i.to_string();
             &value_text_owned

@@ -52,6 +52,13 @@ pub(crate) fn refresh_open_settings_modals(app: &mut AppView) {
     let auto_mode_gate_from_app = app.auto_mode_gate;
     let ask_user_question_timeout_enabled_from_app = app.ask_user_question_timeout_enabled;
     let voice_stt_language_from_app = app.voice_config.language.clone();
+    // Phase 1: read API key from auth storage (masked for display).
+    let api_key_masked = {
+        let nexus_home = nexus_tools::util::nexus_home::nexus_home();
+        nexus_shell::auth::storage::read_api_key(&nexus_home).map(|key| {
+            crate::views::settings_modal::render::mask_password(&key)
+        })
+    };
     for agent in app.agents.values_mut() {
         // Walk both `Settings` and `ResetSettingsConfirm` — the
         // confirm dialog embeds settings state that must stay fresh
@@ -89,6 +96,12 @@ pub(crate) fn refresh_open_settings_modals(app: &mut AppView) {
                 auto_mode_gate: auto_mode_gate_from_app,
                 ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
                 voice_stt_language: voice_stt_language_from_app.clone(),
+                // Phase 1
+                api_key_masked: api_key_masked.clone(),
+                proxy_http: None,
+                proxy_https: None,
+                proxy_no_proxy: None,
+                default_reasoning_effort: None,
             };
         }
     }
@@ -159,6 +172,12 @@ pub(in crate::app::dispatch) fn dispatch_open_settings(app: &mut AppView) -> Vec
     let auto_mode_gate_from_app = app.auto_mode_gate;
     let ask_user_question_timeout_enabled_from_app = app.ask_user_question_timeout_enabled;
     let voice_stt_language_from_app = app.voice_config.language.clone();
+    let api_key_masked_dispatch = {
+        let nexus_home = nexus_tools::util::nexus_home::nexus_home();
+        nexus_shell::auth::storage::read_api_key(&nexus_home).map(|key| {
+            crate::views::settings_modal::render::mask_password(&key)
+        })
+    };
 
     let Some(agent) = app.agents.get_mut(&id) else {
         return vec![];
@@ -202,6 +221,12 @@ pub(in crate::app::dispatch) fn dispatch_open_settings(app: &mut AppView) -> Vec
         auto_mode_gate: auto_mode_gate_from_app,
         ask_user_question_timeout_enabled: ask_user_question_timeout_enabled_from_app,
         voice_stt_language: voice_stt_language_from_app,
+        // Phase 1
+        api_key_masked: api_key_masked_dispatch.clone(),
+        proxy_http: None,
+        proxy_https: None,
+        proxy_no_proxy: None,
+        default_reasoning_effort: None,
     };
     let state = Box::new(SettingsModalState::new(
         registry,
@@ -672,6 +697,11 @@ pub(crate) fn build_pager_snapshot(app: &AppView) -> crate::settings::PagerLocal
         auto_mode_gate: app.auto_mode_gate,
         ask_user_question_timeout_enabled: app.ask_user_question_timeout_enabled,
         voice_stt_language: app.voice_config.language.clone(),
+        api_key_masked: None,
+        proxy_http: None,
+        proxy_https: None,
+        proxy_no_proxy: None,
+        default_reasoning_effort: None,
     }
 }
 
@@ -835,6 +865,20 @@ pub(in crate::app::dispatch) fn action_for_reset(
         }
         ("voice_stt_language", SettingValue::Enum(s)) => {
             Some(Action::SetVoiceSttLanguage((*s).to_string()))
+        }
+        // Phase 1 proxy / api_key / reasoning_effort reset arms.
+        ("proxy_http", SettingValue::String(s)) => Some(Action::SetProxyHttp(s.clone())),
+        ("proxy_https", SettingValue::String(s)) => Some(Action::SetProxyHttps(s.clone())),
+        ("proxy_no_proxy", SettingValue::String(s)) => Some(Action::SetProxyNoProxy(s.clone())),
+        ("api_key", SettingValue::Password(s)) => {
+            if s.is_empty() {
+                Some(Action::ClearApiKey)
+            } else {
+                Some(Action::SetApiKey(s.clone()))
+            }
+        }
+        ("default_reasoning_effort", SettingValue::Enum(s)) => {
+            Some(Action::SetDefaultReasoningEffort((*s).to_owned()))
         }
         // fork_secondary_model: empty → Clear, non-empty is skew guard.
         ("fork_secondary_model", SettingValue::String(s)) => {
@@ -1124,6 +1168,13 @@ pub(in crate::app::dispatch) fn apply_setting_rollback(
             };
             set_fork_secondary_model_inner(app, restored);
         }
+        // Phase 1: proxy / reasoning-effort — Shell-owned, no pager-side
+        // cache mirror; rollback is a no-op (the persist failure already
+        // prevents the disk write, and there's nothing to undo in memory).
+        ("proxy_http", SettingValue::String(_)) => {}
+        ("proxy_https", SettingValue::String(_)) => {}
+        ("proxy_no_proxy", SettingValue::String(_)) => {}
+        ("default_reasoning_effort", SettingValue::Enum(_)) => {}
 
         _ => {
             tracing::error!(

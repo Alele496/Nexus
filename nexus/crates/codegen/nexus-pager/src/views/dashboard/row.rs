@@ -82,6 +82,11 @@ pub enum RowBadge {
     BgTask,
     Pinned,
     Failed,
+    /// Edit conflict: this agent and at least one other agent have
+    /// modified the same file(s).
+    Conflict,
+    /// A code review has been performed on this agent's work.
+    Reviewed,
 }
 impl RowBadge {
     pub fn label(self) -> &'static str {
@@ -91,6 +96,8 @@ impl RowBadge {
             Self::BgTask => "bg",
             Self::Pinned => "pinned",
             Self::Failed => "failed",
+            Self::Conflict => "conflict",
+            Self::Reviewed => "reviewed",
         }
     }
 }

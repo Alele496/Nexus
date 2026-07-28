@@ -129,6 +129,7 @@ pub(crate) fn execute(
             model_id,
             preferred_session_id,
             chat_kind,
+            shared_context_section,
         } => {
             let tx = acp_tx.clone();
             let compat = nexus_tools::types::compat::CompatConfig::default();
@@ -151,6 +152,18 @@ pub(crate) fn execute(
             if let Some(ref sid) = preferred_session_id {
                 meta.get_or_insert_with(acp::Meta::new)
                     .insert("sessionId".into(), serde_json::json!(sid));
+            }
+            if let Some(ref section) = shared_context_section {
+                let hints = meta
+                    .get_or_insert_with(acp::Meta::new)
+                    .entry(String::from("startupHints"))
+                    .or_insert_with(|| serde_json::json!({}));
+                if let Some(obj) = hints.as_object_mut() {
+                    obj.insert(
+                        String::from("sharedContextSection"),
+                        serde_json::json!(section),
+                    );
+                }
             }
             if is_chat_path {
                 scrub_chat_workspace_bind_meta(&mut meta);

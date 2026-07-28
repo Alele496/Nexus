@@ -664,9 +664,13 @@ impl SettingsModalState {
         match kind {
             SettingKind::String {
                 default, validator, ..
+            }
+            | SettingKind::Password {
+                default, validator, ..
             } => {
                 let text = match value {
-                    Some(SettingValue::String(text)) => text,
+                    Some(SettingValue::String(text))
+                    | Some(SettingValue::Password(text)) => text,
                     _ => default.to_string(),
                 };
                 let mut editor = LineEditor::default();
@@ -933,6 +937,7 @@ pub(super) fn action_for_enum_commit(key: SettingKey, choice: &'static str) -> O
         "default_selected_permission" => {
             Some(Action::SetDefaultSelectedPermission(choice.to_string()))
         }
+        "default_reasoning_effort" => Some(Action::SetDefaultReasoningEffort(choice.to_string())),
         _ => None,
     }
 }
@@ -964,6 +969,11 @@ pub(super) fn action_for_string(
                     .map(Action::SetForkSecondaryModel)
             }
         }
+
+        "api_key" => Some(Action::SetApiKey(value)),
+        "proxy_http" => Some(Action::SetProxyHttp(value)),
+        "proxy_https" => Some(Action::SetProxyHttps(value)),
+        "proxy_no_proxy" => Some(Action::SetProxyNoProxy(value)),
 
         _ => {
             let _ = value;

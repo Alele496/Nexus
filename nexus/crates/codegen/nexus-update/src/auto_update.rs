@@ -25,7 +25,7 @@ pub enum UpdateRunMode {
 
 const PROMPT_UPDATE_NOW: &str = "Update now? [Y/n/d]";
 const MSG_AUTO_UPDATE_BACKGROUND: &str = "Auto-update running in background.";
-const MSG_RUN_UPDATE_MANUAL: &str = "Run `sage update` to get the latest version.";
+const MSG_RUN_UPDATE_MANUAL: &str = "Run `nexus update` to get the latest version.";
 /// Manual-install one-liner for this platform's bootstrap installer.
 fn manual_install_cmd() -> &'static str {
     if cfg!(windows) {
@@ -38,8 +38,8 @@ fn manual_install_cmd() -> &'static str {
 /// Build a reinstall hint for a known installer type.
 fn reinstall_hint(installer: &str) -> String {
     match installer {
-        "npm" => "Please reinstall via npm:\n  npm i -g @xai-official/sage".to_string(),
-        "gh-release" => "Please reinstall via GitHub Releases:\n  gh release download --repo xai-org-shared/sage-build --pattern 'sage-*' --output sage && chmod +x sage".to_string(),
+        "npm" => "Please reinstall via npm:\n  npm i -g @alele496/nexus".to_string(),
+        "gh-release" => "Please reinstall via GitHub Releases:\n  gh release download --repo Alele496/Nexus --pattern 'nexus-*' --output nexus && chmod +x nexus".to_string(),
         _ => format!("Please reinstall via:\n  {}", manual_install_cmd()),
     }
 }
@@ -299,8 +299,8 @@ pub async fn get_installer() -> Option<&'static str> {
     let cfg = config::load_config().await;
     match cfg.cli.installer.as_deref() {
         Some("npm") => Some("npm"),
-        Some("gh-release") => Some("gh-release"),
-        _ => Some("internal"),
+        Some("internal") => Some("internal"),
+        _ => Some("gh-release"),
     }
 }
 
@@ -1344,7 +1344,7 @@ async fn swap_managed_bin_links(
     binary_path: &std::path::Path,
     bin_dir: &std::path::Path,
 ) -> Result<std::path::PathBuf> {
-    let nexus_name = if cfg!(windows) { "sage.exe" } else { "sage" };
+    let nexus_name = if cfg!(windows) { "nexus.exe" } else { "nexus" };
     let agent_name = if cfg!(windows) { "agent.exe" } else { "agent" };
     let nexus_link = bin_dir.join(nexus_name);
     let agent_link = bin_dir.join(agent_name);
@@ -1907,7 +1907,7 @@ async fn reconcile_agent_to_grok(bin_dir: &std::path::Path) {
 
 #[cfg(windows)]
 async fn reconcile_agent_exe_to_grok(bin_dir: &std::path::Path) {
-    let nexus_exe = bin_dir.join("sage.exe");
+    let nexus_exe = bin_dir.join("nexus.exe");
     let agent_exe = bin_dir.join("agent.exe");
 
     if tokio::fs::metadata(&nexus_exe).await.is_err() {
@@ -1922,8 +1922,8 @@ async fn reconcile_agent_exe_to_grok(bin_dir: &std::path::Path) {
         }
     }
     match windows_replace_exe(&nexus_exe, &agent_exe).await {
-        Ok(()) => tracing::info!("reconciled agent.exe to sage.exe"),
-        Err(e) => tracing::warn!("failed to reconcile agent.exe to sage.exe: {e:#}"),
+        Ok(()) => tracing::info!("reconciled agent.exe to nexus.exe"),
+        Err(e) => tracing::warn!("failed to reconcile agent.exe to nexus.exe: {e:#}"),
     }
 }
 
@@ -2001,7 +2001,7 @@ async fn gh_release_download(tag: &str, pattern: &str, dest: &std::path::Path) -
     Ok(())
 }
 
-/// Download and install sage from GitHub Releases (xai-org-shared/sage-build).
+/// Download and install nexus from GitHub Releases (Alele496/Nexus).
 ///
 /// Uses `gh release download` to fetch the binary matching the current platform.
 /// This works anywhere the `gh` CLI is authenticated, without needing npm or
@@ -2021,12 +2021,12 @@ async fn install_gh_release(target: Option<&str>) -> Result<()> {
     tokio::fs::create_dir_all(&download_dir).await?;
     tokio::fs::create_dir_all(&bin_dir).await?;
 
-    let binary_name = format!("sage-{}-{}", version, platform);
+    let binary_name = format!("nexus-{}-{}", version, platform);
     let binary_path = download_dir.join(&binary_name);
     let tag = format!("v{}", version);
 
     eprintln!(
-        "  Downloading sage v{} ({}) from GitHub Releases...",
+        "  Downloading nexus v{} ({}) from GitHub Releases...",
         version, platform
     );
 
@@ -2039,18 +2039,18 @@ async fn install_gh_release(target: Option<&str>) -> Result<()> {
         tokio::fs::set_permissions(&binary_path, std::fs::Permissions::from_mode(0o755)).await?;
     }
 
-    // Atomic swap of ~/.nexus/bin/{sage,agent} -> downloaded binary.
+    // Atomic swap of ~/.nexus/bin/{nexus,agent} -> downloaded binary.
     swap_managed_bin_links(&binary_path, &bin_dir).await?;
 
-    // Update sage-latest -> versioned binary so any existing symlinks that route
-    // through it (e.g. /usr/local/bin/sage -> ~/.nexus/downloads/sage-latest)
+    // Update nexus-latest -> versioned binary so any existing symlinks that route
+    // through it (e.g. /usr/local/bin/nexus -> ~/.nexus/downloads/nexus-latest)
     // resolve to the newly installed version.
     #[cfg(unix)]
     {
-        let latest_path = download_dir.join("sage-latest");
+        let latest_path = download_dir.join("nexus-latest");
         let rel_target = relative_symlink_target(&binary_path, &latest_path);
         if let Err(e) = atomic_symlink_swap(&rel_target, &latest_path).await {
-            tracing::warn!("Failed to update sage-latest symlink: {e}");
+            tracing::warn!("Failed to update nexus-latest symlink: {e}");
         }
     }
 
@@ -2172,7 +2172,7 @@ fn install_npm(target: Option<&str>, channel: &str, npm_registry: Option<&str>) 
     warn_if_other_nexus_processes_running();
 
     let version_arg = match target {
-        Some(ver) => format!("@xai-official/sage@{ver}"),
+        Some(ver) => format!("@alele496/nexus@{ver}"),
         None => {
             // All current callers resolve the version via get_latest_version
             // (which applies max(stable, alpha) for the alpha channel) before
@@ -2183,7 +2183,7 @@ fn install_npm(target: Option<&str>, channel: &str, npm_registry: Option<&str>) 
                 "install_npm called without a resolved version, falling back to dist-tag"
             );
             format!(
-                "@xai-official/sage@{}",
+                "@alele496/nexus@{}",
                 if channel == "alpha" {
                     "alpha"
                 } else {
@@ -3448,7 +3448,7 @@ mod tests {
         let hint = reinstall_hint("npm");
         assert!(hint.contains("npm i -g"), "should suggest npm i -g: {hint}");
         assert!(
-            hint.contains("@xai-official/sage"),
+            hint.contains("@alele496/nexus"),
             "should name the package: {hint}"
         );
     }
@@ -3461,7 +3461,7 @@ mod tests {
             "should suggest gh release download: {hint}"
         );
         assert!(
-            hint.contains("xai-org-shared/sage-build"),
+            hint.contains("Alele496/Nexus"),
             "should name the repo: {hint}"
         );
     }
