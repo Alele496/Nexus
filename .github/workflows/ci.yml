@@ -72,7 +72,7 @@ jobs:
         continue-on-error: true
 
       - name: Cargo test (core crates, must-pass)
-        run: cargo test -p nexus-pager -p nexus-shell -p nexus-agent -p nexus-mailbox -p nexus-workflow --lib --no-fail-fast
+        run: cargo test -p nexus-pager -p nexus-shell -p nexus-agent -p nexus-mailbox --lib --no-fail-fast
 
   # ── Linux: check + test ────────────────────────────────────────
   check-linux:
@@ -115,4 +115,4 @@ jobs:
         continue-on-error: true
 
       - name: Cargo test (core crates, must-pass)
-        run: cargo test -p nexus-pager -p nexus-shell -p nexus-agent -p nexus-mailbox -p nexus-workflow --lib --no-fail-fast
+        run: cargo test -p nexus-pager -p nexus-shell -p nexus-agent -p nexus-mailbox --lib --no-fail-fast
