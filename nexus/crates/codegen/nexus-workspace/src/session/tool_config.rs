@@ -582,6 +582,7 @@ pub mod test_support {
                 notification_handle: ToolNotificationHandle::noop(),
                 owner_session_id: None,
                 parent_scheduler_handle: None,
+                parent_mailbox_handle: None,
                 skills: vec![],
                 state_path: session_root.join("tool_state.json"),
                 memory_backend: None,
