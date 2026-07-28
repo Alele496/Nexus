@@ -696,6 +696,8 @@ impl ToolRegistryBuilder {
                 nexus_build::ask_user_question::AskUserQuestionParams,
             >();
         b.register::<nexus_build::MonitorTool>();
+        b.register::<nexus_build::SendMessageTool>();
+        b.register::<nexus_build::CheckMailboxTool>();
         b.register::<nexus_build::SchedulerCreateTool>();
         b.register::<nexus_build::SchedulerDeleteTool>();
         b.register::<nexus_build::SchedulerListTool>();
