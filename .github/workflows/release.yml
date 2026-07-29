@@ -72,7 +72,7 @@ jobs:
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ARTIFACT }}
+          files: nexus/${{ env.ARTIFACT }}
 
   # ── Linux x86_64 ───────────────────────────────────────────────
   release-linux:
@@ -122,9 +122,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: Nexus ${{ github.ref_name }}
-          files: ${{ env.ARTIFACT }}
+          files: nexus/${{ env.ARTIFACT }}
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+          append_body: true
 
   # ── macOS ARM64 (Apple Silicon) ─────────────────────────────────
   release-macos:
@@ -171,4 +172,4 @@ jobs:
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ARTIFACT }}
+          files: nexus/${{ env.ARTIFACT }}
