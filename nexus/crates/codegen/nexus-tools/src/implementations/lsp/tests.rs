@@ -361,11 +361,31 @@ while True:
     (dir, script_path)
 }
 
+/// Detect the system Python command at module load time.
+/// CI runners may have `python3`, `python`, or neither.
+fn python_command() -> Option<&'static str> {
+    static PYTHON: std::sync::OnceLock<Option<&'static str>> = std::sync::OnceLock::new();
+    *PYTHON.get_or_init(|| {
+        for candidate in &["python3", "python"] {
+            if std::process::Command::new(candidate)
+                .arg("--version")
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .status()
+                .is_ok_and(|s| s.success())
+            {
+                return Some(candidate);
+            }
+        }
+        None
+    })
+}
+
 fn mock_server_config(script_path: &Path) -> LspServerConfig {
     let mut ext_map = HashMap::new();
     ext_map.insert(".ts".to_string(), "typescript".to_string());
     LspServerConfig {
-        command: "python3".to_string(),
+        command: python_command().unwrap_or("python3").to_string(),
         args: vec!["-u".to_string(), script_path.to_string_lossy().into_owned()],
         extensions: ext_map,
         startup_timeout: Some(10_000),
@@ -373,7 +393,16 @@ fn mock_server_config(script_path: &Path) -> LspServerConfig {
     }
 }
 
-async fn start_mock_client() -> (tempfile::TempDir, tempfile::TempDir, LspClient) {
+/// Returns `None` when no Python is available, signalling callers to
+/// return early (skip) without failing.
+fn python_missing() -> bool {
+    python_command().is_none()
+}
+
+async fn start_mock_client() -> Option<(tempfile::TempDir, tempfile::TempDir, LspClient)> {
+    if python_missing() {
+        return None;
+    }
     let (script_dir, script_path) = write_mock_server();
     let config = mock_server_config(&script_path);
     let workspace = tempfile::tempdir().unwrap();
@@ -381,7 +410,7 @@ async fn start_mock_client() -> (tempfile::TempDir, tempfile::TempDir, LspClient
     let client = LspClient::start("mock".to_string(), 1, config, workspace.path(), notify)
         .await
         .expect("mock LSP handshake failed");
-    (script_dir, workspace, client)
+    Some((script_dir, workspace, client))
 }
 
 async fn poll_diagnostics(client: &LspClient, path: &Path, expected: usize) -> Vec<Diagnostic> {
@@ -396,7 +425,13 @@ async fn poll_diagnostics(client: &LspClient, path: &Path, expected: usize) -> V
 }
 
 /// Creates a single-server LspManager with the mock TS server, already initialized.
-async fn single_server_manager(script_path: &Path, workspace: &tempfile::TempDir) -> LspManager {
+async fn single_server_manager(
+    script_path: &Path,
+    workspace: &tempfile::TempDir,
+) -> Option<LspManager> {
+    if python_missing() {
+        return None;
+    }
     let mut servers = BTreeMap::new();
     servers.insert("mock-ts".to_string(), mock_server_config(script_path));
 
@@ -407,7 +442,7 @@ async fn single_server_manager(script_path: &Path, workspace: &tempfile::TempDir
         crate::notification::ToolNotificationHandle::noop(),
     );
     mgr.ensure_initialized().await;
-    mgr
+    Some(mgr)
 }
 
 /// Wait until the LSP server has published diagnostics for `path`.
@@ -431,7 +466,7 @@ async fn wait_for_server(mgr: &LspManager, path: &Path, timeout_ms: u64) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn e2e_did_open_publishes_diagnostics() {
-    let (_dir, workspace, mut client) = start_mock_client().await;
+    let Some((_dir, workspace, mut client)) = start_mock_client().await else { return; };
 
     let test_file = workspace.path().join("test.ts");
     std::fs::write(&test_file, "const x = 1;\n").unwrap();
@@ -455,7 +490,7 @@ async fn e2e_did_open_publishes_diagnostics() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn e2e_goto_definition() {
-    let (_dir, workspace, mut client) = start_mock_client().await;
+    let Some((_dir, workspace, mut client)) = start_mock_client().await else { return; };
     let test_file = workspace.path().join("test.ts");
     std::fs::write(&test_file, "const x = 1;\n").unwrap();
     client.notify_file_change(&test_file, "const x = 1;\n", "typescript");
@@ -479,7 +514,7 @@ async fn e2e_lsp_manager_full_lifecycle() {
     let (_dir, script_path) = write_mock_server();
     let workspace = tempfile::tempdir().unwrap();
 
-    let mut mgr = single_server_manager(&script_path, &workspace).await;
+    let Some(mut mgr) = single_server_manager(&script_path, &workspace).await else { return; };
     assert!(mgr.is_initialized());
     mgr.ensure_initialized().await; // idempotent
 
@@ -524,7 +559,7 @@ async fn e2e_lsp_manager_full_lifecycle() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn e2e_did_change_updates_diagnostics() {
-    let (_dir, workspace, mut client) = start_mock_client().await;
+    let Some((_dir, workspace, mut client)) = start_mock_client().await else { return; };
     let test_file = workspace.path().join("test.ts");
     std::fs::write(&test_file, "const x = 1;\n").unwrap();
 
@@ -756,7 +791,7 @@ async fn e2e_real_typescript_language_server() {
 async fn e2e_session_diagnostics_injection_flow() {
     let (_dir, script_path) = write_mock_server();
     let workspace = tempfile::tempdir().unwrap();
-    let mut mgr = single_server_manager(&script_path, &workspace).await;
+    let Some(mut mgr) = single_server_manager(&script_path, &workspace).await else { return; };
 
     // Step 1: tool edits file -> fire-and-forget notify (returns immediately).
     let edited_file = workspace.path().join("component.ts");
@@ -810,7 +845,7 @@ async fn e2e_session_tool_dispatch_flow() {
 
     let (_dir, script_path) = write_mock_server();
     let workspace = tempfile::tempdir().unwrap();
-    let mut mgr = single_server_manager(&script_path, &workspace).await;
+    let Some(mut mgr) = single_server_manager(&script_path, &workspace).await else { return; };
 
     let ts_file = workspace.path().join("app.ts");
     let content = "function greet() { return 'hi'; }\n";
@@ -890,7 +925,7 @@ async fn e2e_tools_enabled_gating() {
     let workspace = tempfile::tempdir().unwrap();
 
     // tools_enabled=false (default) — tools should NOT be advertised.
-    let mut mgr = single_server_manager(&script_path, &workspace).await;
+    let Some(mut mgr) = single_server_manager(&script_path, &workspace).await else { return; };
     assert!(!mgr.tools_enabled(), "tools disabled by default");
     mgr.shutdown().await;
 
@@ -917,7 +952,7 @@ async fn e2e_restart_monitor_preserves_replacement_client() {
         .run_until(async {
             let (_dir, script_path) = write_mock_server();
             let workspace = tempfile::tempdir().unwrap();
-            let mut mgr = single_server_manager(&script_path, &workspace).await;
+            let Some(mut mgr) = single_server_manager(&script_path, &workspace).await else { return; };
 
             let original_lifecycle_id = mgr.clients.get("mock-ts").unwrap().lifecycle_id;
             let tracked_docs = vec![(

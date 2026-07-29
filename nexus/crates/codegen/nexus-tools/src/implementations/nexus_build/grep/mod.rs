@@ -1472,7 +1472,16 @@ mod tests {
 
     use crate::types::resources::Resources;
     use std::fs;
+    use std::process::Command as StdCommand;
     use tempfile::TempDir;
+
+    fn rg_available() -> bool {
+        StdCommand::new("rg")
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
 
     fn make_grep_input(pattern: &str) -> GrepSearchInput {
         GrepSearchInput {
@@ -1674,6 +1683,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_grep_no_matches() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::write(tmp.path().join("hello.txt"), "hello world\n").unwrap();
 
@@ -1696,6 +1706,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_grep_finds_matches() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::write(
             tmp.path().join("test.rs"),
@@ -1726,6 +1737,7 @@ mod tests {
     /// `key.pem`) nor via a `glob` arg that targets a denied file.
     #[tokio::test]
     async fn deny_read_globs_exclude_denied_files() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::write(tmp.path().join(".env"), "FAKE_SECRET=zzz\n").unwrap();
         fs::write(tmp.path().join("key.pem"), "FAKE in pem\n").unwrap();
@@ -1781,6 +1793,7 @@ mod tests {
     /// denied pattern but don't match it (`server.pem.bak`, `notes.env.md`, …).
     #[tokio::test]
     async fn deny_read_globs_spare_glob_boundary_lookalikes() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::create_dir_all(tmp.path().join("src")).unwrap();
         // Real denied secrets (non-dotfiles, so a plain grep would read them).
@@ -1842,6 +1855,7 @@ mod tests {
     /// search root is a subdirectory, not just the cwd.
     #[tokio::test]
     async fn deny_read_globs_exclude_in_subdir_search_root() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::create_dir_all(tmp.path().join("src")).unwrap();
         fs::write(tmp.path().join("src/server.pem"), "FAKE\n").unwrap();
@@ -1875,6 +1889,7 @@ mod tests {
     /// searchable. Guards against over-blocking unrestricted users.
     #[tokio::test]
     async fn no_deny_globs_does_not_block_denied_looking_files() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::create_dir_all(tmp.path().join("src")).unwrap();
         fs::write(tmp.path().join("src/server.pem"), "FAKE\n").unwrap();
@@ -1907,6 +1922,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_works_through_runtime_trait() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::write(tmp.path().join("file.txt"), "findme here\n").unwrap();
 
@@ -1928,6 +1944,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_uses_params_for_truncation() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         // Create a file with many matching lines
         let content: String = (0..100).map(|i| format!("match_line_{}\n", i)).collect();
@@ -1961,6 +1978,7 @@ mod tests {
     /// Explicit `head_limit` truncates the card and stops the search early.
     #[tokio::test]
     async fn tool_grep_head_limit_truncates() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         // Many match lines so an unbounded read would exceed a tiny head_limit.
         let content: String = (0..200).map(|i| format!("findme_{i}\n")).collect();
@@ -1999,6 +2017,7 @@ mod tests {
     /// `head_limit = K + 1` is the exact fit.)
     #[tokio::test]
     async fn tool_grep_head_limit_exact_fit_not_truncated() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         // One file, exactly 5 matching lines → 6 rg output lines (heading + 5).
         let content: String = (0..5).map(|i| format!("findme_{i}\n")).collect();
@@ -2026,6 +2045,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_grep_files_with_matches_mode() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::write(tmp.path().join("a.txt"), "findme\n").unwrap();
         fs::write(tmp.path().join("b.txt"), "findme\n").unwrap();
@@ -2065,6 +2085,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_grep_count_mode() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         fs::write(tmp.path().join("a.txt"), "findme\nfindme\n").unwrap();
         fs::write(tmp.path().join("b.txt"), "findme\n").unwrap();
@@ -2102,6 +2123,7 @@ mod tests {
 
     #[tokio::test]
     async fn tool_grep_with_path_subdir() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let sub = tmp.path().join("subdir");
         fs::create_dir(&sub).unwrap();
@@ -2384,6 +2406,7 @@ mod tests {
     /// wrapper and the "Found N …" summary (terminal-only footer).
     #[tokio::test]
     async fn grep_streaming_body_matches_card_body() {
+        if !rg_available() { return; }
         use futures::StreamExt;
 
         let tmp = TempDir::new().unwrap();
@@ -2462,6 +2485,7 @@ mod tests {
     /// emitted (byte-for-byte pre-streaming) while the terminal still surfaces.
     #[tokio::test]
     async fn grep_streaming_suppressed_when_gate_off() {
+        if !rg_available() { return; }
         use futures::StreamExt;
 
         let tmp = TempDir::new().unwrap();
@@ -2511,6 +2535,7 @@ mod tests {
     /// against feeding the streamer bytes clobbered by the probe's read.
     #[tokio::test]
     async fn grep_streaming_body_matches_card_body_when_truncated() {
+        if !rg_available() { return; }
         use futures::StreamExt;
 
         let tmp = TempDir::new().unwrap();

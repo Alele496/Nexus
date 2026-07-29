@@ -96,7 +96,7 @@ fn test_app() -> AppView {
         registry: crate::actions::ActionRegistry::defaults(),
         settings_registry: std::sync::Arc::new(crate::settings::SettingsRegistry::defaults()),
         current_ui: nexus_shell::agent::config::UiConfig::default(),
-        cwd: PathBuf::from("/tmp"),
+        cwd: std::env::temp_dir(),
         project_picker_shown: true,
         project_picker_disabled: false,
         cwd_has_git_ancestor: false,
@@ -298,7 +298,7 @@ fn make_test_agent_session(app: &AppView, id: AgentId, sid: &str) -> AgentSessio
         models: ModelState::default(),
         state: AgentState::Idle,
         tracker: AcpUpdateTracker::new(),
-        cwd: PathBuf::from("/tmp"),
+        cwd: std::env::temp_dir(),
         is_worktree: false,
         forked_from: None,
         pending_prompts: std::collections::VecDeque::new(),
@@ -550,7 +550,7 @@ fn insert_placeholder_agent(app: &mut AppView, id: AgentId) {
             models: ModelState::default(),
             state: AgentState::Idle,
             tracker: AcpUpdateTracker::new(),
-            cwd: PathBuf::from("/tmp"),
+            cwd: std::env::temp_dir(),
             is_worktree: false,
             forked_from: None,
             pending_prompts: std::collections::VecDeque::new(),
@@ -688,7 +688,7 @@ fn two_agent_app_with_bg_task() -> AppView {
             models: ModelState::default(),
             state: AgentState::Idle,
             tracker: AcpUpdateTracker::new(),
-            cwd: PathBuf::from("/tmp"),
+            cwd: std::env::temp_dir(),
             is_worktree: false,
             forked_from: None,
             pending_prompts: std::collections::VecDeque::new(),
@@ -729,7 +729,7 @@ fn two_agent_app_with_bg_task() -> AppView {
 }
 fn project_picker_app() -> AppView {
     let mut app = test_app();
-    app.cwd = PathBuf::from("/tmp");
+    app.cwd = std::env::temp_dir();
     app.project_picker_shown = false;
     app
 }

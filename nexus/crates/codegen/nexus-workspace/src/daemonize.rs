@@ -547,7 +547,15 @@ mod tests {
         // `execve`s (the fd is `O_CLOEXEC`). That window is microseconds, so a
         // short bounded retry makes the release deterministic without weakening
         // the held-exclusion assertion above.
-        let deadline = Instant::now() + Duration::from_secs(2);
+        // On Windows LockFileEx is mandatory and inherited by child
+        // processes; CI runners spawn significantly slower, so the
+        // retry window must be longer than on Linux.
+        #[cfg(windows)]
+        let retry_secs = 10u64;
+        #[cfg(not(windows))]
+        let retry_secs = 2u64;
+
+        let deadline = Instant::now() + Duration::from_secs(retry_secs);
         let third = loop {
             match PidFile::acquire(&path).unwrap() {
                 Some(guard) => break Some(guard),

@@ -328,7 +328,16 @@ mod tests {
     use crate::types::tool_metadata::test_ctx;
 
     use crate::types::resources::Resources;
+    use std::process::Command as StdCommand;
     use tempfile::TempDir;
+
+    fn rg_available() -> bool {
+        StdCommand::new("rg")
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
 
     fn test_resources(cwd: &std::path::Path) -> Resources {
         let mut resources = Resources::new();
@@ -338,6 +347,7 @@ mod tests {
 
     #[tokio::test]
     async fn glob_finds_matching_files() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("hello.ts"), "console.log('hi');\n").unwrap();
         std::fs::write(tmp.path().join("world.ts"), "export {};\n").unwrap();
@@ -365,6 +375,7 @@ mod tests {
 
     #[tokio::test]
     async fn glob_no_matches_returns_empty() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("readme.md"), "# readme\n").unwrap();
 
@@ -389,6 +400,7 @@ mod tests {
 
     #[tokio::test]
     async fn glob_with_subdirectory_path() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let sub = tmp.path().join("src");
         std::fs::create_dir(&sub).unwrap();
@@ -416,6 +428,7 @@ mod tests {
 
     #[tokio::test]
     async fn glob_sorts_by_mtime_most_recent_first() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
 
         // Create files with slight time gaps so mtime differs.
@@ -452,6 +465,7 @@ mod tests {
 
     #[tokio::test]
     async fn glob_recursive_pattern() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let nested = tmp.path().join("a").join("b");
         std::fs::create_dir_all(&nested).unwrap();
@@ -508,6 +522,7 @@ mod tests {
 
     #[tokio::test]
     async fn absolute_path_parameter() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let sub = tmp.path().join("abs_target");
         std::fs::create_dir(&sub).unwrap();
@@ -534,6 +549,7 @@ mod tests {
 
     #[tokio::test]
     async fn empty_directory() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         // Directory exists but contains no files.
 
@@ -558,6 +574,7 @@ mod tests {
 
     #[tokio::test]
     async fn path_empty_string_defaults_to_cwd() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("root.rs"), "fn main() {}\n").unwrap();
 
@@ -581,6 +598,7 @@ mod tests {
 
     #[tokio::test]
     async fn missing_cwd_resource() {
+        if !rg_available() { return; }
         let tool = GlobTool;
         let resources = Resources::new(); // No Cwd inserted
 
@@ -605,6 +623,7 @@ mod tests {
 
     #[tokio::test]
     async fn result_cap_100() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         for i in 0..110 {
             std::fs::write(tmp.path().join(format!("file_{:03}.txt", i)), "data\n").unwrap();
@@ -635,6 +654,7 @@ mod tests {
 
     #[tokio::test]
     async fn hidden_files_included() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join(".hidden.ts"), "hidden\n").unwrap();
         std::fs::write(tmp.path().join("visible.ts"), "visible\n").unwrap();
@@ -667,6 +687,7 @@ mod tests {
 
     #[tokio::test]
     async fn gitignore_respected() {
+        if !rg_available() { return; }
         // ripgrep's positive --glob overrides .gitignore, so we test the
         // underlying ignore behavior by using a pattern that doesn't match
         // the ignored file. Without .gitignore, `rg --files --hidden`
@@ -727,6 +748,7 @@ mod tests {
 
     #[tokio::test]
     async fn output_format_workspace_result() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("example.rs"), "fn main() {}\n").unwrap();
 

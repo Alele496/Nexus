@@ -229,6 +229,16 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
+    /// `load_envrc` shells out to `/bin/bash`; tests are Unix-only.
+    /// `test_no_envrc` is the exception — it doesn't touch bash and
+    /// verifies the `direnv`-not-installed fast path, which works everywhere.
+    #[test]
+    fn test_no_envrc() {
+        let dir = TempDir::new().unwrap();
+        assert!(load_envrc(dir.path()).is_none());
+    }
+
+    #[cfg(unix)]
     #[test]
     fn test_simple_export() {
         let dir = TempDir::new().unwrap();
@@ -238,6 +248,7 @@ mod tests {
         assert_eq!(env.get("FOO"), Some(&"bar".to_string()));
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_variable_expansion() {
         let dir = TempDir::new().unwrap();
@@ -248,12 +259,7 @@ mod tests {
         assert_eq!(env.get("MY_DIR"), Some(&expected));
     }
 
-    #[test]
-    fn test_no_envrc() {
-        let dir = TempDir::new().unwrap();
-        assert!(load_envrc(dir.path()).is_none());
-    }
-
+    #[cfg(unix)]
     #[test]
     fn test_path_add() {
         let dir = TempDir::new().unwrap();
@@ -264,6 +270,7 @@ mod tests {
         assert!(path.contains(&format!("{}/bin", dir.path().display())));
     }
 
+    #[cfg(unix)]
     #[test]
     fn test_conditional() {
         let dir = TempDir::new().unwrap();

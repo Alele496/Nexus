@@ -376,7 +376,16 @@ mod tests {
     use crate::types::tool_metadata::test_ctx;
 
     use crate::types::resources::Resources;
+    use std::process::Command as StdCommand;
     use tempfile::TempDir;
+
+    fn rg_available() -> bool {
+        StdCommand::new("rg")
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
+    }
 
     /// Build a `Resources` bag with only `Cwd` inserted.
     fn test_resources(cwd: &std::path::Path) -> Resources {
@@ -426,6 +435,7 @@ mod tests {
 
     #[tokio::test]
     async fn basic_match() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("a.txt"), "hello world\ngoodbye world\n").unwrap();
         std::fs::write(tmp.path().join("b.txt"), "no match here\n").unwrap();
@@ -461,6 +471,7 @@ mod tests {
 
     #[tokio::test]
     async fn no_matches() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("a.txt"), "hello world\n").unwrap();
 
@@ -492,6 +503,7 @@ mod tests {
 
     #[tokio::test]
     async fn multiple_files_grouped() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         // Create two files, both containing the pattern.
         std::fs::write(
@@ -546,6 +558,7 @@ mod tests {
 
     #[tokio::test]
     async fn include_glob_filter() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("code.rs"), "fn hello() {}\n").unwrap();
         std::fs::write(tmp.path().join("code.py"), "def hello(): pass\n").unwrap();
@@ -578,6 +591,7 @@ mod tests {
 
     #[tokio::test]
     async fn path_parameter_absolute() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let sub = tmp.path().join("sub");
         std::fs::create_dir(&sub).unwrap();
@@ -613,6 +627,7 @@ mod tests {
 
     #[tokio::test]
     async fn path_parameter_relative() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let sub = tmp.path().join("mydir");
         std::fs::create_dir(&sub).unwrap();
@@ -648,6 +663,7 @@ mod tests {
 
     #[tokio::test]
     async fn match_count_field() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(
             tmp.path().join("multi.txt"),
@@ -680,6 +696,7 @@ mod tests {
 
     #[tokio::test]
     async fn file_matches_populated() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(
             tmp.path().join("f.txt"),
@@ -723,6 +740,7 @@ mod tests {
 
     #[tokio::test]
     async fn missing_cwd_resource() {
+        if !rg_available() { return; }
         let tool = GrepTool;
         let resources = Resources::new(); // No Cwd inserted.
 
@@ -749,6 +767,7 @@ mod tests {
 
     #[tokio::test]
     async fn mtime_sorting() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("old.txt"), "match\n").unwrap();
         std::thread::sleep(std::time::Duration::from_millis(50));
@@ -782,6 +801,7 @@ mod tests {
 
     #[tokio::test]
     async fn match_cap_100() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let content: String = (0..150).map(|_| "pattern\n").collect();
         std::fs::write(tmp.path().join("big.txt"), &content).unwrap();
@@ -822,6 +842,7 @@ mod tests {
 
     #[tokio::test]
     async fn line_truncation_2000_chars() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         let long_line = format!("MATCH{}", "x".repeat(2500));
         std::fs::write(tmp.path().join("long.txt"), format!("{long_line}\n")).unwrap();
@@ -865,6 +886,7 @@ mod tests {
 
     #[tokio::test]
     async fn exit_code_1_no_matches() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("a.txt"), "hello world\n").unwrap();
         std::fs::write(tmp.path().join("b.txt"), "goodbye world\n").unwrap();
@@ -893,6 +915,7 @@ mod tests {
 
     #[tokio::test]
     async fn special_regex_chars() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("code.txt"), "log(err)\nlogout\n").unwrap();
 
@@ -924,6 +947,7 @@ mod tests {
 
     #[tokio::test]
     async fn pipe_in_match_text() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("pipes.txt"), "a | b | c\n").unwrap();
 
@@ -955,6 +979,7 @@ mod tests {
 
     #[tokio::test]
     async fn empty_pattern() {
+        if !rg_available() { return; }
         let tmp = TempDir::new().unwrap();
         std::fs::write(tmp.path().join("any.txt"), "some content\n").unwrap();
 

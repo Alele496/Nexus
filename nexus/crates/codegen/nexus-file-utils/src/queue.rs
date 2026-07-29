@@ -6383,6 +6383,11 @@ mod tests {
             chrono::Utc::now() - chrono::Duration::hours(3),
             false,
         );
+        // Sync before the cleanup scan: overlayfs / tmpfs on CI may not
+        // present freshly-written files to read_dir() immediately.
+        std::fs::File::open(&drop_sc).and_then(|f| f.sync_all()).ok();
+        std::fs::File::open(&keep_sc).and_then(|f| f.sync_all()).ok();
+
         cleanup_queue_dir(&queue_dir, Duration::from_secs(2 * 3600), None);
         assert!(keep_tmp.exists(), "fresh-by-sidecar temp kept");
         assert!(keep_sc.exists(), "fresh-by-sidecar sidecar kept");
