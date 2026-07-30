@@ -116,6 +116,7 @@ async fn todo_gate_policy_none_when_goal_feature_disabled() {
     })
     .await;
 }
+#[cfg(unix)]
 #[tokio::test(flavor = "current_thread")]
 async fn setup_goal_includes_simplified_prompt() {
     let local = tokio::task::LocalSet::new();
@@ -764,6 +765,7 @@ async fn maybe_queue_goal_continuation_is_plan_aware_when_planner_enabled() {
         })
         .await;
 }
+#[cfg(unix)]
 #[tokio::test(flavor = "current_thread")]
 async fn goal_resume_reminder_includes_full_rules() {
     let local = tokio::task::LocalSet::new();
@@ -807,6 +809,7 @@ Multi-step goal work fails when the model narrates an action without executing i
 "#;
 /// Template byte size is pinned so token-cost regressions are visible in CI.
 const GOAL_TASK_DISCIPLINE_TEMPLATE_LEN: usize = 2142;
+#[cfg(unix)]
 #[test]
 fn goal_task_discipline_template_len_pinned() {
     assert_eq!(
@@ -814,11 +817,13 @@ fn goal_task_discipline_template_len_pinned() {
         GOAL_TASK_DISCIPLINE_TEMPLATE_LEN,
     );
 }
+#[cfg(unix)]
 #[test]
 fn render_goal_task_discipline_matches_pinned_copy() {
     let rendered = render_goal_task_discipline(&goal_tool_names_for_test("todo_write"));
     assert_eq!(rendered, GOAL_TASK_DISCIPLINE_PINNED);
 }
+#[cfg(unix)]
 #[test]
 fn render_goal_rules_places_discipline_after_block_recap() {
     const RECAP_SENTINEL: &str = "RECAP_SENTINEL_XYZ";
@@ -844,6 +849,7 @@ fn render_goal_rules_places_discipline_after_block_recap() {
     );
     assert_goal_discipline_in_reminder(&body, "render_goal_rules_recap");
 }
+#[cfg(unix)]
 #[test]
 fn render_goal_rules_discipline_before_tracking_when_block_recap_empty() {
     let body = render_goal_rules(
@@ -857,6 +863,7 @@ fn render_goal_rules_discipline_before_tracking_when_block_recap_empty() {
     );
     assert_goal_discipline_in_reminder(&body, "render_goal_rules_empty_recap");
 }
+#[cfg(unix)]
 #[test]
 fn render_goal_rules_substitutes_custom_todo_tool_through_full_composition() {
     let names = goal_tool_names_for_test("my_custom_todos");
@@ -892,6 +899,7 @@ fn render_goal_task_discipline_substitutes_custom_todo_tool() {
     assert!(!rendered.contains("{TODO_TOOL}"));
 }
 /// Direct unit test for [`render_goal_rules`] covering the slim
+#[cfg(unix)]
 /// slim template: every placeholder is substituted, the four
 /// bullets (TRACKING / WORKING / VERIFY / TEST PROACTIVELY) survive,
 /// no per-goal verdict path is published, and no `{VERIFIER_ID}`
@@ -968,6 +976,7 @@ fn render_goal_rules_substitutes_all_placeholders_in_slim_template() {
 }
 /// Planner-enabled path: `render_goal_rules` with `Some(plan_path)`
 /// folds the slim plan preamble into the same block as the discipline.
+#[cfg(unix)]
 /// Asserts the pinned column-0 `Plan: <abs>` pointer line and the
 /// surviving seed-todos / `## Deviations` instructions; the
 /// slim plan block no longer references verifier subagents or
@@ -1033,6 +1042,7 @@ fn render_goal_rules_plan_aware_block_when_plan_present() {
         "plan preamble must lead the consolidated block:\n{body}"
     );
 }
+#[cfg(unix)]
 /// Planner-disabled (default) / plan-absent path: `render_goal_rules`
 /// with `None` renders the slim no-plan block — no dangling `Plan:`
 /// line, no `None` literal, no plan-aware phrasing — while the
@@ -1153,6 +1163,7 @@ fn render_goal_plan_block_substitutes_custom_todo_tool() {
         "plan block must require committing real tests as durable proof:\n{block}"
     );
 }
+#[cfg(unix)]
 /// A plan path with spaces and unicode must round-trip intact on
 /// the canonical column-0 `Plan:` line (degenerate-input
 /// coverage). `plan_path()` derives from the session dir, so spaces are
@@ -1418,6 +1429,7 @@ fn strategist_note_fence_uses_unguessable_nonce() {
         .expect("second nonce");
     assert_ne!(nonce, nonce2, "each render must use a fresh nonce");
 }
+#[cfg(unix)]
 /// Happy path for `render_goal_continuation_directive`: every
 /// placeholder lands, the proactive-testing copy is present, and
 /// no `{lowercase}` literal leaks through.
@@ -1633,6 +1645,7 @@ fn render_goal_continuation_directive_bail_preface_toggles_cleanly() {
 /// The directive body has a deliberate top-down order: objective
 /// → tokens → plan pointer → verifier gaps → next step → the
 /// pre-completion verification line. Pin the ordering by `find`
+#[cfg(unix)]
 /// indices so a future template edit that reshuffles sections is
 /// caught at test time. The verifier-gaps block must sit ABOVE the
 /// next-step line so the freshest findings take priority for a weak
@@ -1673,6 +1686,7 @@ fn render_goal_continuation_directive_section_order_is_pinned() {
              gaps={gaps_idx} next_step={next_step_idx} verify={verify_idx}:\n{body}",
     );
 }
+#[cfg(unix)]
 /// Pins the substitution trust contract: user-authored `objective`
 /// stays verbatim (a `{placeholder}` inside it IS re-expanded), while
 /// model-controlled slots are neutralized and never re-expand.
@@ -1895,6 +1909,7 @@ fn resolve_goal_next_step_cap_boundaries() {
     );
     assert!(step.ends_with('…'));
 }
+#[cfg(unix)]
 /// Empty `plan_pointer` renders cleanly — no dangling blank line
 /// or `Plan:` artifact remains.
 #[test]

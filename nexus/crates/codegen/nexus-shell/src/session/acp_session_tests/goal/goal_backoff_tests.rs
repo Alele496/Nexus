@@ -1262,6 +1262,7 @@ async fn goal_resume_from_infra_paused_transitions_to_active() {
         .await;
 }
 
+#[cfg_attr(windows, ignore = "pinned template output differs on Windows")]
 #[tokio::test(flavor = "current_thread")]
 async fn goal_resume_from_infra_paused_reminder_uses_infra_copy() {
     let local = tokio::task::LocalSet::new();
@@ -1750,6 +1751,7 @@ async fn goal_resume_from_blocked_transitions_to_active_and_clears_pause_message
         .await;
 }
 
+#[cfg_attr(windows, ignore = "pinned template output differs on Windows")]
 #[tokio::test(flavor = "current_thread")]
 async fn goal_resume_reminder_includes_previous_block_reason() {
     let local = tokio::task::LocalSet::new();

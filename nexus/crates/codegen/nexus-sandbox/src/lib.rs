@@ -584,6 +584,7 @@ mod tests {
             "should bind-over non-existent deny_read paths, got args: {args:?}"
         );
     }
+    #[cfg(unix)]
     #[test]
     #[serial(bwrap_env)]
     fn bwrap_reexec_mounts_existing_paths_read_only() {

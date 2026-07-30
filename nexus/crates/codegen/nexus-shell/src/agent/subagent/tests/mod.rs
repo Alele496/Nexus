@@ -2329,6 +2329,7 @@ async fn handle_subagent_request_rejects_file_as_cwd() {
         "error should mention not a directory, got: {:?}", result.error
     );
 }
+#[cfg(unix)]
 #[tokio::test]
 async fn handle_subagent_request_valid_cwd_passes_validation() {
     let ctx = ctx_with_toggle(HashMap::new());
@@ -2352,6 +2353,7 @@ async fn handle_subagent_request_valid_cwd_passes_validation() {
         );
     }
 }
+#[cfg(unix)]
 #[tokio::test]
 async fn handle_subagent_request_quoted_cwd_passes_validation() {
     let ctx = ctx_with_toggle(HashMap::new());

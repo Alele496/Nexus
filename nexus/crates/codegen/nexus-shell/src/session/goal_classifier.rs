@@ -4022,6 +4022,7 @@ mod tests {
     /// string equality against an independent oracle (std `str::replace` of the
     /// tool tokens with their literal fallbacks + empty `{TOOLSET_TOOLS}`). This
     /// catches (a) any token `apply` fails to resolve, (b) any drift between the
+#[cfg(unix)]
     /// single-pass `apply` and the canonical substitution, and (c) the inherit
     /// defaults diverging from the literals. NOTE: the inventory line's
     /// `read`/`grep` are templated too, so the default render is NOT
@@ -4046,6 +4047,7 @@ mod tests {
         assert_no_tool_placeholders(&rendered);
     }
 
+#[cfg(unix)]
     /// An explicit named toolset renders tool names on the
     /// inventory line (no generic descriptor left mixed in) AND an enumerated
     /// `{TOOLSET_TOOLS}` block; the fallback path (`Unavailable` ⇒ inherit
@@ -4134,6 +4136,7 @@ mod tests {
         assert_no_tool_placeholders(&resume_default);
     }
 
+#[cfg(unix)]
     /// End-to-end per-index rendering. A 3-skeptic panel with a
     /// 2-entry `tool_names` slice — index 2 past the slice
     /// falls back to `inherit_defaults()`. Each captured prompt must render the

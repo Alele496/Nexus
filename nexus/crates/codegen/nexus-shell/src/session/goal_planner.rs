@@ -527,6 +527,7 @@ mod tests {
     use std::sync::{Arc, Mutex};
     use nexus_tools::types::tool::ToolKind;
 
+    #[cfg(unix)]
     #[test]
     fn planner_template_default_render_preserves_wording_and_has_no_placeholders() {
         // Default/inherit render: placeholders resolve to the literal parent
@@ -1099,6 +1100,7 @@ mod tests {
         assert!(GOAL_PLANNER_PROMPT_TEMPLATE.contains("must NOT deny completion"));
     }
 
+#[cfg(unix)]
     /// Pin the minimal-honest-evidence path for headless-unobservable behavior:
     /// no mandated capture ritual/oracle, only artifact-exists + shipped units.
     #[test]

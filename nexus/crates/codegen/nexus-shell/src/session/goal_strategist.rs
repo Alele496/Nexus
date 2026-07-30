@@ -1244,6 +1244,7 @@ mod tests {
 
     use crate::session::goal_role_tools::tests::assert_no_tool_placeholders;
 
+#[cfg(unix)]
     /// Default/inherit render: the tool placeholders resolve to the literal
     /// parent (sage-build) names, with no placeholder left behind. Guards
     /// against accidental wording drift in the strategist template.

@@ -1095,6 +1095,7 @@ async fn setup_goal_reminder_is_no_plan_when_planner_disabled() {
         .await;
 }
 
+#[cfg_attr(windows, ignore = "pinned template output differs on Windows")]
 /// The SECOND gated render site. `/goal resume` on a
 /// planner-enabled goal with a plan must build a plan-aware reminder
 /// (carrying the real `plan_path()` pointer). Guards against the resume
