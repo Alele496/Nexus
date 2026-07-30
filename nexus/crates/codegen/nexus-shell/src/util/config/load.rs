@@ -51,6 +51,42 @@ pub fn load_blocking_upload_config_sync() -> (bool, std::time::Duration) {
         .unwrap_or(DEFAULT_FLUSH_TIMEOUT);
     (block_for_upload, flush_timeout)
 }
+/// Read `[endpoints].proxy_http` synchronously from `config.toml`.
+pub fn load_proxy_http_sync() -> Option<String> {
+    let root: TomlValue = crate::config::load_effective_config().ok()?;
+    root.get("endpoints")?
+        .get("proxy_http")?
+        .as_str()
+        .map(str::to_owned)
+}
+
+/// Read `[endpoints].proxy_https` synchronously from `config.toml`.
+pub fn load_proxy_https_sync() -> Option<String> {
+    let root: TomlValue = crate::config::load_effective_config().ok()?;
+    root.get("endpoints")?
+        .get("proxy_https")?
+        .as_str()
+        .map(str::to_owned)
+}
+
+/// Read `[endpoints].proxy_no_proxy` synchronously from `config.toml`.
+pub fn load_proxy_no_proxy_sync() -> Option<String> {
+    let root: TomlValue = crate::config::load_effective_config().ok()?;
+    root.get("endpoints")?
+        .get("proxy_no_proxy")?
+        .as_str()
+        .map(str::to_owned)
+}
+
+/// Read `[models].default_reasoning_effort` synchronously from `config.toml`.
+pub fn load_default_reasoning_effort_sync() -> Option<String> {
+    let root: TomlValue = crate::config::load_effective_config().ok()?;
+    root.get("models")?
+        .get("default_reasoning_effort")?
+        .as_str()
+        .map(str::to_owned)
+}
+
 pub async fn load_config() -> Config {
     let root: TomlValue = match crate::config::load_effective_config() {
         Ok(v) => v,

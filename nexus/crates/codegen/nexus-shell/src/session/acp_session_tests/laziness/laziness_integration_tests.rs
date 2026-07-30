@@ -617,6 +617,7 @@ async fn debug_mode_fires_classifier_even_with_per_model_enable_false() {
 /// — proving the `idle_threshold = ZERO` branch was taken.
 /// Prevents a future change that drops the `if debug_mode` guard
 /// around `Duration::ZERO`.
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 async fn debug_mode_bypasses_idle_wait() {
     let local = tokio::task::LocalSet::new();

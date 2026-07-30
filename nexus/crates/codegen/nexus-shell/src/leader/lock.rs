@@ -399,6 +399,7 @@ mod tests {
         assert!(!lock2.try_acquire().unwrap()); // Should return false, not error
     }
 
+    #[cfg(unix)]
     #[test]
     fn write_and_read_pid() {
         let temp = TempDir::new().unwrap();

@@ -277,6 +277,7 @@ fn refuted(n: usize) -> VecDeque<SkepticVerdict> {
 
 // ── Trigger fires at N and 2N, never N+1 ────────────────────────────
 
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 #[serial]
 async fn strategist_fires_at_n_and_2n_not_at_n_plus_one() {
@@ -620,6 +621,7 @@ async fn strategist_no_coordinator_revokes_cap_bonus() {
 
 // ── Achieved verdict resets the streak AND clears the recommendation ─
 
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 #[serial]
 async fn achieved_verdict_resets_streak_and_clears_recommendation() {

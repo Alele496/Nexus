@@ -98,10 +98,10 @@ pub(crate) fn refresh_open_settings_modals(app: &mut AppView) {
                 voice_stt_language: voice_stt_language_from_app.clone(),
                 // Phase 1
                 api_key_masked: api_key_masked.clone(),
-                proxy_http: None,
-                proxy_https: None,
-                proxy_no_proxy: None,
-                default_reasoning_effort: None,
+                proxy_http: nexus_shell::util::config::load_proxy_http_sync(),
+                proxy_https: nexus_shell::util::config::load_proxy_https_sync(),
+                proxy_no_proxy: nexus_shell::util::config::load_proxy_no_proxy_sync(),
+                default_reasoning_effort: nexus_shell::util::config::load_default_reasoning_effort_sync(),
             };
         }
     }
@@ -223,10 +223,10 @@ pub(in crate::app::dispatch) fn dispatch_open_settings(app: &mut AppView) -> Vec
         voice_stt_language: voice_stt_language_from_app,
         // Phase 1
         api_key_masked: api_key_masked_dispatch.clone(),
-        proxy_http: None,
-        proxy_https: None,
-        proxy_no_proxy: None,
-        default_reasoning_effort: None,
+        proxy_http: nexus_shell::util::config::load_proxy_http_sync(),
+        proxy_https: nexus_shell::util::config::load_proxy_https_sync(),
+        proxy_no_proxy: nexus_shell::util::config::load_proxy_no_proxy_sync(),
+        default_reasoning_effort: nexus_shell::util::config::load_default_reasoning_effort_sync(),
     };
     let state = Box::new(SettingsModalState::new(
         registry,
@@ -698,10 +698,10 @@ pub(crate) fn build_pager_snapshot(app: &AppView) -> crate::settings::PagerLocal
         ask_user_question_timeout_enabled: app.ask_user_question_timeout_enabled,
         voice_stt_language: app.voice_config.language.clone(),
         api_key_masked: None,
-        proxy_http: None,
-        proxy_https: None,
-        proxy_no_proxy: None,
-        default_reasoning_effort: None,
+        proxy_http: nexus_shell::util::config::load_proxy_http_sync(),
+        proxy_https: nexus_shell::util::config::load_proxy_https_sync(),
+        proxy_no_proxy: nexus_shell::util::config::load_proxy_no_proxy_sync(),
+        default_reasoning_effort: nexus_shell::util::config::load_default_reasoning_effort_sync(),
     }
 }
 

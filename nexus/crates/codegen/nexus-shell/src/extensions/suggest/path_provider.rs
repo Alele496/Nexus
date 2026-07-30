@@ -379,6 +379,7 @@ mod tests {
         assert_eq!(result, vec!["my_exec"]);
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_deduplicates_across_dirs() {
         use std::fs;

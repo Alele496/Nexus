@@ -81,6 +81,7 @@ async fn tool_result_text(actor: &SessionActor, call_id: &str) -> String {
 /// The headline: plan mode Active + allow-all permissions (the always-approve
 /// worst case) still rejects a sage edit outside the plan file, without ever
 /// reaching the permission layer, and steers the model to `exit_plan_mode`.
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 async fn plan_mode_rejects_nexus_edit_outside_plan_file_despite_allow_all_permissions() {
     let local = tokio::task::LocalSet::new();

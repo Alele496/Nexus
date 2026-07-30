@@ -726,6 +726,7 @@ mod tests {
 
     // ── tool_path_file_target ──
 
+    #[cfg(unix)]
     #[test]
     fn tool_path_file_target_resolves_relative_against_cwd() {
         let cwd = Path::new("/Users/me/project");
@@ -744,6 +745,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn tool_path_file_target_accepts_absolute_without_existing_file() {
         let target = tool_path_file_target("/tmp/does-not-exist-xyz/foo.rs", None).expect("target");
@@ -760,6 +762,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn tool_path_file_target_preserves_parent_segments_for_os_resolution() {
         let target = tool_path_file_target("/repo/link/../target.rs", None).expect("target");
@@ -804,6 +807,7 @@ mod tests {
 
     // ── LinkOverlay ──
 
+    #[cfg(unix)]
     #[test]
     fn resolve_target_keeps_standard_scheme_filter_and_file_open_path() {
         let web = LinkTarget::Url(Arc::from("https://example.com/a"));
@@ -830,6 +834,7 @@ mod tests {
         assert_eq!(resolve_link_open_target(&file), Some(file));
     }
 
+    #[cfg(unix)]
     #[test]
     fn official_vscode_remote_file_delegation_is_exact() {
         use crate::terminal::{TerminalContext, TerminalName};
@@ -1186,6 +1191,7 @@ mod tests {
 
     // ── File path detection ──
 
+    #[cfg(unix)]
     #[test]
     fn scan_detects_absolute_file_path() {
         let line = make_line("Error in /Users/foo/src/main.rs at line 10");
@@ -1251,6 +1257,7 @@ mod tests {
         assert!(overlay.links().is_empty());
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_detects_nexus_session_media_path() {
         // Dot-directory (`.nexus`), percent-encoded session segment, and a
@@ -1269,6 +1276,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_detects_media_path_soft_wrapped_across_rows() {
         // Regression: `image_gen` output prose wraps the long session path
@@ -1317,6 +1325,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_wrapped_path_trailing_sentence_period_excluded() {
         // Wrapped path ending mid-sentence: trailing `.` on the last row is
@@ -1390,6 +1399,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_word_break_joiner_restores_source_space() {
         // A `Some(" ")` joiner re-inserts the collapsed space, so a spaced
@@ -1420,6 +1430,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_hard_break_rows_not_joined() {
         // `None` joiner = separate source lines: fragments must not be glued
@@ -1441,6 +1452,7 @@ mod tests {
         assert_eq!(overlay.links()[0].screen_row, 0);
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_path_split_across_styled_spans_single_row() {
         // Markdown styling can split one row into multiple spans; the path
@@ -1466,6 +1478,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_file_path_stops_at_colon() {
         let line = make_line("/Users/foo/bar.rs:45:10: error message");
@@ -1512,6 +1525,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_url_and_file_path_coexist() {
         let line = make_line("See https://docs.rs/foo and /Users/me/src/lib.rs end.");
@@ -1535,6 +1549,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_file_path_with_dots_and_hyphens() {
         let line = make_line("Reading /tmp/sage-impl-summary.md now.");
@@ -1550,6 +1565,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_file_path_with_at_sign() {
         let line = make_line("In /node_modules/@scope/package/index.js now.");
@@ -1565,6 +1581,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_file_path_with_space_in_segment_quoted() {
         // Tutor report: path underline/click target stopped at the space in
@@ -1597,6 +1614,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_file_path_with_space_in_segment_unquoted() {
         // Same filename without surrounding quotes — final segment has a
@@ -1620,6 +1638,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn scan_file_path_space_does_not_swallow_trailing_sentence() {
         // A space followed by prose (no `.ext` in the final segment) must not

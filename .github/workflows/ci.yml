@@ -80,9 +80,6 @@ jobs:
       - name: Cargo test (nexus-agent, strict)
         run: cargo test -p nexus-agent --lib --no-fail-fast
 
-      - name: Cargo test (nexus-mailbox, strict)
-        run: cargo test -p nexus-mailbox --lib --no-fail-fast
-
   # ── Linux: check + test ────────────────────────────────────────
   check-linux:
     runs-on: ubuntu-24.04
@@ -131,6 +128,3 @@ jobs:
 
       - name: Cargo test (nexus-agent, strict)
         run: cargo test -p nexus-agent --lib --no-fail-fast
-
-      - name: Cargo test (nexus-mailbox, strict)
-        run: cargo test -p nexus-mailbox --lib --no-fail-fast

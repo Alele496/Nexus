@@ -2226,6 +2226,7 @@ mod tests {
 
     // ----- try_read_image_from_path ----------------------------------------
 
+    #[cfg(unix)]
     #[test]
     fn try_read_image_with_escaped_parens() {
         let dir = tempfile::tempdir().unwrap();
@@ -2248,6 +2249,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn try_read_image_with_escaped_spaces() {
         let dir = tempfile::tempdir().unwrap();
@@ -2610,6 +2612,7 @@ mod tests {
         );
     }
 
+    #[cfg(unix)]
     #[test]
     fn quoted_path_with_internal_backslash_escape() {
         let dir = tempfile::tempdir().unwrap();
@@ -2627,6 +2630,7 @@ mod tests {
 
     // ----- file:// URL edge cases ----------------------------
 
+    #[cfg(unix)]
     #[test]
     fn file_url_with_localhost_host() {
         let dir = tempfile::tempdir().unwrap();
@@ -2944,6 +2948,7 @@ mod tests {
         assert_eq!(non_images[0], canon(&txt));
     }
 
+    #[cfg(unix)]
     #[test]
     fn dropped_path_percent_encoded_question_round_trips() {
         // `%3F` decodes to `?`. The URL parser must not treat the
@@ -3244,6 +3249,7 @@ mod tests {
     /// The gate is intentionally narrow (NUL, CR, LF) — TAB and
     /// other low-control bytes are legal in Unix filenames and the
     /// TUI's text path renders them fine.
+    #[cfg(unix)]
     #[test]
     fn file_url_with_nul_byte_path_is_rejected() {
         let entries = dropped_paths("file:///tmp/path%00.png");

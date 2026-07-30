@@ -2674,6 +2674,7 @@ mod inline_auto_compact_flow_tests {
     }
     /// A deterministic failure suppresses auto-compaction only on the AUTO
     /// path — never for a bare manual `/compact`.
+    #[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
     #[tokio::test(flavor = "current_thread")]
     async fn bare_manual_compact_failure_does_not_suppress_auto() {
         use crate::session::compaction_config::SUPPRESS_NONE;

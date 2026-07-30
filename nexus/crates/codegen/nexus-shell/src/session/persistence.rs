@@ -2964,9 +2964,11 @@ mod collect_session_files_tests {
 
         files.sort_by(|a, b| a.name.cmp(&b.name));
         assert_eq!(files.len(), 3);
-        assert_eq!(files[0].name, "prompts/prompt_0.txt");
+        let expected = std::path::Path::new("prompts").join("prompt_0.txt");
+        assert_eq!(files[0].name, expected.to_str().unwrap());
         assert_eq!(files[0].data, b"long prompt content");
-        assert_eq!(files[1].name, "prompts/prompt_1.txt");
+        let expected = std::path::Path::new("prompts").join("prompt_1.txt");
+        assert_eq!(files[1].name, expected.to_str().unwrap());
         assert_eq!(files[2].name, "summary.json");
     }
 
@@ -2983,7 +2985,8 @@ mod collect_session_files_tests {
 
         files.sort_by(|a, b| a.name.cmp(&b.name));
         assert_eq!(files.len(), 2);
-        assert_eq!(files[0].name, "a/b/deep.txt");
+        let expected = std::path::Path::new("a").join("b").join("deep.txt");
+        assert_eq!(files[0].name, expected.to_str().unwrap());
         assert_eq!(files[1].name, "top.txt");
     }
 

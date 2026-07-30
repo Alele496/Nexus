@@ -2990,6 +2990,7 @@ fn validate_hooks_path_rejects_relative_path() {
         result.unwrap_err().to_string().contains("absolute"), "should mention 'absolute'"
     );
 }
+#[cfg(unix)]
 #[test]
 fn validate_hooks_path_rejects_outside_nexus_home() {
     let result = validate_hooks_path("/tmp/evil-hooks");
@@ -3003,7 +3004,8 @@ fn validate_hooks_path_rejects_outside_nexus_home() {
 #[test]
 fn validate_hooks_path_rejects_traversal_attack() {
     let nexus_home = crate::util::nexus_home::nexus_home();
-    let traversal = format!("{}/../evil", nexus_home.display());
+    let traversal = nexus_home.join("..").join("evil");
+    let traversal = traversal.to_str().unwrap();
     let result = validate_hooks_path(&traversal);
     assert!(result.is_err());
     let msg = result.unwrap_err().to_string();

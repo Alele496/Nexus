@@ -1857,11 +1857,9 @@ pool_size = 3
         let base = pool_base_directory();
         let instance_dir = base.join("test-instance-uuid");
         assert!(instance_dir.starts_with(&base));
-        assert!(
-            instance_dir
-                .to_string_lossy()
-                .contains("worktree_pool/test-instance-uuid")
-        );
+        assert!(instance_dir
+            .to_string_lossy()
+            .contains(&format!("worktree_pool{}test-instance-uuid", std::path::MAIN_SEPARATOR)));
     }
 
     fn create_temp_git_repo(file_count: usize) -> (tempfile::TempDir, PathBuf) {

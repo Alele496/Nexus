@@ -349,6 +349,7 @@ mod tests {
         assert_eq!(unresolved.relative_to_cwd, None);
     }
 
+    #[cfg(unix)]
     #[test]
     fn expanded_outside_cwd_stays_normalized_target() {
         let cwd = Path::new("/Users/me/project");

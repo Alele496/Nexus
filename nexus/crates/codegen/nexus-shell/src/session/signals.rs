@@ -3054,6 +3054,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "RSS via getrusage unavailable on Windows")]
     fn test_sample_rss_bytes_returns_nonzero() {
         let rss = sample_rss_bytes();
         // On macOS and Linux, RSS should be > 0 for any running process
@@ -3067,6 +3068,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(windows, ignore = "RSS via getrusage unavailable on Windows")]
     fn test_sample_rss_bytes_is_stable() {
         // Two consecutive calls should return similar values (no wild swings)
         let rss1 = sample_rss_bytes();
@@ -3082,6 +3084,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg_attr(windows, ignore = "RSS via getrusage unavailable on Windows")]
     async fn test_peak_rss_recorded_at_turn_end() {
         let (handle, actor) = SessionSignalsActor::new();
         let actor_handle = tokio::spawn(actor.run());

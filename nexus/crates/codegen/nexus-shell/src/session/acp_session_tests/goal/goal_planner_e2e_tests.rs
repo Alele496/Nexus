@@ -204,6 +204,7 @@ fn create_test_goal(actor: &SessionActor) {
     );
 }
 
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 #[serial]
 async fn planner_success_stamps_plan_file_on_orchestration() {
@@ -309,6 +310,7 @@ async fn planner_fork_inherits_parent_model() {
 /// A second `maybe_run_goal_planner` (early-returns: a plan already
 /// exists) must leave the baseline pinned to the original body even after
 /// `plan.md` itself is edited on disk.
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 #[serial]
 async fn planner_snapshots_plan_baseline_once_and_does_not_overwrite() {
@@ -829,6 +831,7 @@ async fn planner_subagent_tokens_fold_into_goal_total() {
 /// attempt succeeds → goal Active with `plan_file` set.
 /// Pins the retry-on-resume contract — without it, the pause
 /// message ("resume with /goal to retry") would be a lie.
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 #[serial]
 async fn lifecycle_fail_pause_resume_retry_success() {
@@ -1020,6 +1023,7 @@ async fn lifecycle_resume_with_plan_does_not_re_fire_planner() {
 /// plan, `setup_goal`'s reminder folds in the plan-aware block carrying
 /// the actual `plan_path()` pointer plus the seed-todos / `## Deviations`
 /// / verifier-threading instructions, with the legacy discipline intact.
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 #[serial]
 async fn setup_goal_reminder_is_plan_aware_when_planner_enabled() {

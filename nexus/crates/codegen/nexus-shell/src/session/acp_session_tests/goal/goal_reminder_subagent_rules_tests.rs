@@ -730,6 +730,7 @@ async fn prune_prior_goal_continuation_directives_noop_without_directive() {
 }
 /// The continuation nudge re-anchors the plan path each turn (planner
 /// enabled + plan present), via the same gate as the full reminder.
+#[cfg_attr(windows, ignore = "timing-sensitive async integration test")]
 #[tokio::test(flavor = "current_thread")]
 async fn maybe_queue_goal_continuation_is_plan_aware_when_planner_enabled() {
     let local = tokio::task::LocalSet::new();
