@@ -472,6 +472,7 @@ mod tests {
         assert_ne!(current_head(&cache_dir), first_head);
     }
 
+    #[cfg(unix)]
     #[test]
     fn cache_lease_blocks_concurrent_reclone_during_scan() {
         let cache_root = tempfile::tempdir().unwrap();
