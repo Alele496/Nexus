@@ -96,6 +96,18 @@ Agent 之间可以互相发消息。Coordinator 给 Worker 派任务，Worker �
 
 代码推送前强制通过三维审查。通过 `/approve-scope` 精细控制每个 Agent 的权限——哪些目录可以读、哪些文件可以写、哪些命令可以执行。
 
+### MCP 生态
+
+完整实现 [MCP 协议](https://modelcontextprotocol.io)（stdio/HTTP、OAuth、凭据管理），兼容 Claude Code 的 MCP server 规范。项目级 `.mcp.json` 自动加载、变更热重载——Claude Code 生态里已有的 server（如 CodeGraph）开箱即用。
+
+### 记忆系统
+
+Markdown 文件存储 + 混合检索（FTS5 全文 + 可选向量相似度），带 dream 整合和文件 watcher。Agent 跨会话记住你的偏好、项目背景和踩过的坑。启用：`--experimental-memory`。
+
+### 知识图谱（自举）
+
+Nexus 自己就是知识图谱的用户——CodeGraph 符号索引 + Graphify 文件级图谱让 Agent 理解代码库更快，也是你参与开发的入口。
+
 ---
 
 ## 常用命令
@@ -169,8 +181,8 @@ Nexus 的架构设计遵循**关注点分离**——每个组件有明确的职�
 │                    nexus-config                          │
 │            配置文件加载 · 合并 · 热更新 · 验证                │
 ├─────────────────────────────────────────────────────────┤
-│         nexus-tools · nexus-mcp · nexus-hooks            │
-│         内置工具  ·  外部协议  ·  生命周期钩子                │
+│   nexus-tools · nexus-mcp · nexus-memory · nexus-hooks   │
+│   内置工具  ·  外部协议  ·  记忆系统  ·  生命周期钩子          │
 ├─────────────────────────────────────────────────────────┤
 │    nexus-workflow (工作流引擎)    nexus-project (单仓库)    │
 │    DAG 管道 · 步骤编排          项目上下文 · 依赖分析         │
@@ -194,6 +206,8 @@ Nexus 的架构设计遵循**关注点分离**——每个组件有明确的职�
 | **审查闸门** | 三维并行审查 | 基础审查 | — | — |
 | **Agent 信箱** | 异步消息传递 | — | — | — |
 | **审批作用域** | 文件级权限控制 | 全局审批 | — | — |
+| **记忆系统** | Markdown + 混合检索 | ✓ | — | — |
+| **MCP 生态** | 完整 MCP 客户端 + 热重载 | ✓ | ✓ | ✓ |
 | **舰队管理** | 多仓库批量操作 | — | — | ✓（组织级） |
 | **工作流引擎** | DAG 可编排 | — | — | — |
 

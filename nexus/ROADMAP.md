@@ -47,11 +47,13 @@
 
 | 功能 | 说明 | 状态 |
 |------|------|------|
-| CI 全绿 | Windows + Linux 零失败 | 🟡 进行中 (Linux ✅, Windows 剩余预存失败) |
+| CI 全绿 | Windows + Linux 零失败 | ✅ 已完成 |
 | 模型无关化 | 支持所有 OpenAI 兼容 API，用户自填 Key + Base URL | ✅ 已完成 |
 | **Agent Graph 可视化** | `/agent-graph` 命令，可视化所有 Agent 关系图，点击独立聊天 | ✅ 已完成 |
 | Windows 安装体验 | 单 exe 免安装，winget / scoop 包 | ✅ 已完成 |
 | 中文文档 | 完整中文 README + 使用指南 | ✅ 已完成 |
+| **MCP 生态兼容** | `nexus-mcp`：stdio/HTTP 客户端、OAuth、凭据；项目级 `.mcp.json` 热重载 | ✅ 已完成 |
+| **记忆系统** | `nexus-memory`：Markdown 存储 + FTS5/向量混合检索 + dream 整合 + 文件 watcher | 🟡 实验性（`--experimental-memory`） |
 
 **为什么 Agent Graph 放在 P0：** 对个人开发者来说，可视化多 Agent 并行工作是最直观的差异化体验——"这工具能同时跑 5 个 Agent 还能点开聊天？"——比功能列表更有传播力。
 
@@ -154,5 +156,30 @@ Agent A（网关服务）→ 消息 → Agent B（用户服务）→ 消息 → 
 | VS Code 扩展 | TUI + IDE 互补，Nexus 作为 AI 后端 |
 | 后台自治 | /loop /schedule，Agent 离开终端运行 |
 | 国产模型适配 | 通义千问、Moonshot、Qwen 等 |
-| MCP 生态兼容 | 完整兼容 Claude Code MCP server 规范 |
+| 记忆系统完善 | dream 定时整合、跨工作区记忆、嵌入模型选择 |
 | 团队协作 | Fleet 共享、Agent 消息跨成员传递 |
+
+---
+
+## 开发基础设施：知识图谱
+
+Nexus 的代码库自带两个知识图谱工具，作为项目自身的开发基础（也是 Agent 理解代码的第一手段）：
+
+- **CodeGraph**（`nexus/.codegraph/`）：符号级 SQLite 索引。`codegraph explore "<符号或问题>"` 一次返回相关符号逐行源码 + 调用路径（含动态分发）。也提供 MCP server（`codegraph serve --mcp`）。
+- **Graphify**（`graphify-out/` / `nexus/graphify-out/`）：文件级知识图谱，含 god nodes 与社区结构。`graphify query/path/explain` 返回作用域子图，比 grep 更小更聚焦。修改代码后 `graphify update .` 保持图最新（AST-only，零 API 成本）。
+
+**理念**：Agent 探索代码时优先查图而不是翻源码——图检索一次拿到目标符号与调用链，grep/翻文件只作为兜底。
+
+---
+
+## 记忆系统详情
+
+`nexus-memory` crate 实现，存储为人类可读 Markdown，索引自动维护：
+
+- **存储**：`~/.nexus/memory/`（全局）+ `~/.nexus/memory/{project-slug}-{hash8}/`（工作区）
+- **检索**：SQLite FTS5 全文 + 可选向量 KNN 混合检索（recency/source 加权），无嵌入 API 时优雅降级为 FTS-only
+- **整合**：dream 会话把散落记忆整合归档（与 Claude Code `/dream` 同源）
+- **感知**：文件 watcher 监视 `.md` 变更自动重建索引，外部编辑（含迁移来的记忆文件）即时可搜
+- **启用**：`--experimental-memory` 或 `NEXUS_MEMORY=1`，配置在 `[memory]` section
+
+> 迁移：Claude Code / CCB 的记忆是同一类 Markdown 文件，直接拷入 `~/.nexus/memory/` 即可被索引检索。

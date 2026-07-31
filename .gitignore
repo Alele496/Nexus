@@ -33,3 +33,13 @@ Thumbs.db
 
 # Stack dumps
 *.stackdump
+
+# Local AI tooling (not for the repo)
+.claude/
+.mcp.json
+CLAUDE.md
+DeepSeek.txt
+**/graphify-out/
+
+# Local code indexes
+.codegraph/
