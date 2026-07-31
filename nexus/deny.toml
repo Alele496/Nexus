@@ -1,0 +1,26 @@
+# Dependency security policy for `cargo audit` (cargo-deny-compatible config).
+#
+# Any advisory NOT listed here fails the CI audit job, so a newly published
+# vulnerability cannot merge silently. Each entry below is justified; remove an
+# ignore only when the underlying dependency is actually updated.
+
+[advisories]
+ignore = [
+  # quick-xml <0.41 — quadratic duplicate-attribute check and unbounded
+  # namespace-declaration allocation (both DoS). nexus-tools uses 0.41; the
+  # leftover 0.38.3 / 0.39.4 copies are pinned by third parties we don't
+  # control (plist→syntect, pdf_oxide, wayland-scanner). Impact is a DoS on a
+  # local file parser the user must explicitly open. Remove once those
+  # upstream crates release a quick-xml >= 0.41 bump.
+  "RUSTSEC-2026-0194",
+  "RUSTSEC-2026-0195",
+  # rsa — "Marvin Attack" timing sidechannel. The advisory ships NO patched
+  # version (`patched = []`) and its own workaround states local use on a
+  # non-compromised machine is fine. Nexus only signs JWTs locally and never
+  # exposes RSA private-key operations to a network observer.
+  "RUSTSEC-2023-0071",
+  # quinn-proto — remote memory exhaustion. Not part of the compiled
+  # dependency graph of any shipped binary (lockfile-only entry); nothing in
+  # this workspace depends on quinn/quinn-proto.
+  "RUSTSEC-2026-0185",
+]

@@ -80,7 +80,76 @@ jobs:
       - name: Cargo test (nexus-agent, strict)
         run: cargo test -p nexus-agent --lib --no-fail-fast
 
-  # ── Linux: check + test ────────────────────────────────────────
+  # ── Dependency security audit ─────────────────────────────────
+  # Scans Cargo.lock against the rustsec advisory database.
+  # A vulnerable dependency fails CI, so regressions can't be merged silently.
+  audit:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: nexus
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo audit binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: cargo-audit-${{ runner.os }}
+
+      - name: Install cargo-audit
+        run: |
+          if [ ! -f ~/.cargo/bin/cargo-audit ]; then
+            cargo install cargo-audit --locked
+          fi
+          cargo audit --version
+
+      # cargo-audit has no config-file support, so the ignore list is read
+      # from nexus/deny.toml (single source of truth, each entry carries a
+      # justification). Anything not listed there fails this job.
+      - name: Run cargo audit
+        run: |
+          set -euo pipefail
+          IGNORES="$(sed -n 's/^[[:space:]]*"\(RUSTSEC-[0-9-]*\)",/\1/p' deny.toml | sed 's/^/--ignore /' | tr '\n' ' ')"
+          echo "ignoring: ${IGNORES}"
+          cargo audit ${IGNORES}
+
+  # ── SBOM / provenance (release tags only) ──────────────────────
+  # Emits a complete dependency inventory + commit-attested provenance
+  # into GitHub Artifacts so every release can be traced back to the
+  # exact dependency tree and toolchain it was built from.
+  sbom:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: nexus
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Generate dependency inventory (cargo tree)
+        run: cargo tree --workspace --prefix none > deps.txt
+
+      - name: Generate build provenance
+        run: |
+          echo "commit: ${{ github.sha }}" > provenance.txt
+          echo "tag: ${{ github.ref_name }}" >> provenance.txt
+          echo "rustc: $(rustc --version)" >> provenance.txt
+          echo "cargo: $(cargo --version)" >> provenance.txt
+          echo "built_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> provenance.txt
+          wc -l deps.txt | awk '{print "dependency_count: " $1}' >> provenance.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-provenance
+          path: |
+            nexus/deps.txt
+            nexus/provenance.txt
   check-linux:
     runs-on: ubuntu-24.04
     env:
