@@ -49,6 +49,12 @@ pub enum AuthScheme {
 pub struct SamplerConfig {
     pub api_key: Option<String>,
     pub base_url: String,
+    /// Base URL override for the Responses API (`POST /responses`).
+    /// When `None`, `base_url` is used for all backends. Set when the
+    /// provider exposes `/responses` at a different root than `/v1` (e.g.
+    /// DeepSeek: `https://api.deepseek.com` vs `https://api.deepseek.com/v1`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub responses_base_url: Option<String>,
     pub model: String,
     pub max_completion_tokens: Option<u32>,
     pub temperature: Option<f32>,
@@ -133,6 +139,7 @@ impl Default for SamplerConfig {
         Self {
             api_key: None,
             base_url: String::new(),
+            responses_base_url: None,
             model: String::new(),
             max_completion_tokens: None,
             temperature: None,

@@ -3350,6 +3350,8 @@ struct DefaultModelJson {
     top_p: Option<f32>,
     max_completion_tokens: Option<u32>,
     api_backend: ApiBackend,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    responses_base_url: Option<String>,
     #[serde(default = "default_agent_type")]
     agent_type: String,
     inference_idle_timeout_secs: Option<u64>,
@@ -3414,6 +3416,7 @@ fn default_models(endpoints: &EndpointsConfig) -> IndexMap<String, ModelEntryCon
                 top_p: m.top_p,
                 max_completion_tokens: m.max_completion_tokens,
                 api_backend: m.api_backend,
+                responses_base_url: m.responses_base_url,
                 auth_scheme: None,
                 agent_type: m.agent_type,
                 inference_idle_timeout_secs: m.inference_idle_timeout_secs,
@@ -3472,6 +3475,13 @@ pub struct ModelEntryConfig {
     /// Values: "chat_completions" (default), "responses"
     #[serde(default)]
     pub api_backend: ApiBackend,
+    /// Base URL override for the Responses API (`POST /responses`).
+    /// When `None`, `base_url` is used for all backends. Set when the
+    /// provider exposes `/responses` at a different root than `/v1`
+    /// (e.g. DeepSeek uses `https://api.deepseek.com` for responses vs
+    /// `https://api.deepseek.com/v1` for chat completions).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub responses_base_url: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub auth_scheme: Option<AuthScheme>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3737,6 +3747,8 @@ pub struct ModelInfo {
     pub temperature: Option<f32>,
     pub top_p: Option<f32>,
     pub api_backend: ApiBackend,
+    /// Base URL override for the Responses API. Falls back to `base_url` when `None`.
+    pub responses_base_url: Option<String>,
     pub auth_scheme: AuthScheme,
     pub extra_headers: IndexMap<String, String>,
     pub context_window: NonZeroU64,
@@ -3802,6 +3814,7 @@ impl ModelInfo {
             temperature: None,
             top_p: None,
             api_backend: ApiBackend::default(),
+            responses_base_url: None,
             auth_scheme: Default::default(),
             extra_headers: IndexMap::new(),
             context_window: NonZeroU64::new(200_000).unwrap(),
@@ -3837,6 +3850,7 @@ impl ModelInfo {
             temperature: entry.temperature,
             top_p: entry.top_p,
             api_backend: entry.api_backend.clone(),
+            responses_base_url: entry.responses_base_url.clone(),
             auth_scheme: entry.auth_scheme.unwrap_or_default(),
             extra_headers: entry.extra_headers.clone(),
             context_window: entry.context_window,
@@ -4522,6 +4536,7 @@ pub fn resolve_aux_model_sampling_config(
                 temperature: None,
                 top_p: None,
                 api_backend: ApiBackend::Responses,
+                responses_base_url: None,
                 auth_scheme: Default::default(),
                 extra_headers: IndexMap::new(),
                 context_window: NonZeroU64::new(200_000).unwrap(),
@@ -4646,6 +4661,7 @@ pub fn sampling_config_for_model(
         api_key: credentials.api_key,
         model: model_name,
         base_url: credentials.base_url,
+        responses_base_url: info.responses_base_url.clone(),
         max_completion_tokens,
         temperature,
         top_p,
@@ -4744,6 +4760,7 @@ fn resolve_hidden_default_web_search_sampling_config(
             temperature: None,
             top_p: None,
             api_backend: ApiBackend::Responses,
+            responses_base_url: None,
             auth_scheme: Default::default(),
             extra_headers: IndexMap::new(),
             context_window: NonZeroU64::new(200_000).unwrap(),

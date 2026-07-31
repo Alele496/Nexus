@@ -213,6 +213,7 @@ impl ShellToolsetConfig {
         let default_base = SamplerConfig {
             api_key: None,
             base_url: "https://api.deepseek.com/v1".to_string(),
+            responses_base_url: None,
             model: String::new(),
             max_completion_tokens: None,
             temperature: None,

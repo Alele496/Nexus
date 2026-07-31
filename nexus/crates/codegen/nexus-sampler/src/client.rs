@@ -280,6 +280,8 @@ pub struct SamplingClient {
     http: reqwest::Client,
     default_headers: HeaderMap,
     base_url: String,
+    /// Base URL for the Responses API. Falls back to `base_url` when not set.
+    responses_base_url: Option<String>,
     defaults: ClientDefaults,
     /// Optional 401-attribution hook. The shell wires this to emit a
     /// structured event at every UNAUTHORIZED arm so 401s can be
@@ -530,10 +532,13 @@ impl SamplingClient {
             doom_loop_recovery: config.doom_loop_recovery,
         };
 
+        let responses_base_url = config.responses_base_url;
+
         Ok(Self {
             http,
             default_headers: headers,
             base_url: config.base_url,
+            responses_base_url,
             defaults,
             attribution_callback: config.attribution_callback,
             bearer_resolver: config.bearer_resolver,
@@ -704,6 +709,17 @@ impl SamplingClient {
         let base = self.base_url.trim_end_matches('/');
         let path = path.trim_start_matches('/');
         format!("{base}/{path}")
+    }
+
+    /// Endpoint for the Responses API (`POST /responses`).
+    /// Uses `responses_base_url` when set, otherwise falls back to `base_url`.
+    fn responses_endpoint(&self) -> String {
+        let base = self
+            .responses_base_url
+            .as_deref()
+            .unwrap_or(&self.base_url)
+            .trim_end_matches('/');
+        format!("{base}/responses")
     }
 
     fn apply_defaults(&self, mut request: ChatCompletionRequest) -> Result<ChatCompletionRequest> {
@@ -1045,7 +1061,7 @@ impl SamplingClient {
         request.trace.take();
 
         tracing::debug!("create_response: {:?}", &request);
-        tracing::debug!("endpoint: {:?}", self.endpoint("responses"));
+        tracing::debug!("endpoint: {:?}", self.responses_endpoint());
 
         let nexus_headers = GrokRequestHeaders {
             conv_id: x_nexus_conv_id,
@@ -1067,7 +1083,7 @@ impl SamplingClient {
         // old raw_output machinery.
         nexus_sampling_types::patch_reasoning_text_types(&mut request_body);
         let http_request = nexus_headers
-            .apply(self.post(self.endpoint("responses")))
+            .apply(self.post(self.responses_endpoint()))
             .json(&request_body);
 
         let response = http_request.send().await.map_err(|e| {
@@ -1084,7 +1100,7 @@ impl SamplingClient {
         if !status.is_success() {
             if status == reqwest::StatusCode::UNAUTHORIZED {
                 self.record_401_attribution(crate::attribution::SamplingConsumer::Responses);
-                let endpoint = self.endpoint("responses");
+                let endpoint = self.responses_endpoint();
                 let server_message = user_facing_api_error_message(status, bytes.as_ref());
                 return Err(SamplingError::Auth(format!(
                     "Unauthorized (401) from {endpoint}: {server_message}"
@@ -1139,7 +1155,7 @@ impl SamplingClient {
         name = "http.create_response_stream",
         skip_all,
         fields(
-            endpoint = %self.endpoint("responses"),
+            endpoint = %self.responses_endpoint(),
             model_id = request.inner.model.as_deref().unwrap_or(""),
             status_code = tracing::field::Empty,
             success = tracing::field::Empty,
@@ -1209,7 +1225,7 @@ impl SamplingClient {
             .doom_loop_recovery
             .map(crate::doom_loop::DoomLoopSignalCollector::new);
         let mut http_request = nexus_headers
-            .apply(self.post(self.endpoint("responses")))
+            .apply(self.post(self.responses_endpoint()))
             .header(ACCEPT, HeaderValue::from_static("text/event-stream"));
         if doom_loop.is_some() {
             // Presence opts in; the server ignores the value.
@@ -1244,7 +1260,7 @@ impl SamplingClient {
             if status == reqwest::StatusCode::UNAUTHORIZED {
                 span.record("error", "unauthorized (401)");
                 self.record_401_attribution(crate::attribution::SamplingConsumer::ResponsesStream);
-                let endpoint = self.endpoint("responses");
+                let endpoint = self.responses_endpoint();
                 let body = response.bytes().await.unwrap_or_default();
                 let server_message = user_facing_api_error_message(status, body.as_ref());
                 return Err(SamplingError::Auth(format!(

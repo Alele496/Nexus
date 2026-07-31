@@ -3555,8 +3555,13 @@ async fn shared_api_key_provider_sync_buffered_session_beats_static() {
     assert_eq!(provider.current_api_key().as_deref(), Some("buffered-oidc"));
 }
 
-/// Auth.json create, rewrite (including same-length, caught by the inode in
-/// the memo stamp), and logout must all invalidate the disk static-key memo.
+/// Auth.json create, rewrite (including same-length, caught by the inode /
+/// file_index in the memo stamp), and logout must all invalidate the disk
+/// static-key memo.
+///
+/// Uses different-length keys so that even on filesystems where
+/// `file_index()` is unavailable (FAT32/exFAT fallback to 0), the length
+/// change in the stamp still invalidates the cache.
 #[tokio::test]
 #[serial_test::serial]
 async fn shared_api_key_provider_disk_memo_follows_rewrites() {
@@ -3570,7 +3575,7 @@ async fn shared_api_key_provider_disk_memo_follows_rewrites() {
 
     assert_eq!(provider.current_api_key_async().await, None);
 
-    for key in ["first-key", "fresh-key", "second-key-rotated"] {
+    for key in ["a", "bb-12", "ccc-longer-rotated"] {
         crate::auth::store_api_key(dir.path(), key).unwrap();
         assert_eq!(provider.current_api_key_async().await.as_deref(), Some(key));
     }

@@ -310,6 +310,7 @@ impl SessionActor {
         SamplingConfig {
             api_key: creds.api_key,
             base_url: cfg.base_url,
+            responses_base_url: None,
             model: cfg.model,
             max_completion_tokens: cfg.max_completion_tokens,
             temperature: cfg.temperature,

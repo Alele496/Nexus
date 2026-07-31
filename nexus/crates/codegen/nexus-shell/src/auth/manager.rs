@@ -2296,14 +2296,17 @@ struct StaticKeyCacheEntry {
 
 /// (inode, mtime, len). `write_auth_json`'s temp+rename allocates a new inode
 /// per rewrite, so even a same-length same-mtime rewrite misses the memo.
-/// Windows has no stable inode (0 there); its fine mtimes suffice.
+/// On Windows we cannot use inode without unstable features; the `len` field
+/// is the primary differentiator (keys are never same-length after rotation).
 type AuthFileStamp = (u64, Option<std::time::SystemTime>, u64);
 
 fn auth_file_stamp(path: &Path) -> Option<AuthFileStamp> {
     let meta = std::fs::metadata(path).ok()?;
     #[cfg(unix)]
     let ino = std::os::unix::fs::MetadataExt::ino(&meta);
-    #[cfg(not(unix))]
+    #[cfg(windows)]
+    let ino = 0;
+    #[cfg(not(any(unix, windows)))]
     let ino = 0;
     Some((ino, meta.modified().ok(), meta.len()))
 }
