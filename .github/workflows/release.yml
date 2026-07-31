@@ -58,7 +58,7 @@ jobs:
           echo "PROTOC=${{ runner.temp }}/protoc/bin/protoc.exe" >> $GITHUB_ENV
 
       - name: Build release
-        run: cargo build -p nexus-bin --release
+        run: cargo build -p nexus-bin --release --locked
 
       - name: Package and rename artifact
         shell: bash
@@ -114,7 +114,7 @@ jobs:
           restore-keys: linux-cargo-
 
       - name: Build release
-        run: cargo build -p nexus-bin --release
+        run: cargo build -p nexus-bin --release --locked
 
       - name: Rename artifact
         run: |
@@ -162,7 +162,7 @@ jobs:
           restore-keys: macos-cargo-
 
       - name: Build release
-        run: cargo build -p nexus-bin --release
+        run: cargo build -p nexus-bin --release --locked
 
       - name: Rename artifact
         run: |
@@ -178,3 +178,64 @@ jobs:
         with:
           files: nexus/${{ env.ARTIFACT }}
           append_body: true
+
+  # ── 构建校验：下载资产计算 SHA256，写入 Release 说明 ───────────────
+  # 证明链：tag → commit → 固定 toolchain + 构建命令 → 产物哈希。
+  # 任何人可下载产物核对哈希（防篡改），或 checkout 同一 commit 自行构建。
+  release-verify:
+    needs: [release-windows, release-linux, release-macos]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download assets and compute SHA256
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+          COMMIT="${{ github.sha }}"
+          WORK=/tmp/nexus-verify
+          rm -rf "$WORK" && mkdir -p "$WORK" && cd "$WORK"
+
+          ASSETS="nexus-${VERSION}-windows-x86_64.zip nexus-${VERSION}-windows-x86_64.exe nexus-${VERSION}-linux-x86_64 nexus-${VERSION}-macos-aarch64"
+          for asset in $ASSETS; do
+            gh release download "${{ github.ref_name }}" -p "$asset" --clobber
+          done
+
+          HASH_ROWS=""
+          for asset in $ASSETS; do
+            HASH=$(sha256sum "$asset" | cut -d' ' -f1)
+            HASH_ROWS="${HASH_ROWS}| \`${asset}\` | \`${HASH}\` |"$'\n'
+          done
+
+          VERIFY_BODY=$(cat <<EOF
+          ## 构建校验
+
+          本发布由源码构建，证据链：
+
+          | 项 | 值 |
+          |----|-----|
+          | 源码 tag | \`${{ github.ref_name }}\`
+          | 源码 commit | \`${COMMIT}\`
+          | 构建环境 | GitHub Actions（windows-2022 / ubuntu-24.04 / macos-latest） |
+          | Rust toolchain | 1.92.0（\`rust-toolchain.toml\` 固定） |
+          | 构建命令 | \`cargo build -p nexus-bin --release --locked\` |
+
+          校验方法：下载后运行 \`sha256sum <文件>\`（Windows：\`certutil -hashfile <文件> SHA256\`）对比下方哈希；深度验证可 \`git checkout ${COMMIT}\` 后按构建命令自行编译，比对产物哈希。
+
+          | 文件 | SHA256 |
+          |------|--------|
+          ${HASH_ROWS}
+          EOF
+          )
+
+          # GitHub only exposes PATCH on /releases/{id} (numeric), not the
+          # by-tag route, so grab the release id from the GET we already make.
+          RELEASE_JSON=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${{ github.ref_name }}")
+          EXISTING=$(printf '%s' "$RELEASE_JSON" | jq -r '.body // ""')
+          RELEASE_ID=$(printf '%s' "$RELEASE_JSON" | jq -r '.id')
+          NEW_BODY=$(printf '%s\n\n%s' "$EXISTING" "$VERIFY_BODY")
+          jq -n --arg b "$NEW_BODY" '{body:$b}' > /tmp/nexus-verify/body.json
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${RELEASE_ID}" --input /tmp/nexus-verify/body.json
