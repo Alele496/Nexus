@@ -131,14 +131,15 @@ echo "Installing Nexus v$version ($platform)..." >&2
 
 # ── Download binary ────────────────────────────────────────────────────────
 
-binary_path="$DOWNLOAD_DIR/nexus-$platform"
-artifact_url="${GITHUB_RELEASES}/download/v${version}/nexus"
+artifact_name="nexus-${version}-${platform}"
+artifact_url="${GITHUB_RELEASES}/download/v${version}/${artifact_name}"
 
 if [ "$os" = "windows" ]; then
-    binary_path="${binary_path}.exe"
+    artifact_name="${artifact_name}.exe"
     artifact_url="${artifact_url}.exe"
 fi
 
+binary_path="$DOWNLOAD_DIR/$artifact_name"
 binary_tmp="${binary_path}.tmp.$$"
 rm -f "$binary_tmp" 2>/dev/null || true
 

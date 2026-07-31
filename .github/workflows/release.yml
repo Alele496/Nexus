@@ -60,19 +60,25 @@ jobs:
       - name: Build release
         run: cargo build -p nexus-bin --release
 
-      - name: Rename artifact
+      - name: Package and rename artifact
         shell: bash
         run: |
           VERSION="${{ github.ref_name }}"
           VERSION="${VERSION#v}"
-          ARTIFACT="nexus-${VERSION}-windows-x86_64.exe"
-          cp target/release/nexus.exe "${ARTIFACT}"
-          echo "ARTIFACT=${ARTIFACT}" >> $GITHUB_ENV
+          EXE="nexus-${VERSION}-windows-x86_64.exe"
+          ZIP="nexus-${VERSION}-windows-x86_64.zip"
+          cp target/release/nexus.exe "${EXE}"
+          # Zip the exe so Windows SmartScreen doesn't flag the raw .exe download
+          powershell -Command "Compress-Archive -Path '${EXE}' -DestinationPath '${ZIP}' -Force"
+          echo "EXE=${EXE}" >> $GITHUB_ENV
+          echo "ZIP=${ZIP}" >> $GITHUB_ENV
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: nexus/${{ env.ARTIFACT }}
+          files: |
+            nexus/${{ env.EXE }}
+            nexus/${{ env.ZIP }}
           append_body: true
 
   # ── Linux x86_64 ───────────────────────────────────────────────

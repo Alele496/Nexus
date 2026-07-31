@@ -5,9 +5,9 @@
     "license": "Apache-2.0",
     "architecture": {
         "64bit": {
-            "url": "https://github.com/Alele496/Nexus/releases/download/v0.3.0/nexus.exe",
+            "url": "https://github.com/Alele496/Nexus/releases/download/v0.3.0/nexus-0.3.0-windows-x86_64.zip",
             "hash": "<AUTO_FILLED_BY_CI>",
-            "bin": "nexus.exe"
+            "bin": "nexus-0.3.0-windows-x86_64.exe"
         }
     },
     "checkver": {
@@ -16,7 +16,7 @@
     "autoupdate": {
         "architecture": {
             "64bit": {
-                "url": "https://github.com/Alele496/Nexus/releases/download/v$version/nexus.exe"
+                "url": "https://github.com/Alele496/Nexus/releases/download/v$version/nexus-$version-windows-x86_64.zip"
             }
         }
     }

@@ -2022,6 +2022,9 @@ async fn install_gh_release(target: Option<&str>) -> Result<()> {
     tokio::fs::create_dir_all(&bin_dir).await?;
 
     let binary_name = format!("nexus-{}-{}", version, platform);
+    // Windows artifacts carry a .exe suffix.
+    #[cfg(target_os = "windows")]
+    let binary_name = format!("{}.exe", binary_name);
     let binary_path = download_dir.join(&binary_name);
     let tag = format!("v{}", version);
 

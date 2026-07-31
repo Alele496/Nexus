@@ -114,15 +114,27 @@ Write-Host "Installing Nexus v$Version ($platform)..." -ForegroundColor Cyan
 
 # ── Download binary ────────────────────────────────────────────────────────
 
-$binaryName = "nexus.exe"
-$downloadUrl = "https://github.com/Alele496/Nexus/releases/download/v$Version/$binaryName"
-$binaryPath = Join-Path $DownloadDir "nexus-$Version.exe"
+$zipName = "nexus-$Version-windows-$arch.zip"
+$downloadUrl = "https://github.com/Alele496/Nexus/releases/download/v$Version/$zipName"
+$zipPath = Join-Path $DownloadDir $zipName
 
 try {
-    Download-File $downloadUrl $binaryPath
+    Download-File $downloadUrl $zipPath
 } catch {
-    if (Test-Path $binaryPath) { Remove-Item $binaryPath -Force }
+    if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
     Write-Error "Download failed from $downloadUrl"
+    exit 1
+}
+
+Write-Host "  Extracting..." -ForegroundColor DarkGray
+$extractDir = Join-Path $DownloadDir "nexus-$Version"
+if (Test-Path $extractDir) { Remove-Item $extractDir -Recurse -Force }
+Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+$exeName = "nexus-$Version-windows-$arch.exe"
+$binaryPath = Join-Path $extractDir $exeName
+
+if (-not (Test-Path $binaryPath)) {
+    Write-Error "Extracted archive does not contain $exeName"
     exit 1
 }
 
