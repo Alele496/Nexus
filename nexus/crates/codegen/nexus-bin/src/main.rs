@@ -2074,25 +2074,38 @@ async fn finish_update_on_exit(
     match adopted {
         Some(handle) => {
             eprintln!("Waiting for the update download to finish...");
-            match handle.await {
-                Ok(Ok(status)) if status.success() => true,
-                Ok(Ok(status)) => {
+            // Bound the wait: a slow/blocked download (e.g. GitHub Releases
+            // behind a slow link) must not hang the user indefinitely.
+            // The background child keeps running after the timeout, so a
+            // later `nexus update` resolves to "Already up to date".
+            const UPDATE_WAIT_TIMEOUT: std::time::Duration =
+                std::time::Duration::from_secs(180);
+            match tokio::time::timeout(UPDATE_WAIT_TIMEOUT, handle).await {
+                Ok(Ok(Ok(status))) if status.success() => true,
+                Ok(Ok(Ok(status))) => {
                     run_blocking(Some(format!(
                         "Background update exited with {status}; retrying..."
                     )))
                     .await
                 }
-                Ok(Err(e)) => {
+                Ok(Ok(Err(e))) => {
                     run_blocking(Some(format!(
                         "Could not wait for the background update ({e}); retrying..."
                     )))
                     .await
                 }
-                Err(join_err) => {
+                Ok(Err(join_err)) => {
                     run_blocking(Some(format!(
                         "Background update waiter failed ({join_err}); retrying..."
                     )))
                     .await
+                }
+                Err(_elapsed) => {
+                    eprintln!(
+                        "Timed out after {UPDATE_WAIT_TIMEOUT:?} waiting for the update download. \
+                         The download continues in the background — run `nexus update` to finish it."
+                    );
+                    false
                 }
             }
         }
