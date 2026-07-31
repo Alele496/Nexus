@@ -39,6 +39,7 @@ pub(crate) fn ctx_with_toggle(toggle: HashMap<String, bool>) -> SubagentSpawnCon
         sampling_config: nexus_sampler::SamplerConfig {
             api_key: None,
             base_url: String::new(),
+            responses_base_url: None,
             model: String::new(),
             max_completion_tokens: None,
             temperature: None,

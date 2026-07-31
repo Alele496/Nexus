@@ -1921,6 +1921,7 @@ mod tests {
         SamplerConfig {
             api_key: Some("test-key".to_string()),
             base_url: "https://example.test".to_string(),
+            responses_base_url: None,
             model: "test-model".to_string(),
             max_completion_tokens: None,
             temperature: None,

@@ -1023,6 +1023,7 @@ async fn set_session_model_invalidates_byok_memo_for_same_model_id() {
             let cfg = nexus_sampler::SamplerConfig {
                 api_key: Some("byok-key".to_string()),
                 base_url: "https://third-party.example/v1".to_string(),
+                responses_base_url: None,
                 model: model.clone(),
                 max_completion_tokens: None,
                 temperature: None,
