@@ -688,3 +688,170 @@ fn journal_conversion_respects_deadline_under_contention() {
     let db = WorktreeDb::open_at_with_journal_mode(&path, JournalMode::Truncate).unwrap();
     assert_eq!(journal_mode(&db), "truncate");
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// `resolve_nexus_home` redirect-file parity with `nexus_config`
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Set `$HOME` / `$USERPROFILE` / `NEXUS_HOME` for the duration of the closure
+/// and restore the prior values afterwards, so `resolve_nexus_home` tests can
+/// be run in any order (also under `cargo test`, where tests share one
+/// process).
+///
+/// Note: `std::env::home_dir()` honors these only on Unix. On Windows it uses
+/// `GetUserProfileDirectoryW`, so the home-dependent tests below are gated
+/// `#[cfg(not(windows))]`; the redirect logic itself is covered on all
+/// platforms by the `read_nexus_home_redirect` unit tests.
+fn with_env_override<F: FnOnce()>(home: Option<&Path>, nexus_home: Option<&Path>, f: F) {
+    let prev_home = std::env::var_os("HOME");
+    let prev_userprofile = std::env::var_os("USERPROFILE");
+    let prev_nexus = std::env::var_os("NEXUS_HOME");
+    unsafe {
+        match home {
+            Some(p) => std::env::set_var("HOME", p),
+            None => std::env::remove_var("HOME"),
+        }
+        match home {
+            Some(p) => std::env::set_var("USERPROFILE", p),
+            None => std::env::remove_var("USERPROFILE"),
+        }
+        match nexus_home {
+            Some(p) => std::env::set_var("NEXUS_HOME", p),
+            None => std::env::remove_var("NEXUS_HOME"),
+        }
+    }
+    f();
+    unsafe {
+        match prev_home {
+            Some(p) => std::env::set_var("HOME", p),
+            None => std::env::remove_var("HOME"),
+        }
+        match prev_userprofile {
+            Some(p) => std::env::set_var("USERPROFILE", p),
+            None => std::env::remove_var("USERPROFILE"),
+        }
+        match prev_nexus {
+            Some(p) => std::env::set_var("NEXUS_HOME", p),
+            None => std::env::remove_var("NEXUS_HOME"),
+        }
+    }
+}
+
+/// `read_nexus_home_redirect` is pure, so the redirect-following logic is
+/// testable on every platform (Windows included) without overriding
+/// `home_dir()`. The full `resolve_nexus_home` path additionally resolves
+/// `home_dir()`, which is only env-overridable on Unix.
+#[test]
+fn read_redirect_returns_absolute_existing_target() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let dot_nexus = tmp.path().join(".nexus");
+    let target = tmp.path().join("custom-data");
+    std::fs::create_dir_all(&dot_nexus).unwrap();
+    std::fs::create_dir_all(&target).unwrap();
+    std::fs::write(dot_nexus.join("nexus-home-path"), target.to_str().unwrap()).unwrap();
+
+    assert_eq!(read_nexus_home_redirect(&dot_nexus), Some(target));
+}
+
+#[test]
+fn read_redirect_ignores_missing_target() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let dot_nexus = tmp.path().join(".nexus");
+    let missing = tmp.path().join("does-not-exist");
+    std::fs::create_dir_all(&dot_nexus).unwrap();
+    std::fs::write(dot_nexus.join("nexus-home-path"), missing.to_str().unwrap()).unwrap();
+
+    assert_eq!(read_nexus_home_redirect(&dot_nexus), None);
+}
+
+#[test]
+fn read_redirect_ignores_relative_target() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let dot_nexus = tmp.path().join(".nexus");
+    std::fs::create_dir_all(&dot_nexus).unwrap();
+    std::fs::write(dot_nexus.join("nexus-home-path"), "some/relative/path").unwrap();
+
+    assert_eq!(read_nexus_home_redirect(&dot_nexus), None);
+}
+
+#[test]
+fn read_redirect_ignores_missing_file() {
+    let tmp = tempfile::TempDir::new().unwrap();
+    let dot_nexus = tmp.path().join(".nexus");
+    std::fs::create_dir_all(&dot_nexus).unwrap();
+
+    assert_eq!(read_nexus_home_redirect(&dot_nexus), None);
+}
+
+/// Full path: unset env + valid redirect is followed. Home-dependent: on
+/// Windows `home_dir()` ignores env overrides (uses `GetUserProfileDirectoryW`),
+/// so this is exercised on Unix only.
+#[cfg(not(windows))]
+#[test]
+fn resolve_nexus_home_follows_redirect_when_env_unset() {
+    let _lock = NEXUS_HOME_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let fake_home = tmp.path().join("home");
+    let dot_nexus = fake_home.join(".nexus");
+    let redirected = tmp.path().join("custom-data");
+    std::fs::create_dir_all(&dot_nexus).unwrap();
+    std::fs::create_dir_all(&redirected).unwrap();
+    std::fs::write(
+        dot_nexus.join("nexus-home-path"),
+        redirected.to_str().unwrap(),
+    )
+    .unwrap();
+
+    with_env_override(Some(&fake_home), None, || {
+        let resolved = resolve_nexus_home().unwrap();
+        assert_eq!(resolved, redirected);
+    });
+}
+
+#[cfg(not(windows))]
+#[test]
+fn resolve_nexus_home_ignores_redirect_when_target_missing() {
+    let _lock = NEXUS_HOME_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let fake_home = tmp.path().join("home");
+    let dot_nexus = fake_home.join(".nexus");
+    // Redirect file points at a directory that does not exist.
+    let redirected = tmp.path().join("custom-data");
+    std::fs::create_dir_all(&dot_nexus).unwrap();
+    std::fs::write(
+        dot_nexus.join("nexus-home-path"),
+        redirected.to_str().unwrap(),
+    )
+    .unwrap();
+
+    let expected = dunce::canonicalize(&fake_home)
+        .unwrap_or_else(|_| fake_home.clone())
+        .join(".nexus");
+    with_env_override(Some(&fake_home), None, || {
+        let resolved = resolve_nexus_home().unwrap();
+        assert_eq!(resolved, expected);
+    });
+}
+
+#[test]
+fn resolve_nexus_home_env_var_wins_over_redirect() {
+    let _lock = NEXUS_HOME_ENV_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+    let tmp = tempfile::TempDir::new().unwrap();
+    let fake_home = tmp.path().join("home");
+    let dot_nexus = fake_home.join(".nexus");
+    let redirected = tmp.path().join("custom-data");
+    let env_home = tmp.path().join("env-home");
+    std::fs::create_dir_all(&dot_nexus).unwrap();
+    std::fs::create_dir_all(&redirected).unwrap();
+    std::fs::create_dir_all(&env_home).unwrap();
+    std::fs::write(
+        dot_nexus.join("nexus-home-path"),
+        redirected.to_str().unwrap(),
+    )
+    .unwrap();
+
+    with_env_override(Some(&fake_home), Some(&env_home), || {
+        let resolved = resolve_nexus_home().unwrap();
+        assert_eq!(resolved, env_home);
+    });
+}

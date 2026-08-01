@@ -337,16 +337,47 @@ pub fn now_epoch_secs() -> i64 {
         .as_secs() as i64
 }
 
+/// Name of the redirect file under `~/.nexus/` that holds a user-chosen data
+/// directory (written by the first-run wizard). Mirrors
+/// `nexus_config::NEXUS_HOME_REDIRECT_FILENAME` so this standalone crate can
+/// honor the same cross-process override without depending on nexus-config.
+const NEXUS_HOME_REDIRECT_FILENAME: &str = "nexus-home-path";
+
 pub fn resolve_nexus_home() -> Result<PathBuf> {
     if let Ok(v) = std::env::var("NEXUS_HOME") {
         return Ok(PathBuf::from(v));
     }
-    let home = PathBuf::from(std::env::var("HOME").context("neither $NEXUS_HOME nor $HOME is set")?);
+    // Mirror `nexus_config::default_nexus_home()` exactly. Must use
+    // `std::env::home_dir()` (never errors, reads `$USERPROFILE` on Windows),
+    // NOT `$HOME` — cmd.exe doesn't set `$HOME`, so a `$HOME` lookup would
+    // error here and the caller would fall back to a redirect-ignoring home.
+    #[allow(deprecated)]
+    let home = std::env::home_dir().unwrap_or_else(|| PathBuf::from("."));
     // Canonicalize the home dir so worktree paths share the same physical .nexus
     // tree as trust/hooks even when it is symlinked. The dunce canonicalization
     // must stay in sync with nexus_config::default_nexus_home();
-    // home resolution deliberately differs ($HOME here vs std::env::home_dir()).
-    Ok(dunce::canonicalize(&home).unwrap_or(home).join(".nexus"))
+    let dot_nexus = dunce::canonicalize(&home).unwrap_or(home).join(".nexus");
+    // Honor the redirect file like `nexus_config::default_nexus_home()` does.
+    // Without this the worktree base diverges from config/auth, which follow
+    // the redirect — worktrees would land under `~/.nexus` while everything
+    // else reads the redirected data directory.
+    if let Some(redirected) = read_nexus_home_redirect(&dot_nexus) {
+        return Ok(redirected);
+    }
+    Ok(dot_nexus)
+}
+
+/// Read the redirect file at `dot_nexus/nexus-home-path`. Returns the
+/// redirected path if it exists, is absolute, and the directory exists.
+fn read_nexus_home_redirect(dot_nexus: &Path) -> Option<PathBuf> {
+    let redirect_file = dot_nexus.join(NEXUS_HOME_REDIRECT_FILENAME);
+    let content = std::fs::read_to_string(&redirect_file).ok()?;
+    let path = PathBuf::from(content.trim());
+    if path.is_absolute() && path.exists() {
+        Some(path)
+    } else {
+        None
+    }
 }
 
 /// Serializes tests that mutate the process-global `NEXUS_HOME` env var so they
