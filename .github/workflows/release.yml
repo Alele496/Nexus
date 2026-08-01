@@ -5,6 +5,14 @@ name: Release
 #
 # Artifact naming: nexus-{version}-{os}-{arch}[.exe]
 # Matches the auto-update download pattern in nexus-update crate.
+#
+# Windows code signing is wired but dormant until SignPath Foundation approval
+# (free for OSS, no regional restriction). After approval, add these repo
+# secrets and the Windows job automatically signs the exe before packaging:
+#   SIGNPATH_API_TOKEN       SignPath submitter API key
+#   SIGNPATH_ORGANIZATION_ID SignPath organization ID
+#   SIGNPATH_PROJECT_SLUG    SignPath project slug
+#   SIGNPATH_POLICY_SLUG     SignPath signing policy slug
 
 on:
   push:
@@ -12,6 +20,7 @@ on:
 
 permissions:
   contents: write
+  actions: read  # SignPath action downloads the uploaded artifact from Actions
 
 env:
   CARGO_TERM_COLOR: always
@@ -59,6 +68,40 @@ jobs:
 
       - name: Build release
         run: cargo build -p nexus-bin --release --locked
+
+      # ── Windows code signing (SignPath Foundation, free for OSS) ──
+      # Active only when SIGNPATH_API_TOKEN is configured. The unsigned exe is
+      # uploaded as a GitHub artifact, SignPath signs it and hands the signed
+      # binary back; without the secrets this block is skipped entirely and
+      # the job ships the unsigned exe exactly as before.
+      - name: Upload unsigned binary to artifacts
+        id: upload-unsigned
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-unsigned-exe
+          path: target/release/nexus.exe
+          retention-days: 1
+
+      - name: Submit signing request to SignPath
+        id: signpath
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        uses: SignPath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ secrets.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          output-artifact-directory: target/release/signed
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1800
+
+      - name: Swap signed binary into the build output
+        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        shell: bash
+        run: |
+          find target/release/signed -iname 'nexus*.exe' -exec cp -f {} target/release/nexus.exe \;
 
       - name: Package and rename artifact
         shell: bash

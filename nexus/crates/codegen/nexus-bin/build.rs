@@ -7,6 +7,16 @@ fn main() {
     println!("cargo:rerun-if-changed=nexus.rc");
     println!("cargo:rerun-if-changed=nexus.ico");
 
+    // Windows: reserve a 16 MiB main-thread stack. Debug builds give the
+    // startup async state machines (e.g. `async_main`'s generated poll) huge
+    // stack frames — the MSVC default 1 MiB main-thread stack overflows
+    // ("thread 'main' has overflowed its stack") on first launch.
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
+        && std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc")
+    {
+        println!("cargo:rustc-link-arg-bins=/STACK:16777216");
+    }
+
     // Windows: embed the Nexus icon into the .exe by compiling nexus.rc → nexus.res
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows") {
         if let Some(rc_path) = find_rc_exe() {
