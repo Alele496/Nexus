@@ -614,6 +614,12 @@ pub enum Action {
     CancelLogin,
     /// User submitted a manually-pasted auth token (loopback mode).
     SubmitAuthCode(String),
+    /// User pressed "Set API key" on the blocked welcome screen (Pending auth
+    /// with `preferred_method=api_key`): switch to API-key entry mode.
+    SetApiKeyFromWelcomeBegin,
+    /// User submitted an API key from the welcome screen: store it via auth
+    /// storage and unlock into the main session flow.
+    SetApiKeyFromWelcome(String),
     /// Copy the auth URL to the clipboard during authentication.
     CopyAuthUrl,
     /// Show the raw auth URL with mouse capture disabled for manual copy.

@@ -42,7 +42,12 @@ pub fn render_menu(
     let menu_width = logo_visual_width(area.height)
         .max(30)
         .max(content_min)
-        .max(min_width_hint);
+        .max(min_width_hint)
+        // Clamp to the available width so rows never exceed the window and
+        // get soft-wrapped by the terminal on narrow terminals (which garbles
+        // the label/key alignment). Wide windows are unaffected — the logo
+        // drives the width there and stays centered.
+        .min(area.width.max(1));
 
     let [_, menu_centered, _] = Layout::horizontal([
         Constraint::Min(0),
@@ -137,4 +142,79 @@ pub fn render_menu(
     }
 
     rects
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// On a narrow terminal the menu column must clamp to the available
+    /// width instead of overflowing — an overflowing row gets soft-wrapped
+    /// by the terminal, garbling the label/key alignment. The unclamped
+    /// width (driven by the ASCII logo, ~100 cols) would overflow at 20/40.
+    #[test]
+    fn narrow_areas_clamp_menu_width_to_area() {
+        let theme = Theme::current();
+        // (key shortcut, label) — render_menu's item contract.
+        let items: &[(&str, &str)] = &[
+            ("l", "Login with sage.local"),
+            ("k", "Set API key"),
+            ("q", "Quit"),
+        ];
+        for width in [20u16, 40, 80] {
+            let area = Rect {
+                x: 0,
+                y: 0,
+                width,
+                height: 40,
+            };
+            let mut buf = Buffer::empty(area);
+            let rects = render_menu(area, &mut buf, &theme, items, None, None, 0);
+            assert_eq!(rects.len(), items.len());
+            for (i, r) in rects.iter().enumerate() {
+                assert!(
+                    r.width <= area.width,
+                    "width {width}: menu row {i} must be clamped to the area (got width {})",
+                    r.width
+                );
+                assert!(
+                    r.x + r.width <= area.x + area.width,
+                    "width {width}: menu row {i} must stay inside the area"
+                );
+            }
+        }
+    }
+
+    /// Each menu row renders the label flush-left and the key shortcut
+    /// flush-right within the row.
+    #[test]
+    fn menu_rows_render_label_left_key_right() {
+        let theme = Theme::current();
+        // (key shortcut, label) — render_menu's item contract.
+        let items: &[(&str, &str)] = &[
+            ("l", "Login with sage.local"),
+            ("k", "Set API key"),
+            ("q", "Quit"),
+        ];
+        let area = Rect {
+            x: 0,
+            y: 0,
+            width: 120,
+            height: 40,
+        };
+        let mut buf = Buffer::empty(area);
+        let rects = render_menu(area, &mut buf, &theme, items, None, None, 0);
+        for (i, (key, label)) in items.iter().enumerate() {
+            let row = rects[i];
+            let first = buf.cell((row.x, row.y)).unwrap().symbol().to_string();
+            assert_eq!(
+                first,
+                label.chars().next().unwrap().to_string(),
+                "row {i}: label must be flush-left"
+            );
+            let last_x = row.x + row.width - 1;
+            let last = buf.cell((last_x, row.y)).unwrap().symbol().to_string();
+            assert_eq!(last, key.to_string(), "row {i}: key must be flush-right");
+        }
+    }
 }

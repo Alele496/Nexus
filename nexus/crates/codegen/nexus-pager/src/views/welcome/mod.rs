@@ -592,6 +592,9 @@ pub struct WelcomeRenderParams<'a> {
     pub login_label: Option<&'a str>,
     pub auth_code_input: &'a str,
     pub auth_code_cursor_byte: usize,
+    /// The blocked welcome screen is in API-key entry mode (Pending auth,
+    /// `preferred_method=api_key`): render an input box instead of the menu.
+    pub setting_api_key: bool,
     pub clipboard_delivery: Option<crate::clipboard::ClipboardDelivery>,
     pub show_raw_url: bool,
     pub announcement: Option<&'a nexus_announcements::RemoteAnnouncement>,
@@ -689,7 +692,21 @@ pub fn render_welcome(
         AuthState::Pending { error } => {
             let label = params.login_label.unwrap_or("sage.local");
             let login_text = format!("Login with {}", label);
-            let menu = [("l", login_text.as_str()), ("q", "Quit")];
+            let key_entry = params.setting_api_key.then_some((
+                params.auth_code_input,
+                params.auth_code_cursor_byte,
+            ));
+            let menu: &[(&str, &str)] = if params.setting_api_key {
+                // While entering a key the menu collapses to Quit; the input
+                // box takes over the message slot.
+                &[("q", "Quit")]
+            } else {
+                &[
+                    ("l", login_text.as_str()),
+                    ("k", "Set API key"),
+                    ("q", "Quit"),
+                ]
+            };
             let msg = error.as_deref().map(|e| (e, theme.accent_error));
             let info = PromptInfo {
                 model_name: params.model_name,
@@ -702,11 +719,12 @@ pub fn render_welcome(
                 content_area,
                 buf,
                 msg,
-                &menu,
+                menu,
                 params.selected,
                 Some((prompt, &info)),
                 h_margin,
                 params.compact,
+                key_entry,
             );
             WelcomeRenderResult {
                 cursor_pos: None,
@@ -772,6 +790,7 @@ pub fn render_welcome(
                 None,
                 h_margin,
                 params.compact,
+                None,
             );
             WelcomeRenderResult {
                 cursor_pos: None,
@@ -854,10 +873,17 @@ fn render_welcome_blocked(
     prompt: Option<(&mut PromptWidget, &PromptInfo<'_>)>,
     h_margin: u16,
     compact: bool,
+    api_key_entry: Option<(&str, usize)>,
 ) -> (Vec<Rect>, Option<crate::terminal::overlay::PostFlush>) {
     let theme = Theme::current();
 
-    let msg_height = if message.is_some() { 2u16 } else { 0u16 };
+    let msg_height = if api_key_entry.is_some() {
+        4
+    } else if message.is_some() {
+        2u16
+    } else {
+        0u16
+    };
     let menu_height = menu_items.len() as u16;
     // Force the stacked layout: this renderer only paints the stacked
     // logo/menu rects, which the hero-box layout would leave empty.
@@ -872,7 +898,29 @@ fn render_welcome_blocked(
 
     render_logo(layout.logo, buf, &theme, content_area.height);
 
-    if let Some((text, color)) = message {
+    if let Some((input, cursor_byte)) = api_key_entry {
+        // API-key entry mode replaces the error message with a hint line and
+        // a masked input box (Enter saves, Esc cancels — handled by input).
+        let [_, hint_area, _, box_area, _] = Layout::vertical([
+            Constraint::Min(0),
+            Constraint::Length(1),
+            Constraint::Min(0),
+            Constraint::Length(3),
+            Constraint::Min(0),
+        ])
+        .flex(Flex::Center)
+        .areas(layout.error);
+        Paragraph::new(
+            Line::from(Span::styled(
+                "Paste or type your API key (Enter saves, Esc cancels)",
+                Style::default().fg(theme.gray_bright),
+            ))
+            .alignment(Alignment::Center),
+        )
+        .render(hint_area, buf);
+        let box_inner = inset_horizontal(box_area, prompt::prompt_inset(compact));
+        render_auth_input_box(box_inner, buf, &theme, input, cursor_byte);
+    } else if let Some((text, color)) = message {
         let line =
             Line::from(Span::styled(text, Style::default().fg(color))).alignment(Alignment::Center);
         Paragraph::new(line).render(layout.error, buf);
@@ -2685,6 +2733,7 @@ mod tests {
             login_label: None,
             auth_code_input: "",
             auth_code_cursor_byte: 0,
+            setting_api_key: false,
             clipboard_delivery: None,
             show_raw_url: false,
             announcement: None,
@@ -2775,6 +2824,30 @@ mod tests {
         let text = render_done_text(&params);
         assert!(text.contains("v9.9.9 available"), "{text}");
         assert!(!text.contains("Coming from Cursor?"), "{text}");
+    }
+
+    #[test]
+    fn pending_welcome_renders_set_api_key_menu() {
+        let auth = AuthState::Pending { error: None };
+        let trust = TrustState::Done;
+        let params = render_params(&auth, &trust, None);
+        let text = render_done_text(&params);
+        assert!(text.contains("Set API key"), "{text}");
+        assert!(text.contains("Quit"), "{text}");
+    }
+
+    #[test]
+    fn pending_welcome_key_entry_renders_hint_and_masked_box() {
+        let auth = AuthState::Pending { error: None };
+        let trust = TrustState::Done;
+        let mut params = render_params(&auth, &trust, None);
+        params.setting_api_key = true;
+        params.auth_code_input = "sk-secret-token-123";
+        params.auth_code_cursor_byte = params.auth_code_input.len();
+        let text = render_done_text(&params);
+        assert!(text.contains("Paste or type your API key"), "{text}");
+        // The entered key must be masked, never echoed.
+        assert!(!text.contains("sk-secret-token-123"), "{text}");
     }
 
     fn png() -> [u8; 8] {

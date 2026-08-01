@@ -301,6 +301,39 @@ pub(super) fn dispatch_submit_auth_code(app: &mut AppView, code: String) -> Vec<
     vec![Effect::SubmitAuthCode { request_seq, code }]
 }
 
+/// Enter API-key entry mode on the blocked welcome screen (Pending auth with
+/// empty auth methods). The key itself is captured by the welcome input
+/// handler into `auth_code_input` and submitted via
+/// [`Action::SetApiKeyFromWelcome`].
+pub(super) fn dispatch_set_api_key_from_welcome_begin(app: &mut AppView) -> Vec<Effect> {
+    app.welcome_setting_api_key = true;
+    app.auth_code_input.reset();
+    app.welcome_menu_index = None;
+    vec![]
+}
+
+/// Store an API key entered from the blocked welcome screen, then unlock into
+/// the main session flow.
+///
+/// The key is persisted via auth storage (`auth.json`), which the running
+/// agent's key provider re-reads on its next call (file-stamp memo), so no
+/// restart or re-auth round-trip is needed. Mirrors the post-auth transition
+/// in `handle_auth_complete`: mark auth Done and replay any deferred startup
+/// once trust is also resolved.
+pub(super) fn dispatch_set_api_key_from_welcome(app: &mut AppView, key: String) -> Vec<Effect> {
+    app.welcome_setting_api_key = false;
+    app.auth_code_input.reset();
+    app.welcome_menu_index = None;
+    let mut effects = super::settings::setters::set_api_key(app, key);
+    app.auth_state = AuthState::Done;
+    app.auth_show_raw_url = false;
+    app.welcome_prompt_focused = !app.is_access_blocked();
+    if app.session_startup_allowed() {
+        effects.extend(drain_startup_actions(app));
+    }
+    effects
+}
+
 // TaskResult handlers.
 
 pub(super) fn handle_auth_complete(

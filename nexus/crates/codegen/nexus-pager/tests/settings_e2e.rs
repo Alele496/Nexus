@@ -65,6 +65,12 @@ const ALL_SETTINGS_EXERCISED: &[&str] = &[
     "hunk_tracker_mode",
     "voice_capture_mode",
     "voice_stt_language",
+    // Proxy + API keys + reasoning effort (SHELL String/Password/Enum).
+    "proxy_http",
+    "proxy_https",
+    "proxy_no_proxy",
+    "api_key",
+    "default_reasoning_effort",
     // Contextual-hints group + its per-tip child toggles (exercised via the
     // group sub-sheet, not as top-level rows).
     "contextual_hints",
@@ -1731,6 +1737,7 @@ fn registry_kind_membership_through_pr_14() {
 
             SettingKind::DynamicEnum { .. } => "DynamicEnum",
             SettingKind::Group { .. } => "Group",
+            SettingKind::Password { .. } => "Password",
             other => panic!(
                 "registry_kind_membership: setting `{}` has unknown kind {:?} — \
                  add an arm here AND a kind-membership assertion below",
@@ -1789,6 +1796,7 @@ fn registry_kind_membership_through_pr_14() {
             "auto_dark_theme",
             "auto_light_theme",
             "coding_data_sharing",
+            "default_reasoning_effort",
             "default_selected_permission",
             "hunk_tracker_mode",
             "keep_text_selection",
@@ -1805,10 +1813,12 @@ fn registry_kind_membership_through_pr_14() {
     );
 
     let string_keys = by_kind.remove("String").unwrap_or_default();
-    assert!(
-        string_keys.is_empty(),
-        "no String-kind settings should remain — `default_model` + `fork_secondary_model` \
-         migrated to DynamicEnum; got: {string_keys:?}",
+    let mut sorted_string = string_keys.clone();
+    sorted_string.sort();
+    assert_eq!(
+        sorted_string,
+        vec!["proxy_http", "proxy_https", "proxy_no_proxy"],
+        "String kind membership drift (Phase 1 proxy settings)",
     );
 
     let dynamic_enum_keys = by_kind.remove("DynamicEnum").unwrap_or_default();
@@ -1832,6 +1842,13 @@ fn registry_kind_membership_through_pr_14() {
         group_keys,
         vec!["contextual_hints"],
         "Group kind membership drift",
+    );
+
+    let password_keys = by_kind.remove("Password").unwrap_or_default();
+    assert_eq!(
+        password_keys,
+        vec!["api_key"],
+        "Password kind membership drift",
     );
 
     // No unexpected kinds.
@@ -1858,6 +1875,7 @@ fn enum_settings_membership_through_pr_14() {
             "auto_dark_theme",
             "auto_light_theme",
             "coding_data_sharing",
+            "default_reasoning_effort",
             "default_selected_permission",
             "hunk_tracker_mode",
             "keep_text_selection",
@@ -1946,6 +1964,13 @@ fn defaults_round_trip_through_registry() {
             "contextual_hints.small_screen" => SettingValue::Bool(true),
             "contextual_hints.word_select" => SettingValue::Bool(true),
             "contextual_hints.ssh_wrap" => SettingValue::Bool(true),
+            // Phase 1: proxy + API key default to unset (empty string); the
+            // reasoning-effort default is `high`.
+            "proxy_http" => SettingValue::String(String::new()),
+            "proxy_https" => SettingValue::String(String::new()),
+            "proxy_no_proxy" => SettingValue::String(String::new()),
+            "api_key" => SettingValue::Password(String::new()),
+            "default_reasoning_effort" => SettingValue::Enum("high"),
             other => panic!("test must list expected default for `{other}`"),
         }
     };
@@ -7725,4 +7750,205 @@ fn collapsed_edit_blocks_renders_under_appearance_category_shell_owned() {
         "collapsed_edit_blocks must be immediately below group_tool_verbs; \
          Appearance order: {keys:?}"
     );
+}
+
+// ---------------------------------------------------------------------------
+// Phase 1: proxy + API key (SHELL String/Password editors)
+// ---------------------------------------------------------------------------
+
+/// Drive the String/Password editor for a given setting: Enter opens the
+/// inline editor, the chars are typed, Enter commits the typed setter.
+/// Returns the committed `Action`.
+fn edit_and_commit(s: &mut SettingsModalState, target: &str, text: &str) -> Action {
+    navigate_to(s, target);
+    let outcome = handle_settings_key(s, &press(KeyCode::Enter));
+    assert!(
+        matches!(outcome, SettingsKeyOutcome::Changed),
+        "Enter on `{target}` must transition to EditingValue, got {outcome:?}"
+    );
+    assert!(
+        matches!(s.mode(), SettingsModalMode::EditingValue { key, .. } if key == target),
+        "expected EditingValue for `{target}`, got {:?}",
+        s.mode(),
+    );
+    for ch in text.chars() {
+        let _ = handle_settings_key(s, &press(KeyCode::Char(ch)));
+    }
+    let outcome = handle_settings_key(s, &press(KeyCode::Enter));
+    match outcome {
+        SettingsKeyOutcome::Action(a) => a,
+        other => panic!("expected commit Action for `{target}`, got {other:?}"),
+    }
+}
+
+/// Enter on the `proxy_http` row edits + commits `Action::SetProxyHttp`.
+#[test]
+fn enter_on_proxy_http_edits_and_commits_set_proxy_http() {
+    let mut s = make_state();
+    match edit_and_commit(&mut s, "proxy_http", "http://127.0.0.1:8080") {
+        Action::SetProxyHttp(url) => assert_eq!(url, "http://127.0.0.1:8080"),
+        other => panic!("expected Action::SetProxyHttp commit, got {other:?}"),
+    }
+    assert!(
+        matches!(s.mode(), SettingsModalMode::Browse),
+        "commit must return to Browse"
+    );
+}
+
+/// Enter on the `proxy_https` row edits + commits `Action::SetProxyHttps`.
+#[test]
+fn enter_on_proxy_https_edits_and_commits_set_proxy_https() {
+    let mut s = make_state();
+    match edit_and_commit(&mut s, "proxy_https", "http://127.0.0.1:8080") {
+        Action::SetProxyHttps(url) => assert_eq!(url, "http://127.0.0.1:8080"),
+        other => panic!("expected Action::SetProxyHttps commit, got {other:?}"),
+    }
+    assert!(
+        matches!(s.mode(), SettingsModalMode::Browse),
+        "commit must return to Browse"
+    );
+}
+
+/// Enter on the `proxy_no_proxy` row edits + commits `Action::SetProxyNoProxy`.
+#[test]
+fn enter_on_proxy_no_proxy_edits_and_commits_set_proxy_no_proxy() {
+    let mut s = make_state();
+    match edit_and_commit(&mut s, "proxy_no_proxy", "localhost,127.0.0.1") {
+        Action::SetProxyNoProxy(hosts) => assert_eq!(hosts, "localhost,127.0.0.1"),
+        other => panic!("expected Action::SetProxyNoProxy commit, got {other:?}"),
+    }
+    assert!(
+        matches!(s.mode(), SettingsModalMode::Browse),
+        "commit must return to Browse"
+    );
+}
+
+/// Enter on the `api_key` row edits + commits `Action::SetApiKey`. The
+/// Password validator is `NonEmptyToken`, so the buffer must be non-empty
+/// and whitespace-free for the commit to dispatch.
+#[test]
+fn enter_on_api_key_edits_and_commits_set_api_key() {
+    let mut s = make_state();
+    match edit_and_commit(&mut s, "api_key", "sk-test-key-123") {
+        Action::SetApiKey(key) => assert_eq!(key, "sk-test-key-123"),
+        other => panic!("expected Action::SetApiKey commit, got {other:?}"),
+    }
+    assert!(
+        matches!(s.mode(), SettingsModalMode::Browse),
+        "commit must return to Browse"
+    );
+}
+
+/// An empty `api_key` buffer is rejected by the `NonEmptyToken` validator:
+/// Enter shows the validation error and stays in the editor (no commit).
+#[test]
+fn enter_on_api_key_with_empty_buffer_blocks_commit() {
+    let mut s = make_state();
+    navigate_to(&mut s, "api_key");
+    let _ = handle_settings_key(&mut s, &press(KeyCode::Enter));
+    let outcome = handle_settings_key(&mut s, &press(KeyCode::Enter));
+    assert!(
+        matches!(outcome, SettingsKeyOutcome::Unchanged),
+        "empty api_key commit must be blocked (Unchanged), got {outcome:?}"
+    );
+    assert!(
+        matches!(s.mode(), SettingsModalMode::EditingValue { key, .. } if key == "api_key"),
+        "must stay in the editor after a validation failure, got {:?}",
+        s.mode(),
+    );
+    assert!(
+        s.editing_validation_error().is_some(),
+        "a validation error must be surfaced"
+    );
+}
+
+/// Value-column click on each proxy/api_key row opens the editor in ONE
+/// click (mouse ↔ keyboard parity).
+#[test]
+fn mouse_click_on_proxy_and_api_key_value_opens_editor_in_one_click() {
+    for target in ["proxy_http", "proxy_https", "proxy_no_proxy", "api_key"] {
+        let mut s = make_state();
+        synth_rects(&mut s);
+        let row_y = row_idx_for(&s, target) as u16;
+        let outcome = handle_settings_mouse(
+            &mut s,
+            MouseEventKind::Down(crossterm::event::MouseButton::Left),
+            72,
+            row_y,
+        );
+        assert!(
+            matches!(outcome, SettingsKeyOutcome::Changed),
+            "value click on `{target}` must open the editor, got {outcome:?}",
+        );
+        assert!(
+            matches!(s.mode(), SettingsModalMode::EditingValue { key, .. } if key == target),
+            "value click on `{target}` must enter EditingValue, got {:?}",
+            s.mode(),
+        );
+    }
+}
+
+/// `default_reasoning_effort` (SHELL Enum): Enter opens the picker at the
+/// `high` default; one Down + Enter commits `Action::SetDefaultReasoningEffort("xhigh")`.
+#[test]
+fn default_reasoning_effort_picker_enter_dispatches_commit() {
+    let mut s = make_state();
+    navigate_to(&mut s, "default_reasoning_effort");
+    let outcome = handle_settings_key(&mut s, &press(KeyCode::Enter));
+    assert!(
+        matches!(outcome, SettingsKeyOutcome::Changed),
+        "Enter on default_reasoning_effort must transition to PickingEnum, got {outcome:?}"
+    );
+    match &s.mode() {
+        SettingsModalMode::PickingEnum {
+            key,
+            original_value,
+            ..
+        } => {
+            assert_eq!(*key, "default_reasoning_effort");
+            assert_eq!(
+                original_value,
+                &SettingValue::Enum("high"),
+                "default reasoning effort must seed at `high`"
+            );
+        }
+        other => panic!("expected PickingEnum mode, got {other:?}"),
+    }
+    let _ = handle_settings_key(&mut s, &press(KeyCode::Down));
+    let outcome = handle_settings_key(&mut s, &press(KeyCode::Enter));
+    match outcome {
+        SettingsKeyOutcome::Action(Action::SetDefaultReasoningEffort(effort)) => {
+            assert_eq!(effort, "xhigh", "second choice is Deep (xhigh)")
+        }
+        other => panic!("expected SetDefaultReasoningEffort commit, got {other:?}"),
+    }
+    assert!(
+        matches!(s.mode(), SettingsModalMode::Browse),
+        "Enter commit must return to Browse"
+    );
+}
+
+/// Value-column click on the `default_reasoning_effort` row opens the
+/// picker in ONE click (mouse ↔ keyboard parity).
+#[test]
+fn mouse_click_on_default_reasoning_effort_value_opens_picker_in_one_click() {
+    let mut s = make_state();
+    synth_rects(&mut s);
+    let row_y = row_idx_for(&s, "default_reasoning_effort") as u16;
+    let outcome = handle_settings_mouse(
+        &mut s,
+        MouseEventKind::Down(crossterm::event::MouseButton::Left),
+        72,
+        row_y,
+    );
+    assert!(
+        matches!(outcome, SettingsKeyOutcome::Changed),
+        "value click must open picker in one click, got: {outcome:?}",
+    );
+    match &s.mode() {
+        SettingsModalMode::PickingEnum { key, .. } => {
+            assert_eq!(*key, "default_reasoning_effort")
+        }
+        _ => panic!("value click on default_reasoning_effort must enter PickingEnum"),
+    }
 }

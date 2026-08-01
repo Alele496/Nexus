@@ -104,6 +104,25 @@ impl MvpAgent {
                 byok_from_models(&models, preferred_model_id, current.0.as_ref()),
             );
     }
+    /// Resolve a stored API key for session start when no auth method was
+    /// registered at `initialize()` time. Env wins over auth.json, matching
+    /// the precedence in `initialize()`. `None` under the OIDC pin or the
+    /// admin `disable_api_key_auth` kill switch.
+    fn stored_api_key_for_session_start(&self) -> Option<String> {
+        if self.cfg.borrow().nexus_com_config.api_key_auth_disabled() {
+            return None;
+        }
+        match self.cfg.borrow().nexus_com_config.preferred_method {
+            Some(crate::auth::PreferredAuthMethod::Oidc) => None,
+            _ => crate::agent::auth_method::read_xai_api_key_env().ok().or_else(
+                || {
+                    crate::auth::storage::read_api_key(
+                        &crate::util::nexus_home::nexus_home(),
+                    )
+                },
+            ),
+        }
+    }
     /// Return auth for sync config construction.
     pub(super) fn current_or_buffered_auth(&self) -> Option<crate::auth::GrokAuth> {
         self.auth_manager
@@ -3139,10 +3158,29 @@ impl MvpAgent {
         let support_permission = self.cfg.borrow().features.support_permission;
         let telemetry_enabled = self.product_analytics_enabled();
         let origin_client = self.origin_client_info_from_meta(init.meta.as_ref());
-        let sampling_config = self
+        let mut sampling_config = self
             .resolve_sampling_config_for_model(&session_model_id, origin_client.clone());
         if self.auth_method_id.load().is_none() {
-            return Err(acp::Error::auth_required().data("no auth method id provided"));
+            // The API key may have been stored after `initialize()` (the
+            // welcome-screen `k` flow writes auth.json). Register xai.api_key
+            // from env / auth.json so the session can start without a full
+            // re-initialize — mirrors the auth.json load in `initialize()`.
+            if let Some(api_key) = self.stored_api_key_for_session_start() {
+                self.set_auth_method(acp::AuthMethodId::new(
+                    crate::agent::auth_method::XAI_API_KEY_METHOD_ID,
+                ));
+                // Seed both the per-session snapshot (used to build the
+                // session's request credentials below) and the live store.
+                if sampling_config.api_key.is_none() {
+                    sampling_config.api_key = Some(api_key.clone());
+                }
+                let mut live = self.sampling_config.borrow_mut();
+                if live.api_key.is_none() {
+                    live.api_key = Some(api_key);
+                }
+            } else {
+                return Err(acp::Error::auth_required().data("no auth method id provided"));
+            }
         }
         let auth_method_id = std::sync::Arc::clone(&self.auth_method_id);
         tracing::info!(

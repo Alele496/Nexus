@@ -1,7 +1,7 @@
 //! Nexus 首次运行设置向导。
 //!
 //! 在 `~/.nexus/config.toml` 不存在或 `[startup].wizard_completed` 未设置时，
-//! 引导用户完成初始配置：提供商选择、API Key。
+//! 引导用户完成初始配置：提供商选择、API 端点。
 //!
 //! 用户名、数据目录、模型、API 端点和思考深度等高级设置均使用智能默认值，
 //! 用户可在进入 Nexus 后通过 F2 → Settings 随时修改。
@@ -17,8 +17,6 @@ const NEXUS_HOME_REDIRECT_FILENAME: &str = "nexus-home-path";
 struct ProviderPreset {
     /// 显示名称
     name: &'static str,
-    /// 获取 API Key 的网址
-    key_url: &'static str,
     /// 默认 API 端点
     base_url: &'static str,
     /// API 后端类型
@@ -27,14 +25,11 @@ struct ProviderPreset {
     supports_reasoning: bool,
     /// 模型列表: (model_id, display_name, context_window)
     models: &'static [(&'static str, &'static str, u64)],
-    /// 环境变量提示
-    env_var_hint: &'static str,
 }
 
 const PROVIDERS: &[ProviderPreset] = &[
     ProviderPreset {
         name: "DeepSeek",
-        key_url: "https://platform.deepseek.com/api_keys",
         base_url: "https://api.deepseek.com/v1",
         api_backend: "chat_completions",
         supports_reasoning: true,
@@ -42,11 +37,9 @@ const PROVIDERS: &[ProviderPreset] = &[
             ("deepseek-v4-pro", "DeepSeek V4 Pro — 最强推理，1M 上下文 (推荐)", 1_000_000),
             ("deepseek-v4-flash", "DeepSeek V4 Flash — 更快响应，日常开发", 1_000_000),
         ],
-        env_var_hint: "NEXUS_API_KEY",
     },
     ProviderPreset {
         name: "OpenAI",
-        key_url: "https://platform.openai.com/api-keys",
         base_url: "https://api.openai.com/v1",
         api_backend: "chat_completions",
         supports_reasoning: true,
@@ -55,11 +48,9 @@ const PROVIDERS: &[ProviderPreset] = &[
             ("gpt-5.1", "GPT-5.1 — 平衡性能与速度", 128_000),
             ("gpt-5-mini", "GPT-5 Mini — 轻量快速，日常任务", 128_000),
         ],
-        env_var_hint: "OPENAI_API_KEY",
     },
     ProviderPreset {
         name: "Anthropic (Claude)",
-        key_url: "https://console.anthropic.com/settings/keys",
         base_url: "https://api.anthropic.com/v1",
         api_backend: "messages",
         supports_reasoning: false,
@@ -68,16 +59,13 @@ const PROVIDERS: &[ProviderPreset] = &[
             ("claude-sonnet-4-6", "Claude Sonnet 4.6 — 快速响应的主力模型", 200_000),
             ("claude-haiku-4-5", "Claude Haiku 4.5 — 极速轻量，日常任务", 200_000),
         ],
-        env_var_hint: "ANTHROPIC_API_KEY",
     },
     ProviderPreset {
         name: "自定义 (OpenAI 兼容 API)",
-        key_url: "",
         base_url: "",
         api_backend: "chat_completions",
         supports_reasoning: false,
         models: &[],
-        env_var_hint: "NEXUS_API_KEY",
     },
 ];
 
@@ -189,10 +177,12 @@ fn config_toml_path() -> PathBuf {
 ///
 /// 步骤：
 /// 1. 选择 AI 提供商
-/// 2. 输入 API Key（可跳过）
+/// 2. 配置 API 端点（URL 在前）
 /// 3. 检查工具 → Done!
 ///
-/// 用户名、数据目录、模型、API 端点、思考深度使用智能默认值。
+/// API Key 不在向导中收集，进入 Nexus 后通过欢迎页按 k 或 F2 → 设置添加，
+/// 避免用户在向导中留空。
+/// 用户名、数据目录、模型、思考深度使用智能默认值。
 pub fn run_setup_wizard() -> io::Result<PathBuf> {
     print_banner();
 
@@ -200,22 +190,17 @@ pub fn run_setup_wizard() -> io::Result<PathBuf> {
     let provider_idx = step_provider()?;
     let provider = &PROVIDERS[provider_idx];
 
-    // ── 第 2 步：API Key ───────────────────────────────────────────────
+    // ── 第 2 步：API 端点（URL 在前）──────────────────────────────────
     let nexus_home = default_nexus_home();
     std::fs::create_dir_all(&nexus_home)?;
     if let Err(e) = save_nexus_home_redirect(&nexus_home) {
         eprintln!("  ⚠ 无法保存目录重定向文件: {e}");
     }
-    let api_key = step_api_key(provider, &nexus_home)?;
+    let api_base_url = step_endpoint(provider)?;
 
     // ── 智能默认值（基于提供商预设）───────────────────────────────────
     let username = "Developer";
     let (model_id, model_name, context_window) = smart_default_model(provider);
-    let api_base_url = if provider.base_url.is_empty() {
-        "https://api.deepseek.com/v1"
-    } else {
-        provider.base_url
-    };
     let reasoning_effort = if provider.supports_reasoning {
         "high"
     } else {
@@ -229,14 +214,12 @@ pub fn run_setup_wizard() -> io::Result<PathBuf> {
     println!();
     print_separator("正在保存配置");
     let config_path = nexus_home.join("config.toml");
-    let has_api_key = !api_key.is_empty();
     write_config_toml(
         &config_path,
         username,
         model_id,
         model_name,
-        &api_key,
-        api_base_url,
+        &api_base_url,
         provider.api_backend,
         context_window,
         provider.supports_reasoning,
@@ -248,47 +231,11 @@ pub fn run_setup_wizard() -> io::Result<PathBuf> {
         std::env::set_var("NEXUS_HOME", nexus_home.as_os_str());
     }
 
-    // 设 NEXUS_API_KEY 环境变量
-    if has_api_key {
-        unsafe {
-            std::env::set_var("NEXUS_API_KEY", &api_key);
-        }
-    }
-
-    // 写入 auth.json
-    if has_api_key {
-        let auth_json_path = nexus_home.join("auth.json");
-        let now = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-        let ts = format_time_rfc3339(now);
-        let auth_entry = serde_json::json!({
-            "key": &api_key,
-            "auth_mode": "api_key",
-            "create_time": ts,
-            "user_id": username,
-            "email": serde_json::Value::Null,
-        });
-        let auth_map = serde_json::json!({
-            "xai::api_key": auth_entry,
-        });
-        if let Err(e) = std::fs::write(
-            &auth_json_path,
-            serde_json::to_string_pretty(&auth_map).unwrap_or_default(),
-        ) {
-            eprintln!("  ⚠ 无法写入 auth.json: {e}");
-        }
-    }
-
     println!("  ✓ 配置文件已保存到: {}", config_path.display());
     println!();
-    if has_api_key {
-        println!("  Nexus 已准备就绪，正在进入主界面……");
-    } else {
-        println!("  ⚠ 未设置 API Key，进入主界面后请按 F2 → 设置 → Keys 进行配置。");
-        println!("  （没有 API Key 将无法使用 AI 对话功能）");
-    }
+    println!("  ⚠ 尚未设置 API Key — 启动后先在欢迎页按 k 输入，");
+    println!("     或按 F2 → 设置 → Keys 分类中添加。");
+    println!("  （没有 API Key 将无法进入主界面 / 使用 AI 对话）");
     println!();
     println!("  💡 提示：高级设置（模型、API 端点、思考深度）可在 Settings (F2) 中配置。");
     println!();
@@ -305,15 +252,54 @@ pub fn run_setup_wizard() -> io::Result<PathBuf> {
 // ── 界面辅助 ────────────────────────────────────────────────────────────
 
 fn print_banner() {
+    // 框内总宽 50 列；中文/全角字符按 2 列计（见 display_width），运行时填充
+    // 空格，避免手工数空格导致右侧边框错位。
+    const INNER_WIDTH: usize = 50;
+    let banner_line = |content: &str| {
+        let content_width = display_width(content);
+        let padding = INNER_WIDTH - 2 * 2 - content_width;
+        format!("  ║  {content}{}  ║", " ".repeat(padding))
+    };
+    let border = "  ╔".to_string()
+        + &"═".repeat(INNER_WIDTH)
+        + "╗";
+    let bottom = "  ╚".to_string()
+        + &"═".repeat(INNER_WIDTH)
+        + "╝";
+    let empty = banner_line("");
     println!();
-    println!("  ╔══════════════════════════════════════════════════╗");
-    println!("  ║                                                  ║");
-    println!("  ║      N E X U S  —  你的 AI 编程搭档              ║");
-    println!("  ║                                                  ║");
-    println!("  ║   欢迎首次使用！只需 3 步即可完成初始设置。       ║");
-    println!("  ║      (高级设置后续可通过 F2 → Settings 修改)      ║");
-    println!("  ║                                                  ║");
-    println!("  ╚══════════════════════════════════════════════════╝");
+    println!("{border}");
+    println!("{empty}");
+    println!("{}", banner_line("N E X U S  —  你的 AI 编程搭档"));
+    println!("{empty}");
+    println!("{}", banner_line("欢迎首次使用！只需 3 步即可完成初始设置。"));
+    println!("{}", banner_line("(高级设置后续可通过 F2 → Settings 修改)"));
+    println!("{empty}");
+    println!("{bottom}");
+}
+
+/// 估算字符串的终端显示宽度：CJK 全角字符计 2 列，其余计 1 列。
+fn display_width(s: &str) -> usize {
+    s.chars()
+        .map(|c| {
+            let cp = c as u32;
+            if (0x1100..=0x115f).contains(&cp)
+                || (0x2e80..=0xa4cf).contains(&cp) && cp != 0x303f
+                || (0xac00..=0xd7a3).contains(&cp)
+                || (0xf900..=0xfaff).contains(&cp)
+                || (0xfe30..=0xfe4f).contains(&cp)
+                || (0xff00..=0xff60).contains(&cp)
+                || (0xffe0..=0xffe6).contains(&cp)
+                || (0x1f300..=0x1f64f).contains(&cp)
+                || c == '—'
+                || c == '→'
+            {
+                2
+            } else {
+                1
+            }
+        })
+        .sum()
 }
 
 fn print_separator(title: &str) {
@@ -372,30 +358,30 @@ fn step_provider() -> io::Result<usize> {
     }
 }
 
-// ── 步骤 4：API Key ──────────────────────────────────────────────────────
+// ── 步骤 2：API 端点（URL 在前）─────────────────────────────────────────
 
-fn step_api_key(provider: &ProviderPreset, nexus_home: &Path) -> io::Result<String> {
+fn step_endpoint(provider: &ProviderPreset) -> io::Result<String> {
     println!();
-    print_separator("第 2 步：API Key");
+    print_separator("第 2 步：API 端点");
     println!();
-    println!("  请输入你的 {} API Key。", provider.name);
-    if !provider.key_url.is_empty() {
-        println!("  获取地址: {}", provider.key_url);
+    println!("  Nexus 将通过下面的 Base URL 访问 {} 的 API。", provider.name);
+    let default_base_url = if provider.base_url.is_empty() {
+        "https://api.deepseek.com/v1"
+    } else {
+        provider.base_url
+    };
+    if provider.base_url.is_empty() {
+        println!("  自定义提供商：请填写任意 OpenAI 兼容 API 的 Base URL。");
+    } else {
+        println!("  {} 的默认端点: {}", provider.name, provider.base_url);
     }
-    println!("  环境变量: {}", provider.env_var_hint);
     println!();
-    println!("  (可以留空，后续在 Nexus 内通过 F2 → 设置 添加)");
+    println!("  (直接回车 = 使用默认端点)");
     println!();
-    let api_key = read_line("  请输入 API Key (输入时可见): ")?;
-    if api_key.is_empty() {
-        println!();
-        println!(
-            "  ⚠ 未输入 API Key。你可以在 {} 中手动添加，",
-            nexus_home.join("config.toml").display()
-        );
-        println!("    或进入 Nexus 后按 F2 → 设置 → API Key。");
-    }
-    Ok(api_key)
+    let base_url = read_line_with_default("  请输入 API 端点 (Base URL)", default_base_url)?;
+    let base_url = base_url.trim().trim_end_matches('/').to_string();
+    println!("  ✓ API 端点: {}", base_url);
+    Ok(base_url)
 }
 
 // ── 步骤 3：工具检查 ────────────────────────────────────────────────────
@@ -436,14 +422,12 @@ fn write_config_toml(
     username: &str,
     model_id: &str,
     model_name: &str,
-    api_key: &str,
     api_base_url: &str,
     api_backend: &str,
     context_window: u64,
     supports_reasoning: bool,
     reasoning_effort: &str,
 ) -> io::Result<()> {
-    let has_api_key = !api_key.is_empty();
     let has_reasoning = supports_reasoning && !reasoning_effort.is_empty();
 
     let mut content = String::new();
@@ -476,49 +460,14 @@ fn write_config_toml(
     if supports_reasoning {
         content.push_str("supports_reasoning_effort = true\n");
     }
-    if has_api_key {
-        content.push_str(&format!("api_key = \"{}\"\n", api_key));
-    }
 
     // [endpoints]
     content.push_str("\n[endpoints]\n");
     content.push_str(&format!("xai_api_base_url = \"{}\"\n", api_base_url));
-    if has_api_key {
-        content.push_str(&format!("management_api_key = \"{}\"\n", api_key));
-    }
 
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
     std::fs::write(path, content)?;
     Ok(())
-}
-
-// ── 时间格式化 ───────────────────────────────────────────────────────────
-
-fn format_time_rfc3339(unix_secs: u64) -> String {
-    let secs_per_day: u64 = 86400;
-    let days_since_epoch = unix_secs / secs_per_day;
-    let remaining_secs = unix_secs % secs_per_day;
-
-    let (year, month, day) = days_to_date(days_since_epoch);
-    let hours = remaining_secs / 3600;
-    let minutes = (remaining_secs % 3600) / 60;
-    let secs = remaining_secs % 60;
-
-    format!("{year:04}-{month:02}-{day:02}T{hours:02}:{minutes:02}:{secs:02}Z")
-}
-
-fn days_to_date(mut days: u64) -> (u64, u64, u64) {
-    days += 719468;
-    let era = days / 146097;
-    let doe = days - era * 146097;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let year = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = if month <= 2 { year + 1 } else { year };
-    (year, month, day)
 }

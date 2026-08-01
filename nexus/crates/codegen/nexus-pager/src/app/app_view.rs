@@ -1010,6 +1010,10 @@ pub struct AppView {
     pub auth_start_mode: AuthMode,
     /// Text buffer for manual auth token paste (loopback mode).
     pub(crate) auth_code_input: LineEditor,
+    /// Whether the blocked welcome screen (Pending auth) is in "Set API key"
+    /// entry mode: the next key events type into `auth_code_input` instead of
+    /// being treated as menu shortcuts, and Enter submits the key.
+    pub(crate) welcome_setting_api_key: bool,
     /// Monotonically increasing sequence number for auth requests.
     pub next_auth_request_seq: u64,
     /// Abort handle for the in-flight `PollAuthUrl` task (with its request_seq).
@@ -1372,6 +1376,7 @@ impl AppView {
             login_method_id: None,
             auth_start_mode: AuthMode::Pending,
             auth_code_input: LineEditor::default(),
+            welcome_setting_api_key: false,
             next_auth_request_seq: 1,
             auth_url_poll_handle: None,
             deferred_startup: Default::default(),
@@ -2233,6 +2238,7 @@ impl AppView {
                     cwd: &self.cwd,
                     mid_session_login: self.auth_return_view.is_some(),
                     auth_code_input: &mut self.auth_code_input,
+                    setting_api_key: &mut self.welcome_setting_api_key,
                     prompt: &mut self.welcome_prompt,
                     prompt_focused: &mut self.welcome_prompt_focused,
                     new_worktree_dialog: &mut self.new_worktree_dialog,
@@ -2818,6 +2824,8 @@ struct WelcomeInputCtx<'a> {
     /// login and return to the session rather than quitting the app.
     mid_session_login: bool,
     auth_code_input: &'a mut LineEditor,
+    /// Whether the welcome screen is in API-key entry mode (Pending auth).
+    setting_api_key: &'a mut bool,
     prompt: &'a mut PromptWidget,
     prompt_focused: &'a mut bool,
     new_worktree_dialog: &'a mut Option<NewWorktreeDialogState>,
@@ -3321,6 +3329,52 @@ fn handle_welcome_input(ev: &Event, ctx: &mut WelcomeInputCtx<'_>) -> InputOutco
                 }
             }
             AuthState::Pending { .. } => {
+                if *ctx.setting_api_key {
+                    // API-key entry mode: keys type into the editor, Enter
+                    // submits, Esc / Ctrl+C / Ctrl+D cancels back to the menu.
+                    if key!(Esc).matches(key)
+                        || key!('c', CONTROL).matches(key)
+                        || key!('d', CONTROL).matches(key)
+                    {
+                        *ctx.setting_api_key = false;
+                        ctx.auth_code_input.reset();
+                        return InputOutcome::Changed;
+                    }
+                    if key!(Enter).matches(key) {
+                        let trimmed = ctx.auth_code_input.text().trim().to_string();
+                        if !trimmed.is_empty() {
+                            return InputOutcome::Action(Action::SetApiKeyFromWelcome(trimmed));
+                        }
+                        return InputOutcome::Unchanged;
+                    }
+                    let outcome = if crate::input::key::is_paste_key(key) {
+                        let Some(text) = crate::clipboard::system_clipboard_get() else {
+                            return InputOutcome::Unchanged;
+                        };
+                        ctx.auth_code_input.insert_paste(&text)
+                    } else if key.modifiers.intersects(
+                        crossterm::event::KeyModifiers::CONTROL
+                            | crossterm::event::KeyModifiers::ALT
+                            | crossterm::event::KeyModifiers::SUPER,
+                    ) && !crate::input::key::is_altgr(key.modifiers)
+                    {
+                        return InputOutcome::Changed;
+                    } else {
+                        ctx.auth_code_input
+                            .handle_key_with_insert_policy(key, |character| !character.is_control())
+                    };
+                    return match outcome {
+                        LineEditOutcome::TextChanged
+                        | LineEditOutcome::CursorChanged
+                        | LineEditOutcome::HandledNoChange => InputOutcome::Changed,
+                        LineEditOutcome::Unhandled => InputOutcome::Unchanged,
+                    };
+                }
+                if key!('k').matches(key) || key!('K').matches(key) {
+                    *ctx.setting_api_key = true;
+                    ctx.auth_code_input.reset();
+                    return InputOutcome::Changed;
+                }
                 if key!('q').matches(key)
                     || key!('c', CONTROL).matches(key)
                     || key!('d', CONTROL).matches(key)
@@ -3408,6 +3462,10 @@ fn handle_welcome_input(ev: &Event, ctx: &mut WelcomeInputCtx<'_>) -> InputOutco
                 mode: AuthMode::Loopback,
                 ..
             } => {
+                let _ = ctx.auth_code_input.insert_paste(text);
+                return InputOutcome::Changed;
+            }
+            AuthState::Pending { .. } if *ctx.setting_api_key => {
                 let _ = ctx.auth_code_input.insert_paste(text);
                 return InputOutcome::Changed;
             }
@@ -3614,11 +3672,12 @@ fn handle_menu_nav(
     }
 }
 /// Dispatch an action for a welcome menu item when not yet authenticated.
-/// Menu layout: 0 = Login, 1 = Quit.
+/// Menu layout: 0 = Login, 1 = Set API key, 2 = Quit.
 fn dispatch_pending_menu_action(index: usize) -> InputOutcome {
     match index {
         0 => InputOutcome::Action(Action::Login),
-        1 => InputOutcome::Action(Action::Quit),
+        1 => InputOutcome::Action(Action::SetApiKeyFromWelcomeBegin),
+        2 => InputOutcome::Action(Action::Quit),
         _ => InputOutcome::Unchanged,
     }
 }
@@ -4020,6 +4079,7 @@ impl AppView {
                             login_label: self.login_label.as_deref(),
                             auth_code_input: self.auth_code_input.text(),
                             auth_code_cursor_byte: self.auth_code_input.cursor_byte(),
+                            setting_api_key: self.welcome_setting_api_key,
                             clipboard_delivery: self.auth_clipboard_delivery,
                             show_raw_url: self.auth_show_raw_url,
                             announcement: hero_announcement,
@@ -5389,6 +5449,7 @@ pub(crate) mod tests {
             login_method_id: None,
             auth_start_mode: AuthMode::Pending,
             auth_code_input: LineEditor::default(),
+            welcome_setting_api_key: false,
             next_auth_request_seq: 1,
             auth_url_poll_handle: None,
             deferred_startup: Default::default(),
@@ -8835,6 +8896,90 @@ pub(crate) mod tests {
             }
             other => panic!("expected SubmitAuthCode, got {:?}", other),
         }
+    }
+    fn pending_app() -> AppView {
+        let mut app = test_app();
+        app.auth_state = AuthState::Pending { error: None };
+        app
+    }
+    #[test]
+    fn pending_set_api_key_k_enters_entry_mode() {
+        let mut app = pending_app();
+        let outcome = app.handle_input(&key_event(KeyCode::Char('k'), KeyModifiers::NONE));
+        assert!(matches!(outcome, InputOutcome::Changed));
+        assert!(app.welcome_setting_api_key);
+        assert!(app.auth_code_input.text().is_empty());
+    }
+    #[test]
+    fn pending_set_api_key_typing_edits_editor_instead_of_shortcuts() {
+        let mut app = pending_app();
+        app.welcome_setting_api_key = true;
+        // 'k' (the mode toggle) and 'q' (the quit key) must type into the editor.
+        for ch in ['k', 'q'] {
+            let outcome = app.handle_input(&key_event(KeyCode::Char(ch), KeyModifiers::NONE));
+            assert!(matches!(outcome, InputOutcome::Changed), "typing {ch:?} must edit");
+            assert!(app.welcome_setting_api_key, "must stay in entry mode");
+        }
+        assert_eq!(app.auth_code_input.text(), "kq");
+    }
+    #[test]
+    fn pending_set_api_key_enter_submits_trimmed() {
+        let mut app = pending_app();
+        app.welcome_setting_api_key = true;
+        app.auth_code_input.set_text("  sk-test-123  ");
+        let outcome = app.handle_input(&key_event(KeyCode::Enter, KeyModifiers::NONE));
+        match outcome {
+            InputOutcome::Action(Action::SetApiKeyFromWelcome(key)) => {
+                assert_eq!(key, "sk-test-123");
+            }
+            other => panic!("expected SetApiKeyFromWelcome, got {:?}", other),
+        }
+    }
+    #[test]
+    fn pending_set_api_key_enter_empty_is_noop() {
+        let mut app = pending_app();
+        app.welcome_setting_api_key = true;
+        app.auth_code_input.set_text("   ");
+        let outcome = app.handle_input(&key_event(KeyCode::Enter, KeyModifiers::NONE));
+        assert!(matches!(outcome, InputOutcome::Unchanged));
+        assert!(app.welcome_setting_api_key);
+    }
+    #[test]
+    fn pending_set_api_key_esc_cancels_entry_mode() {
+        let mut app = pending_app();
+        app.welcome_setting_api_key = true;
+        app.auth_code_input.set_text("partial");
+        let outcome = app.handle_input(&key_event(KeyCode::Esc, KeyModifiers::NONE));
+        assert!(matches!(outcome, InputOutcome::Changed));
+        assert!(!app.welcome_setting_api_key);
+        assert!(app.auth_code_input.text().is_empty());
+    }
+    #[test]
+    fn pending_set_api_key_ctrl_c_cancels_instead_of_quitting() {
+        let mut app = pending_app();
+        app.welcome_setting_api_key = true;
+        let outcome = app.handle_input(&key_event(KeyCode::Char('c'), KeyModifiers::CONTROL));
+        assert!(matches!(outcome, InputOutcome::Changed));
+        assert!(!app.welcome_setting_api_key);
+    }
+    #[test]
+    fn pending_set_api_key_paste_appends_text() {
+        let mut app = pending_app();
+        app.welcome_setting_api_key = true;
+        app.auth_code_input.set_text("sk-");
+        let outcome = app.handle_input(&Event::Paste("abcd".to_string()));
+        assert!(matches!(outcome, InputOutcome::Changed));
+        assert_eq!(app.auth_code_input.text(), "sk-abcd");
+    }
+    #[test]
+    fn pending_q_still_quits_when_not_in_key_entry_mode() {
+        let mut app = pending_app();
+        let outcome = app.handle_input(&key_event(KeyCode::Char('q'), KeyModifiers::NONE));
+        // QuitConfirmed is normalized to Quit by the AppView wrapper.
+        assert!(
+            matches!(outcome, InputOutcome::Action(Action::Quit)),
+            "expected Quit, got {outcome:?}"
+        );
     }
     #[test]
     fn moved_with_button_held_promotes_pending_scrollback_drag() {

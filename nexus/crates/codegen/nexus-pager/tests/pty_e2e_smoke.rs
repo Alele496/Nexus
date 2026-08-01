@@ -39,6 +39,8 @@ mod waiting_for_model_label;
 mod welcome_screen;
 #[path = "pty_e2e/welcome_screen_braille_logo_renders_correctly.rs"]
 mod welcome_screen_braille_logo_renders_correctly;
+#[path = "pty_e2e/welcome_api_key_unlock.rs"]
+mod welcome_api_key_unlock;
 #[path = "pty_e2e/wrap_child_killed_with_latched_modes_restores_terminal.rs"]
 mod wrap_child_killed_with_latched_modes_restores_terminal;
 #[path = "pty_e2e/wrap_clean_exit_stays_byte_transparent.rs"]

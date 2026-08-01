@@ -501,6 +501,13 @@ impl acp::Agent for MvpAgent {
                                 Some(serde_json::json!({ "error" : e.to_string() })),
                             );
                         }
+                    } else if let Some(api_key) = crate::auth::read_api_key(
+                        &crate::util::nexus_home::nexus_home(),
+                    ) {
+                        // auth.json key (welcome-screen `k` flow) — mirror the
+                        // initialize() load so an explicit authenticate can
+                        // succeed for a key stored after startup.
+                        sampling_config.api_key = Some(api_key);
                     } else if !self
                         .models_manager
                         .models()
