@@ -1,4 +1,4 @@
-# Grok
+# Nexus
 
 A terminal-based AI coding assistant and agentic harness.
 
@@ -11,24 +11,24 @@ Use it interactively as a TUI, or integrate it into your own apps via headless m
 curl -fsSL https://x.ai/cli/install.sh | bash
 
 # Interactive TUI
-sage
+nexus
 
 # Headless (for scripts/automation)
-sage -p "Explain this codebase"
+nexus -p "Explain this codebase"
 
 # Agent mode (for IDE/app integration)
-sage agent stdio
+nexus agent stdio
 ```
 
 ## Contents
 
 - [Installation](#installation)
 - [Authentication](#authentication) — browser login, API key, OIDC, external auth providers
-- **Using Grok**
+- **Using Nexus**
   - [Interactive TUI](#interactive-tui) — shortcuts, slash commands, file references
   - [Headless Mode](#headless-mode) — scripting, CI/CD, output formats
   - [Agent Mode](#agent-mode) — stdio, ACP integration
-  - [SSH Passthrough](#ssh-passthrough-sage-ssh) — Apple Terminal clipboard support
+  - [SSH Passthrough](#ssh-passthrough-nexus-ssh) — Apple Terminal clipboard support
 - **Configuration**
   - [Config File](#configuration) — general settings, telemetry, LSP, enterprise deployment
   - [Custom Models](#custom-models) — BYOK, Ollama, OpenAI, custom endpoints
@@ -44,14 +44,14 @@ sage agent stdio
   - [Memory](#memory) — cross-session knowledge persistence
   - [Sandbox](#sandbox) — OS-level filesystem/network isolation
 - **Reference**
-  - [Introspection (`sage inspect`)](#introspection)
+  - [Introspection (`nexus inspect`)](#introspection)
   - [Claude Code Compatibility](#claude-code-compatibility)
   - [Built-in Tools](#built-in-tools)
   - [Session Persistence](#session-persistence) — storage layout, resume
   - [File Locations](#file-locations)
   - [Environment Variables](#environment-variables)
   - [Troubleshooting](#troubleshooting)
-- [Building with Grok](#building-with-sage) — headless API, ACP SDK integration
+- [Building with Nexus](#building-with-nexus) — headless API, ACP SDK integration
 
 ---
 
@@ -68,13 +68,13 @@ curl -fsSL https://x.ai/cli/install.sh | bash -s 0.1.42
 Verify installation:
 
 ```bash
-sage --version
+nexus --version
 ```
 
 Update to the latest version:
 
 ```bash
-sage update
+nexus update
 ```
 
 ---
@@ -83,20 +83,20 @@ sage update
 
 ### Browser Login (Default)
 
-On first launch, Grok opens your browser to authenticate with sage.local:
+On first launch, Nexus opens your browser to authenticate with sage.local:
 
 ```bash
-sage
+nexus
 ```
 
-Credentials are stored in `~/.sage/auth.json` and persist across sessions. Tokens expire after 7 days; Grok will prompt you to re-authenticate when needed.
+Credentials are stored in `~/.nexus/auth.json` and persist across sessions. Tokens expire after 7 days; Nexus will prompt you to re-authenticate when needed.
 
 ### Re-authenticate
 
 To switch accounts or fix authentication issues:
 
 ```bash
-sage login
+nexus login
 ```
 
 ### API Key
@@ -104,8 +104,8 @@ sage login
 For CI/CD, automation, or environments without browser access, use an API key from [console.x.ai](https://console.x.ai):
 
 ```bash
-export XAI_API_KEY="xai-..."
-sage
+export NEXUS_API_KEY="xai-..."
+nexus
 ```
 
 The API key takes precedence over browser credentials.
@@ -122,24 +122,24 @@ Authenticate developers via your own Identity Provider (Okta, Azure AD, Auth0) i
 **2. Configure the CLI** (config file or env vars):
 
 ```toml
-# ~/.sage/config.toml
-[grok_com_config.oidc]
+# ~/.nexus/config.toml
+[nexus_com_config.oidc]
 issuer = "https://acme.okta.com"
 client_id = "0oa1b2c3d4e5f6g7h8i9"
 ```
 
 ```bash
 # Or via environment variables
-export SAGE_OIDC_ISSUER="https://acme.okta.com"
-export SAGE_OIDC_CLIENT_ID="0oa1b2c3d4e5f6g7h8i9"
+export NEXUS_OIDC_ISSUER="https://acme.okta.com"
+export NEXUS_OIDC_CLIENT_ID="0oa1b2c3d4e5f6g7h8i9"
 ```
 
 Customers typically also override the API endpoint to point at their own proxy:
 ```bash
-export SAGE_CLI_CHAT_PROXY_BASE_URL="https://sage-proxy.acme.com/v1"
+export NEXUS_CLI_CHAT_PROXY_BASE_URL="https://sage-proxy.acme.com/v1"
 ```
 
-**3. Run `sage`.** The CLI discovers endpoints via `{issuer}/.well-known/openid-configuration`, opens the IdP login page, and stores tokens in `~/.sage/auth.json`. The OIDC token is sent as `Authorization: Bearer` to the configured proxy. Tokens auto-refresh silently via the stored `refresh_token`.
+**3. Run `nexus`.** The CLI discovers endpoints via `{issuer}/.well-known/openid-configuration`, opens the IdP login page, and stores tokens in `~/.nexus/auth.json`. The OIDC token is sent as `Authorization: Bearer` to the configured proxy. Tokens auto-refresh silently via the stored `refresh_token`.
 
 **Optional fields:**
 
@@ -152,13 +152,13 @@ export SAGE_CLI_CHAT_PROXY_BASE_URL="https://sage-proxy.acme.com/v1"
 
 For environments where browser-based login isn't possible (sandboxed VMs, CI runners, air-gapped networks), delegate authentication to an external binary or script. This is the recommended approach for enterprise deployments where your company runs its own auth infrastructure (SSO, device code flows, certificate auth, etc.).
 
-Grok is provider-agnostic — it doesn't know or care how your binary authenticates. It just runs the command, reads a token from stdout, and stores it. Your binary is a black box that handles the entire auth flow.
+Nexus is provider-agnostic — it doesn't know or care how your binary authenticates. It just runs the command, reads a token from stdout, and stores it. Your binary is a black box that handles the entire auth flow.
 
 #### How It Works
 
 ```
 ┌──────────────┐     sh -c     ┌────────────────────────┐
-│     Grok     │──────────────▶│  your auth binary      │
+│     Nexus     │──────────────▶│  your auth binary      │
 │              │               │                        │
 │  reads       │◀── stdout ────│  prints token          │
 │  auth.json   │               │                        │
@@ -166,11 +166,11 @@ Grok is provider-agnostic — it doesn't know or care how your binary authentica
 └──────────────┘               └────────────────────────┘
 ```
 
-1. Grok runs your command via `sh -c "<command>"`
+1. Nexus runs your command via `sh -c "<command>"`
 2. Your binary does whatever auth flow it needs (SSO login, device code, cert exchange, etc.)
 3. **stderr** → displayed directly to the user (use for login URLs, status messages, progress)
-4. **stdout** → captured by Grok and saved to `~/.sage/auth.json` as the access token
-5. exit 0 → success; exit non-zero → Grok falls through to interactive login
+4. **stdout** → captured by Nexus and saved to `~/.nexus/auth.json` as the access token
+5. exit 0 → success; exit non-zero → Nexus falls through to interactive login
 
 #### The stdout / stderr Contract
 
@@ -178,10 +178,10 @@ This is the most important thing to get right:
 
 | Stream | What to print | Who sees it |
 |--------|---------------|-------------|
-| **stdout** | The token — nothing else | Grok (parsed and stored in `auth.json`) |
+| **stdout** | The token — nothing else | Nexus (parsed and stored in `auth.json`) |
 | **stderr** | Login URLs, status messages, errors, progress | The user (displayed in their terminal) |
 
-**Do not print anything to stdout except the token.** No progress messages, no debug output, no "Login successful!" text. Grok reads stdout verbatim and tries to parse it as a token. Any extra text will break parsing.
+**Do not print anything to stdout except the token.** No progress messages, no debug output, no "Login successful!" text. Nexus reads stdout verbatim and tries to parse it as a token. Any extra text will break parsing.
 
 #### stdout Token Format
 
@@ -197,7 +197,7 @@ eyJhbGciOiJSUzI1NiIs...
 {"access_token": "eyJhbGciOi...", "refresh_token": "ref-tok", "expires_in": 3600}
 ```
 
-Use JSON if your tokens expire and you want Grok to automatically re-run the binary before expiry. The `expires_in` field (seconds until expiry) tells Grok when to proactively refresh. Without it, Grok assumes tokens last 30 days.
+Use JSON if your tokens expire and you want Nexus to automatically re-run the binary before expiry. The `expires_in` field (seconds until expiry) tells Nexus when to proactively refresh. Without it, Nexus assumes tokens last 30 days.
 
 #### Minimal Example
 
@@ -209,14 +209,14 @@ echo "Visit: https://sso.acme.com/device-login?code=ABCD-1234" >&2
 
 # ... do the auth flow, get a token ...
 
-# Print ONLY the token to stdout (Grok captures this)
+# Print ONLY the token to stdout (Nexus captures this)
 echo "eyJhbGciOiJSUzI1NiIs..."
 ```
 
 #### Configuration
 
 ```toml
-# ~/.sage/config.toml
+# ~/.nexus/config.toml
 [auth]
 auth_provider_command = "/usr/local/bin/my-auth-provider"
 auth_provider_label = "Acme Corp"   # optional — customizes the TUI login button
@@ -225,16 +225,16 @@ auth_token_ttl = 3600               # optional — token lifetime in seconds (se
 
 ```bash
 # Or via environment variables
-export SAGE_AUTH_PROVIDER_COMMAND="/usr/local/bin/my-auth-provider"
-export SAGE_AUTH_PROVIDER_LABEL="Acme Corp"   # optional
-export SAGE_AUTH_TOKEN_TTL=3600               # optional
+export NEXUS_AUTH_PROVIDER_COMMAND="/usr/local/bin/my-auth-provider"
+export NEXUS_AUTH_PROVIDER_LABEL="Acme Corp"   # optional
+export NEXUS_AUTH_TOKEN_TTL=3600               # optional
 ```
 
-If your binary outputs a bare token string (not JSON with `expires_in`), set `auth_token_ttl` to the token's expected lifetime in seconds. Without it, Grok cannot detect expiry proactively and will only refresh after a 401.
+If your binary outputs a bare token string (not JSON with `expires_in`), set `auth_token_ttl` to the token's expected lifetime in seconds. Without it, Nexus cannot detect expiry proactively and will only refresh after a 401.
 
 The command is run via `sh -c`, so it can be a binary path, a shell script, or a pipeline.
 
-When `auth_provider_label` is set, the TUI welcome screen shows **"Login with Acme Corp"** instead of "Login with sage.local". In headless mode (`sage -p`), the label has no effect — stderr from your binary is printed directly to the terminal.
+When `auth_provider_label` is set, the TUI welcome screen shows **"Login with Acme Corp"** instead of "Login with sage.local". In headless mode (`nexus -p`), the label has no effect — stderr from your binary is printed directly to the terminal.
 
 > **Enterprise setup:** For a complete enterprise `config.toml` combining external auth, corporate proxy, and telemetry settings, see [Enterprise Deployment](#enterprise-deployment) in the Configuration section.
 
@@ -266,11 +266,11 @@ echo "{\"access_token\": \"$TOKEN\", \"expires_in\": 3600}"
 
 #### Example: Auth Binary with Refresh Support
 
-When Grok needs to refresh an expired token, it re-runs your binary with `SAGE_AUTH_EXPIRED=1` set in the environment. Your binary can use this to take a faster silent-refresh path:
+When Nexus needs to refresh an expired token, it re-runs your binary with `NEXUS_AUTH_EXPIRED=1` set in the environment. Your binary can use this to take a faster silent-refresh path:
 
 ```bash
 #!/bin/sh
-if [ "$SAGE_AUTH_EXPIRED" = "1" ]; then
+if [ "$NEXUS_AUTH_EXPIRED" = "1" ]; then
     # Token expired — attempt silent refresh (no user interaction)
     echo "Refreshing token..." >&2
     TOKEN=$(my-company-auth --refresh --silent)
@@ -288,31 +288,31 @@ fi
 echo "{\"access_token\": \"$TOKEN\", \"expires_in\": 3600}"
 ```
 
-`SAGE_AUTH_EXPIRED` is optional — if your binary ignores it, Grok still works. It just runs the same flow for both login and refresh.
+`NEXUS_AUTH_EXPIRED` is optional — if your binary ignores it, Nexus still works. It just runs the same flow for both login and refresh.
 
 ### Automatic Credential Refresh
 
-Grok supports automatic credential refresh for external auth providers and OIDC. When Grok detects that your token is expired (either locally based on `expires_in`, or when the server returns a 401), it automatically re-runs your `auth_provider_command` to obtain new credentials before retrying the request.
+Nexus supports automatic credential refresh for external auth providers and OIDC. When Nexus detects that your token is expired (either locally based on `expires_in`, or when the server returns a 401), it automatically re-runs your `auth_provider_command` to obtain new credentials before retrying the request.
 
-This is transparent — you don't need to do anything. Grok handles it in the background during your session.
+This is transparent — you don't need to do anything. Nexus handles it in the background during your session.
 
 **When does refresh happen?**
 
-- **Before expiry:** If your binary returned `expires_in` in its JSON output, or you set `auth_token_ttl` in config, Grok re-runs the binary ~5 minutes before the token expires, so you never see an auth error.
-- **On auth error:** If the server rejects a request with 401/403 (e.g. token was revoked or expired), Grok re-runs the binary and retries the request once.
-- **OIDC:** If you're using OIDC and have a `refresh_token`, Grok silently refreshes via your IdP without re-opening the browser.
+- **Before expiry:** If your binary returned `expires_in` in its JSON output, or you set `auth_token_ttl` in config, Nexus re-runs the binary ~5 minutes before the token expires, so you never see an auth error.
+- **On auth error:** If the server rejects a request with 401/403 (e.g. token was revoked or expired), Nexus re-runs the binary and retries the request once.
+- **OIDC:** If you're using OIDC and have a `refresh_token`, Nexus silently refreshes via your IdP without re-opening the browser.
 
 **Tuning the refresh buffer:**
 
 ```bash
-# Grok refreshes tokens 5 minutes before expiry by default.
+# Nexus refreshes tokens 5 minutes before expiry by default.
 # Set to 0 to only refresh on 401. Set higher for very short-lived tokens.
-export SAGE_AUTH_EARLY_INVALIDATION_SECS=300
+export NEXUS_AUTH_EARLY_INVALIDATION_SECS=300
 ```
 
 **Keep in mind:**
-- When using `auth_provider_command`, you don't need to run `sage login` before starting — Grok runs your binary automatically on first launch. You _can_ run `sage login` to explicitly hydrate `auth.json` ahead of time if you prefer.
-- If both OIDC and `auth_provider_command` are configured: at **login** time, Grok tries OIDC silent refresh first (if a `refresh_token` exists), then the external binary, then browser-based login. During a **session**, whichever method is configured is used exclusively — if `auth_provider_command` is set it handles all mid-session refreshes; otherwise OIDC silent refresh is used.
+- When using `auth_provider_command`, you don't need to run `nexus login` before starting — Nexus runs your binary automatically on first launch. You _can_ run `nexus login` to explicitly hydrate `auth.json` ahead of time if you prefer.
+- If both OIDC and `auth_provider_command` are configured: at **login** time, Nexus tries OIDC silent refresh first (if a `refresh_token` exists), then the external binary, then browser-based login. During a **session**, whichever method is configured is used exclusively — if `auth_provider_command` is set it handles all mid-session refreshes; otherwise OIDC silent refresh is used.
 - Your binary's stderr output is displayed to the user but interactive stdin is not supported. This works well for browser-based SSO flows where the binary displays a URL and you complete authentication in the browser.
 
 #### Troubleshooting Auth
@@ -320,8 +320,8 @@ export SAGE_AUTH_EARLY_INVALIDATION_SECS=300
 Enable debug logging to trace the auth flow:
 
 ```bash
-sage --debug-file /tmp/sage-auth.log -p "hello"
-tail -f /tmp/sage-auth.log
+nexus --debug-file /tmp/nexus-auth.log -p "hello"
+tail -f /tmp/nexus-auth.log
 ```
 
 Common log messages:
@@ -336,14 +336,14 @@ Common log messages:
 
 ### Using auth.json for API Access
 
-If you've authenticated with `sage login`, you can use the stored credentials to call the CLI chat proxy directly via curl. The proxy requires specific headers that mirror what the sage CLI sends internally:
+If you've authenticated with `nexus login`, you can use the stored credentials to call the CLI chat proxy directly via curl. The proxy requires specific headers that mirror what the nexus CLI sends internally:
 
 ```bash
 curl -s -N -X POST "https://cli-chat-proxy.sage.local/v1/chat/completions" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $(jq -r '."https://accounts.x.ai/sign-in".key' ~/.sage/auth.json)" \
-  -H "X-XAI-Token-Auth: xai-sage-cli" \
-  -H "x-sage-model-override: sage-build" \
+  -H "Authorization: Bearer $(jq -r '."https://accounts.x.ai/sign-in".key' ~/.nexus/auth.json)" \
+  -H "X-XAI-Token-Auth: xai-nexus-cli" \
+  -H "x-nexus-model-override: sage-build" \
   -d '{
     "model": "sage-build",
     "messages": [{"role": "user", "content": "Hello!"}],
@@ -355,9 +355,9 @@ curl -s -N -X POST "https://cli-chat-proxy.sage.local/v1/chat/completions" \
 
 | Header                           | Required | Purpose                                                                                                                                                                                   |
 | -------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Authorization: Bearer <token>`  | Yes      | Session token from `~/.sage/auth.json` (set by `sage login`)                                                                                                                              |
-| `X-XAI-Token-Auth: xai-sage-cli` | Yes      | Tells the auth middleware to validate as a CLI session token                                                                                                                              |
-| `x-sage-model-override: <model>` | Yes\*    | The proxy uses this header (not the JSON body) to route to the correct backend. \*Can be omitted for `sage-build` which is on the default route, but always safe to include. |
+| `Authorization: Bearer <token>`  | Yes      | Session token from `~/.nexus/auth.json` (set by `nexus login`)                                                                                                                              |
+| `X-XAI-Token-Auth: xai-nexus-cli` | Yes      | Tells the auth middleware to validate as a CLI session token                                                                                                                              |
+| `x-nexus-model-override: <model>` | Yes\*    | The proxy uses this header (not the JSON body) to route to the correct backend. \*Can be omitted for `sage-build` which is on the default route, but always safe to include. |
 
 **Streaming vs non-streaming:**
 
@@ -367,7 +367,7 @@ Most models behind the proxy only support streaming. Always use `"stream": true`
 | --------------------- | -------------- | ------------ |
 | `sage-build`    | ✅ Supported   | ✅ Supported |
 
-> **Note:** `auth.json` tokens expire after 7 days. Run `sage login` to refresh.
+> **Note:** `auth.json` tokens expire after 7 days. Run `nexus login` to refresh.
 
 ---
 
@@ -378,7 +378,7 @@ The TUI (Terminal User Interface) provides a full interactive coding environment
 ### Launch
 
 ```bash
-sage [OPTIONS]
+nexus [OPTIONS]
 ```
 
 ### Options
@@ -404,16 +404,16 @@ sage [OPTIONS]
 
 ```bash
 # Start in a specific project
-sage --cwd ~/projects/my-app
+nexus --cwd ~/projects/my-app
 
 # Start with an initial task
-sage --prompt "Review this codebase and suggest improvements"
+nexus --prompt "Review this codebase and suggest improvements"
 
 # Add project-specific rules
-sage --rules "Always use TypeScript. Prefer functional components."
+nexus --rules "Always use TypeScript. Prefer functional components."
 
 # Auto-approve mode for trusted tasks
-sage --always-approve --prompt "Format all files"
+nexus --always-approve --prompt "Format all files"
 ```
 
 ### Keyboard Shortcuts
@@ -499,7 +499,7 @@ The `!` modifier allows you to attach any file in the project regardless of igno
 
 ## Headless Mode
 
-Run Grok non-interactively from the command line. Use headless mode when you need to:
+Run Nexus non-interactively from the command line. Use headless mode when you need to:
 
 - **Automate tasks** — CI/CD pipelines, pre-commit hooks, cron jobs
 - **Script workflows** — Batch process files, chain with other tools
@@ -511,7 +511,7 @@ Headless mode accepts a single prompt, executes it with full tool access, and re
 ### Basic Usage
 
 ```bash
-sage -p "Your prompt here"
+nexus -p "Your prompt here"
 ```
 
 ### Options
@@ -555,13 +555,13 @@ Tool names correspond to the internal tool IDs shown below. For quick reference:
 
 ```bash
 # Only allow read-only tools
-sage -p "Explain this codebase" --tools "read_file,grep,list_dir"
+nexus -p "Explain this codebase" --tools "read_file,grep,list_dir"
 
 # Remove web access and file editing
-sage -p "Review this code" --disallowed-tools "web_search,web_fetch,search_replace"
+nexus -p "Review this code" --disallowed-tools "web_search,web_fetch,search_replace"
 
 # Remove shell access
-sage -p "Review this code" --disallowed-tools "run_terminal_cmd"
+nexus -p "Review this code" --disallowed-tools "run_terminal_cmd"
 ```
 
 `--disallowed-tools` also supports special `Agent` entries to control subagent spawning:
@@ -574,10 +574,10 @@ sage -p "Review this code" --disallowed-tools "run_terminal_cmd"
 
 ```bash
 # Allow tools but prevent the agent from spawning any subagents
-sage -p "Fix this bug" --disallowed-tools "Agent"
+nexus -p "Fix this bug" --disallowed-tools "Agent"
 
 # Block only the explore subagent
-sage -p "Refactor this module" --disallowed-tools "Agent(explore)"
+nexus -p "Refactor this module" --disallowed-tools "Agent(explore)"
 ```
 
 When `--tools` is set, only the listed tools are available and default tool injection is disabled. When both flags are present, `--disallowed-tools` runs after `--tools` — use this to start from an allowlist and then remove specific entries.
@@ -604,19 +604,19 @@ Glob patterns support `*` (single-level wildcard) and `**` (recursive). A bare p
 
 ```bash
 # Deny all shell commands matching "rm*"
-sage -p "Clean up this project" --deny "Bash(rm*)"
+nexus -p "Clean up this project" --deny "Bash(rm*)"
 
 # Allow npm commands, deny everything else dangerous
-sage -p "Set up the project" --allow "Bash(npm*)" --deny "Bash(sudo*)"
+nexus -p "Set up the project" --allow "Bash(npm*)" --deny "Bash(sudo*)"
 
 # Deny edits outside src/
-sage -p "Refactor the code" --deny "Edit(/etc/**)"
+nexus -p "Refactor the code" --deny "Edit(/etc/**)"
 
 # Allow all bash commands (auto-approve without prompting)
-sage -p "Build the project" --allow "Bash"
+nexus -p "Build the project" --allow "Bash"
 
 # Combine: allow fetching docs sites, deny other URLs
-sage --allow "WebFetch(domain:docs.rs)" --deny "WebFetch(*)"
+nexus --allow "WebFetch(domain:docs.rs)" --deny "WebFetch(*)"
 ```
 
 `--allow` and `--deny` can be repeated to add multiple rules. Deny rules take precedence over allow rules. These flags work in both TUI and headless mode.
@@ -625,26 +625,26 @@ sage --allow "WebFetch(domain:docs.rs)" --deny "WebFetch(*)"
 
 ```bash
 # Simple question
-sage -p "What does this project do?"
+nexus -p "What does this project do?"
 
 # Use a specific model
-sage -p "Optimize this function" -m sage-build
+nexus -p "Optimize this function" -m sage-build
 
 # Get JSON output for parsing
-sage -p "List all TODO comments in the codebase" --output-format json
+nexus -p "List all TODO comments in the codebase" --output-format json
 
 # Streaming JSON for real-time processing
-sage -p "Explain the architecture" --output-format streaming-json
+nexus -p "Explain the architecture" --output-format streaming-json
 
 # Multi-turn conversation (session ID is returned in JSON output)
-sage -p "Remember: the secret number is 42" --output-format json
-sage -p "What's the secret number?" --resume <sessionId>
+nexus -p "Remember: the secret number is 42" --output-format json
+nexus -p "What's the secret number?" --resume <sessionId>
 
 # Resume most recent session
-sage -p "Continue where we left off" -c
+nexus -p "Continue where we left off" -c
 
 # Run in a different directory
-sage -p "Run the tests" --cwd ~/projects/other-app --always-approve
+nexus -p "Run the tests" --cwd ~/projects/other-app --always-approve
 ```
 
 ### Scripting with Named Sessions
@@ -653,10 +653,10 @@ For CI and automation, `-s/--session-id` lets you choose your own session ID:
 
 ```bash
 # Start a session namespaced to a PR
-sage -p "Review the changes in this PR" -s "critique-myrepo-pr-123"
+nexus -p "Review the changes in this PR" -s "critique-myrepo-pr-123"
 
 # Continue in the same session
-sage -p "Now check for security issues" -s "critique-myrepo-pr-123"
+nexus -p "Now check for security issues" -s "critique-myrepo-pr-123"
 ```
 
 If the session exists it picks up where you left off; if not, a new one is created.
@@ -697,25 +697,25 @@ Here's a summary of the codebase...
 
 ```bash
 # Pipe output to a file
-sage -p "Generate a README" > README.md
+nexus -p "Generate a README" > README.md
 
 # Parse JSON output with jq
-sage -p "List files" --output-format json | jq -r '.text'
+nexus -p "List files" --output-format json | jq -r '.text'
 
 # CI/CD: automated code review
-sage -p "Review changes for bugs and security issues." \
+nexus -p "Review changes for bugs and security issues." \
   --output-format json --always-approve | jq -r '.text' > review.md
 
 # Pipeline: chain with other tools
-git diff --staged | sage -p "Write a concise commit message for these changes"
+git diff --staged | nexus -p "Write a concise commit message for these changes"
 
 # Batch: process multiple files
 for file in src/*.js; do
-  sage -p "Migrate $file from CommonJS to ES modules." --always-approve
+  nexus -p "Migrate $file from CommonJS to ES modules." --always-approve
 done
 
 # Pre-commit hook
-sage -p "Review staged changes for obvious bugs. Reply OK if fine, or list issues." \
+nexus -p "Review staged changes for obvious bugs. Reply OK if fine, or list issues." \
   --always-approve --output-format json | jq -r '.text' | grep -q "^OK" || exit 1
 ```
 
@@ -725,14 +725,14 @@ sage -p "Review staged changes for obvious bugs. Reply OK if fine, or list issue
 
 ## Agent Mode
 
-Run Grok as an ACP (Agent Client Protocol) agent for integration with IDEs, editors, and custom tooling.
+Run Nexus as an ACP (Agent Client Protocol) agent for integration with IDEs, editors, and custom tooling.
 
 ### stdio Transport
 
 For direct integration with ACP clients:
 
 ```bash
-sage agent stdio
+nexus agent stdio
 ```
 
 Communication happens via JSON-RPC over stdin/stdout. This mode is used by:
@@ -755,7 +755,7 @@ Communication happens via JSON-RPC over stdin/stdout. This mode is used by:
 To expose the agent over the internet (instead of local network), run a WebSocket relay server and have the agent connect to it:
 
 ```bash
-sage agent headless --sage-ws-url wss://your-relay.example.com/ws
+nexus agent headless --sage-ws-url wss://your-relay.example.com/ws
 ```
 
 The agent connects OUT to your relay, and your web clients connect to the same relay. Useful for building web UIs where browsers can't spawn local processes.
@@ -764,31 +764,31 @@ The agent connects OUT to your relay, and your web clients connect to the same r
 
 ---
 
-## SSH Passthrough (`sage ssh`)
+## SSH Passthrough (`nexus ssh`)
 
-Use `sage ssh` instead of plain `ssh` when connecting to remote hosts in terminals that lack native support (e.g. Apple Terminal) for local OSC 52 clipboard interception.
+Use `nexus ssh` instead of plain `ssh` when connecting to remote hosts in terminals that lack native support (e.g. Apple Terminal) for local OSC 52 clipboard interception.
 
 ```bash
 # Basic usage (same args as ssh)
-sage ssh user@host
+nexus ssh user@host
 
 # With SSH flags
-sage ssh -t user@host
-sage ssh -L 8080:localhost:8080 user@host
+nexus ssh -t user@host
+nexus ssh -L 8080:localhost:8080 user@host
 
 # With remote command
-sage ssh user@host -- tmux attach
+nexus ssh user@host -- tmux attach
 ```
 
-On macOS, if the terminal doesn't natively handle OSC 52, `sage ssh` runs SSH inside a local PTY that intercepts clipboard sequences and writes them to `pbcopy`. Both plain OSC 52 and tmux DCS passthrough are handled. Terminals with native OSC 52 (iTerm2, Ghostty, Kitty, WezTerm, Alacritty) get a plain `ssh` exec with no wrapper.
+On macOS, if the terminal doesn't natively handle OSC 52, `nexus ssh` runs SSH inside a local PTY that intercepts clipboard sequences and writes them to `pbcopy`. Both plain OSC 52 and tmux DCS passthrough are handled. Terminals with native OSC 52 (iTerm2, Ghostty, Kitty, WezTerm, Alacritty) get a plain `ssh` exec with no wrapper.
 
 This runs entirely locally.
 
 ---
 
-## Building with Grok
+## Building with Nexus
 
-Grok can be used as an OpenAI-compatible chat completion backend. Choose between two integration modes:
+Nexus can be used as an OpenAI-compatible chat completion backend. Choose between two integration modes:
 
 | Mode         | Use Case                                                           |
 | ------------ | ------------------------------------------------------------------ |
@@ -799,7 +799,7 @@ Grok can be used as an OpenAI-compatible chat completion backend. Choose between
 
 ### Headless Mode (Simple Chat Completion)
 
-Use headless mode for simple integrations. Spawns `sage -p` and parses JSON output.
+Use headless mode for simple integrations. Spawns `nexus -p` and parses JSON output.
 
 #### Python - Headless
 
@@ -808,7 +808,7 @@ import asyncio
 import json
 import os
 
-class GrokChat:
+class NexusChat:
     """Simple OpenAI-compatible wrapper using headless mode."""
 
     def __init__(self, cwd="."):
@@ -816,7 +816,7 @@ class GrokChat:
         self.env = {**os.environ}
 
     def _build_cmd(self, prompt, model, stream):
-        return ["sage", "-p", prompt, "-m", model, "--cwd", self.cwd,
+        return ["nexus", "-p", prompt, "-m", model, "--cwd", self.cwd,
                 "--output-format", "streaming-json" if stream else "json", "--always-approve"]
 
     async def create(self, messages, model="sage-build", stream=False):
@@ -856,7 +856,7 @@ class GrokChat:
 
 # Usage
 async def main():
-    client = GrokChat(cwd=".")
+    client = NexusChat(cwd=".")
 
     # Non-streaming
     response = await client.create([{"role": "user", "content": "What files are here?"}])
@@ -876,7 +876,7 @@ asyncio.run(main())
 ```typescript
 import { execa } from "execa";
 
-class GrokChat {
+class NexusChat {
   constructor(private cwd = ".") {}
 
   private buildArgs(prompt: string, model: string, stream: boolean) {
@@ -905,7 +905,7 @@ class GrokChat {
     if (stream) return this.streamResponse(prompt, model);
 
     const { stdout } = await execa(
-      "sage",
+      "nexus",
       this.buildArgs(prompt, model, false),
     );
     const data = JSON.parse(stdout || '{"text":""}');
@@ -920,7 +920,7 @@ class GrokChat {
   }
 
   async *streamResponse(prompt: string, model: string) {
-    const proc = execa("sage", this.buildArgs(prompt, model, true));
+    const proc = execa("nexus", this.buildArgs(prompt, model, true));
     for await (const chunk of proc.stdout!) {
       for (const line of chunk.toString().split("\n").filter(Boolean)) {
         const event = JSON.parse(line);
@@ -935,7 +935,7 @@ class GrokChat {
 }
 
 // Usage
-const client = new GrokChat(".");
+const client = new NexusChat(".");
 
 // Non-streaming
 const response = await client.create([
@@ -964,7 +964,7 @@ Use the Agent Client Protocol for full access to tool calls, thoughts, plans, an
 import asyncio
 import json
 
-class GrokACPChat:
+class NexusACPChat:
     """Rich OpenAI-compatible wrapper using ACP protocol."""
 
     def __init__(self, cwd="."):
@@ -974,7 +974,7 @@ class GrokACPChat:
 
     async def init(self):
         self.proc = await asyncio.create_subprocess_exec(
-            "sage", "agent", "stdio",
+            "nexus", "agent", "stdio",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE
         )
@@ -1065,7 +1065,7 @@ class GrokACPChat:
 
 # Usage
 async def main():
-    client = await GrokACPChat(cwd=".").init()
+    client = await NexusACPChat(cwd=".").init()
 
     # Streaming with rich updates
     async for chunk in await client.create(
@@ -1091,7 +1091,7 @@ asyncio.run(main())
 import { spawn, ChildProcess } from "child_process";
 import * as readline from "readline";
 
-class GrokACPChat {
+class NexusACPChat {
   private proc!: ChildProcess;
   private sessionId!: string;
   private rl!: readline.Interface;
@@ -1099,7 +1099,7 @@ class GrokACPChat {
   constructor(private cwd = ".") {}
 
   async init() {
-    this.proc = spawn("sage", ["agent", "stdio"]);
+    this.proc = spawn("nexus", ["agent", "stdio"]);
     this.rl = readline.createInterface({ input: this.proc.stdout! });
 
     // Initialize
@@ -1203,7 +1203,7 @@ class GrokACPChat {
 }
 
 // Usage
-const client = await new GrokACPChat(".").init();
+const client = await new NexusACPChat(".").init();
 
 // Streaming with rich updates
 for await (const chunk of await client.create(
@@ -1223,7 +1223,7 @@ for await (const chunk of await client.create(
 
 ### ACP Protocol Reference
 
-Grok implements the [Agent Client Protocol (ACP)](https://agentclientprotocol.com), a standard for AI agent communication.
+Nexus implements the [Agent Client Protocol (ACP)](https://agentclientprotocol.com), a standard for AI agent communication.
 
 #### Architecture
 
@@ -1234,7 +1234,7 @@ Grok implements the [Agent Client Protocol (ACP)](https://agentclientprotocol.co
 └──────────────────┬──────────────────────┘
                    │ JSON-RPC over stdio
 ┌──────────────────▼──────────────────────┐
-│           sage agent stdio              │
+│           nexus agent stdio              │
 │                                         │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐  │
 │  │ Session │  │  Tools  │  │   MCP   │  │
@@ -1272,7 +1272,7 @@ Grok implements the [Agent Client Protocol (ACP)](https://agentclientprotocol.co
 
 ## Configuration
 
-Grok reads configuration from `~/.sage/config.toml`. If the file doesn't exist, Grok uses sensible defaults. You only need to specify values you want to override.
+Nexus reads configuration from `~/.nexus/config.toml`. If the file doesn't exist, Nexus uses sensible defaults. You only need to specify values you want to override.
 
 Each feature section below documents its own config. This section covers the general-purpose settings that don't have their own top-level section.
 
@@ -1291,8 +1291,8 @@ max_thoughts_width = 120               # max column width for reasoning display
 
 [features]
 support_permission = false             # prompt before tool execution
-telemetry = false                      # anonymous usage telemetry (env: SAGE_TELEMETRY_ENABLED)
-feedback = false                       # feedback system (env: SAGE_FEEDBACK_ENABLED)
+telemetry = false                      # anonymous usage telemetry (env: NEXUS_TELEMETRY_ENABLED)
+feedback = false                       # feedback system (env: NEXUS_FEEDBACK_ENABLED)
 lsp_tools = false                      # expose the lsp tool (see LSP Servers below)
 codebase_indexing = true               # code graph indexing (true, false, or glob patterns)
 
@@ -1301,7 +1301,7 @@ auto_compact_threshold_percent = 85    # auto-compact at this % of context windo
 load_envrc = true                      # load .envrc environment variables into bash commands
 
 [tools]
-respect_gitignore = true               # filter gitignored files from tools (env: SAGE_RESPECT_GITIGNORE)
+respect_gitignore = true               # filter gitignored files from tools (env: NEXUS_RESPECT_GITIGNORE)
 
 [toolset.bash]
 timeout_secs = 120.0                   # command timeout in seconds
@@ -1324,32 +1324,32 @@ Configure telemetry destinations and credentials. Empty values disable the corre
 
 ```toml
 [telemetry]
-events_url = "https://example.com/events"  # env: SAGE_TELEMETRY_EVENTS_URL
-events_api_key = "..."                      # env: SAGE_TELEMETRY_EVENTS_API_KEY
-mixpanel_token = "..."                      # env: SAGE_TELEMETRY_MIXPANEL_TOKEN
-mixpanel_enabled = true                     # env: SAGE_TELEMETRY_MIXPANEL_ENABLED
-trace_upload = true                         # env: SAGE_TELEMETRY_TRACE_UPLOAD
+events_url = "https://example.com/events"  # env: NEXUS_TELEMETRY_EVENTS_URL
+events_api_key = "..."                      # env: NEXUS_TELEMETRY_EVENTS_API_KEY
+mixpanel_token = "..."                      # env: NEXUS_TELEMETRY_MIXPANEL_TOKEN
+mixpanel_enabled = true                     # env: NEXUS_TELEMETRY_MIXPANEL_ENABLED
+trace_upload = true                         # env: NEXUS_TELEMETRY_TRACE_UPLOAD
 ```
 
-When building from source, defaults can also be baked into the binary at compile time by setting `SAGE_TELEMETRY_BUILD_EVENTS_URL`, `SAGE_TELEMETRY_BUILD_EVENTS_API_KEY`, and `SAGE_TELEMETRY_BUILD_MIXPANEL_TOKEN` in the build environment (providing a Mixpanel token this way also enables Mixpanel by default). Config-file and runtime env values override build-time defaults.
+When building from source, defaults can also be baked into the binary at compile time by setting `NEXUS_TELEMETRY_BUILD_EVENTS_URL`, `NEXUS_TELEMETRY_BUILD_EVENTS_API_KEY`, and `NEXUS_TELEMETRY_BUILD_MIXPANEL_TOKEN` in the build environment (providing a Mixpanel token this way also enables Mixpanel by default). Config-file and runtime env values override build-time defaults.
 
 ### LSP Servers
 
-Grok can connect to Language Server Protocol (LSP) servers configured in JSON files. LSP integration gives Grok language-aware code intelligence while it works in your repository.
+Nexus can connect to Language Server Protocol (LSP) servers configured in JSON files. LSP integration gives Nexus language-aware code intelligence while it works in your repository.
 
 LSP support is used in two ways:
 
-- **Passive diagnostics** — after edits, Grok can surface language-server diagnostics such as errors and warnings.
-- **The `lsp` tool** — Grok can actively query the language server for `goToDefinition`, `findReferences`, `hover`, `goToImplementation`, `documentSymbol`, and `workspaceSymbol`.
+- **Passive diagnostics** — after edits, Nexus can surface language-server diagnostics such as errors and warnings.
+- **The `lsp` tool** — Nexus can actively query the language server for `goToDefinition`, `findReferences`, `hover`, `goToImplementation`, `documentSymbol`, and `workspaceSymbol`.
 
 Reference: [Language Server Protocol](https://microsoft.github.io/language-server-protocol/)
 
 #### Config locations
 
-Grok looks for server definitions in:
+Nexus looks for server definitions in:
 
-- project config: `<repo>/.sage/lsp.json`
-- user config: `~/.sage/lsp.json`
+- project config: `<repo>/.nexus/lsp.json`
+- user config: `~/.nexus/lsp.json`
 
 If the same server name appears in both places, the project config wins.
 
@@ -1357,13 +1357,13 @@ If the same server name appears in both places, the project config wins.
 
 Having an `lsp.json` file is enough for passive diagnostics. The model-visible `lsp` tool is exposed when both of these are true:
 
-- LSP tools are enabled (`SAGE_LSP_TOOLS=1` or `[features] lsp_tools = true`)
+- LSP tools are enabled (`NEXUS_LSP_TOOLS=1` or `[features] lsp_tools = true`)
 - the merged LSP configuration is non-empty
 
 Enable the tool for one run:
 
 ```bash
-SAGE_LSP_TOOLS=1 sage
+NEXUS_LSP_TOOLS=1 nexus
 ```
 
 Or enable it in config:
@@ -1373,7 +1373,7 @@ Or enable it in config:
 lsp_tools = true
 ```
 
-If LSP tools are enabled but no usable server config is found, Grok emits a non-fatal warning in logs and continues without the `lsp` tool. If config exists but every server fails to start, the tool may still be present and will fail on first use with a startup error.
+If LSP tools are enabled but no usable server config is found, Nexus emits a non-fatal warning in logs and continues without the `lsp` tool. If config exists but every server fails to start, the tool may still be present and will fail on first use with a startup error.
 
 #### Example `lsp.json`
 
@@ -1415,7 +1415,7 @@ If LSP tools are enabled but no usable server config is found, Grok emits a non-
 
 #### Installing language servers
 
-Grok does not bundle language server binaries. You must install the server yourself and make sure the configured `command` is runnable on your machine.
+Nexus does not bundle language server binaries. You must install the server yourself and make sure the configured `command` is runnable on your machine.
 
 Examples:
 
@@ -1427,7 +1427,7 @@ Examples:
 
 #### Notes
 
-- Passive diagnostics do **not** require `SAGE_LSP_TOOLS=1`; they run whenever an applicable server is configured and starts successfully.
+- Passive diagnostics do **not** require `NEXUS_LSP_TOOLS=1`; they run whenever an applicable server is configured and starts successfully.
 - Passive diagnostics are currently driven by `search_replace` edits; they are not a general watcher for arbitrary shell or git mutations in the workspace.
 - The `lsp` tool is intentionally hidden when disabled or unconfigured so the model does not plan around unavailable capabilities.
 - Same-workspace subagents reuse the parent session's live LSP runtime instead of starting a duplicate server pool.
@@ -1447,12 +1447,12 @@ auth_provider_label = "Acme Corp"
 auth_token_ttl = 3600               # if your provider outputs bare tokens
 
 [models]
-default = "company-sage"
+default = "company-nexus"
 
-[model.company-sage]
+[model.company-nexus]
 model = "sage-build"
 base_url = "https://sage-proxy.acme.com/"
-name = "Sage Latest (Proxy)"
+name = "Nexus Latest (Proxy)"
 context_window = 256000
 
 [features]
@@ -1463,21 +1463,21 @@ telemetry = false
 timeout_secs = 120.0
 ```
 
-With this config, `sage` runs your auth binary, stores the token, and routes inference through your corporate proxy. See [Authentication](#authentication) for full auth setup details.
+With this config, `nexus` runs your auth binary, stores the token, and routes inference through your corporate proxy. See [Authentication](#authentication) for full auth setup details.
 
 ---
 
 ## AGENTS.md
 
-Add project-specific instructions by creating an agent rules file (e.g., `AGENTS.md`). Grok reads these files and appends their contents to the system prompt.
+Add project-specific instructions by creating an agent rules file (e.g., `AGENTS.md`). Nexus reads these files and appends their contents to the system prompt.
 
-Grok scans for agent rules in this order:
+Nexus scans for agent rules in this order:
 
-1. `~/.sage/` (global rules)
+1. `~/.nexus/` (global rules)
 2. If inside a git repo: every directory from the repo root → current working directory (inclusive)
 3. If **not** inside a git repo: only the current working directory
 
-Within each directory, Grok checks for these filenames:
+Within each directory, Nexus checks for these filenames:
 
 - `Agents.md`, `Claude.md`, `AGENT.md`, `AGENTS.md`
 
@@ -1489,22 +1489,22 @@ Ordering matters: files found later (deeper directories) come last, so they effe
 
 ## Skills
 
-Skills are reusable prompt packages that extend Grok with specialized workflows, domain knowledge, and tool integrations. Use them to encode repeatable procedures that would otherwise require re-explaining each session.
+Skills are reusable prompt packages that extend Nexus with specialized workflows, domain knowledge, and tool integrations. Use them to encode repeatable procedures that would otherwise require re-explaining each session.
 
 ### Skill Locations
 
-Grok discovers skills from these directories (in priority order):
+Nexus discovers skills from these directories (in priority order):
 
 | Location                    | Scope | Priority |
 | --------------------------- | ----- | -------- |
-| `./.sage/skills/`           | Local | Highest  |
-| `<repo_root>/.sage/skills/` | Repo  | Medium   |
-| `~/.sage/skills/`           | User  | Lowest   |
+| `./.nexus/skills/`           | Local | Highest  |
+| `<repo_root>/.nexus/skills/` | Repo  | Medium   |
+| `~/.nexus/skills/`           | User  | Lowest   |
 | `~/.claude/skills/`         | User  | Lowest   |
 
 Skills with the same name are deduplicated — higher priority locations override lower ones.
 
-Repo-scoped skills (Local and Repo) respect `.gitignore` and are filtered out if ignored. User-scoped skills (`~/.sage/skills/`) are outside the repo and never filtered.
+Repo-scoped skills (Local and Repo) respect `.gitignore` and are filtered out if ignored. User-scoped skills (`~/.nexus/skills/`) are outside the repo and never filtered.
 
 ### Configuration
 
@@ -1521,7 +1521,7 @@ ignore = ["~/my-team-skills/wip"]     # paths to exclude
 Each skill lives in its own directory with a `SKILL.md` file:
 
 ```
-~/.sage/skills/
+~/.nexus/skills/
 └── commit/
     └── SKILL.md
 ```
@@ -1551,7 +1551,7 @@ Review staged changes and create a commit with a clear, conventional message.
 | Field         | Description                                                                  |
 | ------------- | ---------------------------------------------------------------------------- |
 | `name`        | Skill identifier (lowercase, hyphens, max 64 chars)                          |
-| `description` | What the skill does and when to use it—this is how Grok decides to invoke it |
+| `description` | What the skill does and when to use it—this is how Nexus decides to invoke it |
 
 ### Using Skills
 
@@ -1566,9 +1566,9 @@ Review staged changes and create a commit with a clear, conventional message.
 
 **Slash command shorthand:**
 
-Users can reference skills as `/skill-name` (e.g., `/commit`). When you see this pattern, Grok invokes the corresponding skill.
+Users can reference skills as `/skill-name` (e.g., `/commit`). When you see this pattern, Nexus invokes the corresponding skill.
 
-> **Tip:** The `description` field is critical — it determines when Grok automatically invokes the skill. Be specific about trigger phrases and use cases.
+> **Tip:** The `description` field is critical — it determines when Nexus automatically invokes the skill. Be specific about trigger phrases and use cases.
 
 ---
 
@@ -1576,24 +1576,24 @@ Users can reference skills as `/skill-name` (e.g., `/commit`). When you see this
 
 Agent profiles control the system prompt, toolset, and behavior of a session. A profile is a `.md` file with YAML frontmatter, or a named agent discovered from disk.
 
-Grok discovers agent definitions from `.sage/agents/` (project), `~/.sage/agents/` (user), and built-in agents. Priority (highest wins):
+Nexus discovers agent definitions from `.nexus/agents/` (project), `~/.nexus/agents/` (user), and built-in agents. Priority (highest wins):
 
 1. `--agent-profile <PATH>` CLI flag
 2. `[agent]` section in `config.toml`
-3. `SAGE_AGENT` env var
+3. `NEXUS_AGENT` env var
 4. Default `sage-build` agent
 
 ```toml
-# ~/.sage/config.toml
+# ~/.nexus/config.toml
 [agent]
 name = "my-custom-agent"             # Discovered by name
 # definition = "/path/to/agent.md"   # OR: explicit path
 ```
 
 ```bash
-sage --agent-profile ./my-agent.md
+nexus --agent-profile ./my-agent.md
 # or
-export SAGE_AGENT="my-custom-agent"
+export NEXUS_AGENT="my-custom-agent"
 ```
 
 ---
@@ -1605,11 +1605,11 @@ Subagents spawn independent child sessions that handle tasks in parallel. Each c
 ### Disabling
 
 ```bash
-export SAGE_SUBAGENTS=0              # Environment variable
+export NEXUS_SUBAGENTS=0              # Environment variable
 ```
 
 ```toml
-# ~/.sage/config.toml
+# ~/.nexus/config.toml
 [subagents]
 enabled = false
 ```
@@ -1641,33 +1641,33 @@ Roles define reusable capability/model defaults. Personas layer tone and behavio
 description = "Deep research agent"
 default_capability_mode = "read-only"
 model = "sage-build"
-prompt_file = ".sage/prompts/researcher.md"
+prompt_file = ".nexus/prompts/researcher.md"
 
 [subagents.personas.concise]
 instructions = "Be extremely concise. No filler words."
-# instructions_file = ".sage/personas/concise.md"  # or load from file
+# instructions_file = ".nexus/personas/concise.md"  # or load from file
 ```
 
-Both are also discovered from `.sage/roles/*.toml` and `.sage/personas/*.toml` files respectively. If a requested persona is not found, the spawn fails (fail-closed).
+Both are also discovered from `.nexus/roles/*.toml` and `.nexus/personas/*.toml` files respectively. If a requested persona is not found, the spawn fails (fail-closed).
 
 ---
 
 ## Plugins
 
-Plugins extend Grok with additional tools, skills, and MCP servers from external packages.
+Plugins extend Nexus with additional tools, skills, and MCP servers from external packages.
 
 ### Plugin Locations
 
 | Location                    | Scope   |
 | --------------------------- | ------- |
-| `.sage/plugins/`            | Project |
-| `~/.sage/plugins/`          | User    |
+| `.nexus/plugins/`            | Project |
+| `~/.nexus/plugins/`          | User    |
 | `--plugin-dir <PATH>` (CLI) | Session |
 
 ### Configuration
 
 ```toml
-# ~/.sage/config.toml
+# ~/.nexus/config.toml
 [plugins]
 paths = ["~/my-plugins/custom-tools"]       # additional plugin directories
 disabled = ["user/a1b2c3d4/noisy-plugin"]   # plugin IDs to skip
@@ -1681,7 +1681,7 @@ Manage plugins at runtime with `/plugins list`, `/plugins reload`, or `/plugins 
 
 Hooks run project scripts on tool and session lifecycle events (pre/post-tool-use, session start/end). Projects must be explicitly trusted before their hooks execute.
 
-Grok discovers hooks from `.sage/hooks/` in the project directory. Manage them with:
+Nexus discovers hooks from `.nexus/hooks/` in the project directory. Manage them with:
 
 ```
 /hooks-list              # show hooks loaded in this session
@@ -1713,9 +1713,9 @@ max_completion_tokens = 8192          # Max tokens per response
 context_window = 256000               # Total context window in tokens (for auto-compact)
 ```
 
-**Credential resolution order:** `api_key` → `env_key` → `XAI_API_KEY`. If neither `api_key` nor `env_key` is set, Grok falls back to the global `XAI_API_KEY` environment variable.
+**Credential resolution order:** `api_key` → `env_key` → `NEXUS_API_KEY`. If neither `api_key` nor `env_key` is set, Nexus falls back to the global `NEXUS_API_KEY` environment variable.
 
-The `context_window` parameter is used to calculate when auto-compact should trigger. If not specified, Grok falls back to built-in defaults for known models.
+The `context_window` parameter is used to calculate when auto-compact should trigger. If not specified, Nexus falls back to built-in defaults for known models.
 
 ### Overriding Built-in Models
 
@@ -1732,25 +1732,25 @@ temperature = 0.5
 api_key = "sk-custom"
 ```
 
-**How it works:** When you override a built-in model, Grok starts with the default configuration (including the correct `base_url` from your `[endpoints]` setting), then applies only the fields you specify. Unspecified fields inherit from the default.
+**How it works:** When you override a built-in model, Nexus starts with the default configuration (including the correct `base_url` from your `[endpoints]` setting), then applies only the fields you specify. Unspecified fields inherit from the default.
 
 **Priority order:**
 1. Your config (`[model.*]`) — highest priority
 2. Prefetched models from remote `/v1/models`
 3. Hardcoded defaults — lowest priority
 
-**Web search model:** Set `[models] web_search`, `SAGE_WEB_SEARCH_MODEL`, or `--web-search-model` to point the `web_search` tool at a different model. The target endpoint must support the Responses API and web search.
+**Web search model:** Set `[models] web_search`, `NEXUS_WEB_SEARCH_MODEL`, or `--web-search-model` to point the `web_search` tool at a different model. The target endpoint must support the Responses API and web search.
 
 > **Overriding with a custom model:** Setting `[models] web_search` alone is not
 > enough if the model isn't already in the catalog (built-in defaults or
-> `sage models` output). You also need a `[model.*]` entry so Grok knows
+> `nexus models` output). You also need a `[model.*]` entry so Nexus knows
 > how to reach it. Without both, web search is silently disabled.
 >
 > ```toml
 > [models]
 > web_search = "my-custom-model"       # 1. tell web search which model to use
 >
-> [model.my-custom-model]              # 2. tell Grok how to reach it
+> [model.my-custom-model]              # 2. tell Nexus how to reach it
 > model = "my-custom-model"
 > api_backend = "responses"            # required — web search uses the Responses API
 > # base_url, api_key, env_key optional — defaults to cli-chat-proxy
@@ -1801,13 +1801,13 @@ env_key = "OPENAI_API_KEY"
 
 ```bash
 # List available models (including custom)
-sage models
+nexus models
 
 # Use in TUI via slash command
 /model my-model
 
 # Use in headless mode
-sage -p "Hello" -m my-model
+nexus -p "Hello" -m my-model
 
 # Set as default
 # In config.toml:
@@ -1817,29 +1817,29 @@ default = "my-model"
 
 ### Custom Models Endpoint
 
-Point Grok at a custom OpenAI-compatible `/v1/models` endpoint instead of the default cli-chat-proxy. Useful when models are served behind a corporate gateway or self-hosted inference stack.
+Point Nexus at a custom OpenAI-compatible `/v1/models` endpoint instead of the default cli-chat-proxy. Useful when models are served behind a corporate gateway or self-hosted inference stack.
 
 **Environment variables:**
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SAGE_MODELS_BASE_URL` | Yes | Base URL for inference / chat completions (e.g. `https://api.acme.com/v1`). The model list is fetched from `{base_url}/models` automatically |
-| `XAI_API_KEY` | Yes | API key sent as `Authorization: Bearer` to the custom endpoint |
-| `SAGE_MODELS_LIST_URL` | No | Override the model list URL if it differs from `{base_url}/models` |
+| `NEXUS_MODELS_BASE_URL` | Yes | Base URL for inference / chat completions (e.g. `https://api.acme.com/v1`). The model list is fetched from `{base_url}/models` automatically |
+| `NEXUS_API_KEY` | Yes | API key sent as `Authorization: Bearer` to the custom endpoint |
+| `NEXUS_MODELS_LIST_URL` | No | Override the model list URL if it differs from `{base_url}/models` |
 
 **Setup:**
 
 ```bash
-export SAGE_MODELS_BASE_URL="https://api.acme.com/v1"
-export XAI_API_KEY="xai-..."
-sage
+export NEXUS_MODELS_BASE_URL="https://api.acme.com/v1"
+export NEXUS_API_KEY="xai-..."
+nexus
 ```
 
-Grok fetches the model list from `{SAGE_MODELS_BASE_URL}/models` on startup and sends inference requests to `SAGE_MODELS_BASE_URL`. This follows the standard OpenAI-compatible convention used by OpenAI, Anthropic, OpenRouter, Groq, Together.ai, and others.
+Nexus fetches the model list from `{NEXUS_MODELS_BASE_URL}/models` on startup and sends inference requests to `NEXUS_MODELS_BASE_URL`. This follows the standard OpenAI-compatible convention used by OpenAI, Anthropic, OpenRouter, Groq, Together.ai, and others.
 
-If your model list endpoint differs from `{base_url}/models`, set `SAGE_MODELS_LIST_URL` explicitly.
+If your model list endpoint differs from `{base_url}/models`, set `NEXUS_MODELS_LIST_URL` explicitly.
 
-**Combining with `[endpoints]` config:** You can also set endpoints in `~/.sage/config.toml`:
+**Combining with `[endpoints]` config:** You can also set endpoints in `~/.nexus/config.toml`:
 
 ```toml
 [endpoints]
@@ -1852,17 +1852,17 @@ api_key = "my-api-key"
 
 When using `[endpoints]` with partial model overrides, the `base_url` is inherited from the endpoints config — you don't need to specify it in each `[model.*]` section.
 
-**Auth behavior:** When `models_base_url` is set, Grok uses API key auth (`Authorization: Bearer`) instead of session auth. `sage login` is not required — only the API key.
+**Auth behavior:** When `models_base_url` is set, Nexus uses API key auth (`Authorization: Bearer`) instead of session auth. `nexus login` is not required — only the API key.
 
 ---
 
 ## MCP Servers
 
-Extend Grok's capabilities with [Model Context Protocol](https://modelcontextprotocol.io) servers.
+Extend Nexus's capabilities with [Model Context Protocol](https://modelcontextprotocol.io) servers.
 
 ### Configuration
 
-MCP servers are configured in `~/.sage/config.toml`:
+MCP servers are configured in `~/.nexus/config.toml`:
 
 ```toml
 [mcp_servers.<name>]
@@ -1878,36 +1878,36 @@ tool_timeouts = { create_issue = 120, search = 30 }  # Per-tool timeout override
 
 ### Project-Scoped MCP Servers
 
-MCP servers can also be configured per-project in `.sage/config.toml`. Grok walks from the current directory up to the git repo root, loading `.sage/config.toml` at each level:
+MCP servers can also be configured per-project in `.nexus/config.toml`. Nexus walks from the current directory up to the git repo root, loading `.nexus/config.toml` at each level:
 
 | Location                        | Scope             | Priority |
 | ------------------------------- | ----------------- | -------- |
-| `~/.sage/config.toml`           | All projects      | Lowest   |
-| `<repo-root>/.sage/config.toml` | This repository   | ↑        |
-| `<cwd>/.sage/config.toml`       | Current directory | Highest  |
+| `~/.nexus/config.toml`           | All projects      | Lowest   |
+| `<repo-root>/.nexus/config.toml` | This repository   | ↑        |
+| `<cwd>/.nexus/config.toml`       | Current directory | Highest  |
 
 If a project defines a server with the same name as a global one, the project version **replaces** it entirely (fields are not merged — omitted fields get defaults, not the global values). Servers defined only in the global config are unaffected.
 
-**Example:** commit a `.sage/config.toml` in your repo to share MCP servers across the team:
+**Example:** commit a `.nexus/config.toml` in your repo to share MCP servers across the team:
 
 ```
 my-project/
-├── .sage/
+├── .nexus/
 │   └── config.toml
 ├── src/
 └── ...
 ```
 
 ```toml
-# .sage/config.toml
+# .nexus/config.toml
 [mcp_servers.linear]
 command = "npx"
 args = ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
 ```
 
-If you also have a `linear` server in `~/.sage/config.toml`, the project version replaces it entirely.
+If you also have a `linear` server in `~/.nexus/config.toml`, the project version replaces it entirely.
 
-> **Note:** Only `[mcp_servers]` is supported in project-scoped `.sage/config.toml`. Other config sections (models, shortcuts, etc.) are only read from `~/.sage/config.toml`.
+> **Note:** Only `[mcp_servers]` is supported in project-scoped `.nexus/config.toml`. Other config sections (models, shortcuts, etc.) are only read from `~/.nexus/config.toml`.
 
 ### Tool Naming
 
@@ -1975,16 +1975,16 @@ See the [MCP Server Registry](https://github.com/modelcontextprotocol/servers) f
 
 ## Memory
 
-> **Experimental:** requires `--experimental-memory` (or `SAGE_MEMORY=1` / `[memory] enabled = true` in config).
+> **Experimental:** requires `--experimental-memory` (or `NEXUS_MEMORY=1` / `[memory] enabled = true` in config).
 
-Cross-session memory lets Grok remember facts, decisions, code patterns, and debugging workflows across separate sessions in the same project.
+Cross-session memory lets Nexus remember facts, decisions, code patterns, and debugging workflows across separate sessions in the same project.
 
 ### How it works
 
-Memory is stored as Markdown files under `~/.sage/memory/`:
-- **Global** (`~/.sage/memory/MEMORY.md`) — facts that apply across all your projects
-- **Workspace** (`~/.sage/memory/<project-slug>-<hash8>/MEMORY.md`) — project-specific conventions and context
-- **Session logs** (`~/.sage/memory/<project-slug>-<hash8>/sessions/`) — per-session summaries
+Memory is stored as Markdown files under `~/.nexus/memory/`:
+- **Global** (`~/.nexus/memory/MEMORY.md`) — facts that apply across all your projects
+- **Workspace** (`~/.nexus/memory/<project-slug>-<hash8>/MEMORY.md`) — project-specific conventions and context
+- **Session logs** (`~/.nexus/memory/<project-slug>-<hash8>/sessions/`) — per-session summaries
 
 Workspace directories are suffixed with a short hash for uniqueness (e.g. `xai-a3f7b2c9/`). The hash is derived from the git remote URL so all clones and worktrees of the same repository share the same memory directory.
 
@@ -1994,21 +1994,21 @@ An SQLite index enables fast hybrid search (FTS5 keyword + optional vector KNN) 
 
 ```bash
 # Per-session flag
-sage --experimental-memory
+nexus --experimental-memory
 
 # Environment variable (persists for the shell session)
-export SAGE_MEMORY=1
-sage
+export NEXUS_MEMORY=1
+nexus
 
 # Config file (persists permanently)
-# ~/.sage/config.toml
+# ~/.nexus/config.toml
 [memory]
 enabled = true
 ```
 
 ### What gets saved automatically
 
-At the end of each session, Grok saves a **structured metadata summary** to the daily session log:
+At the end of each session, Nexus saves a **structured metadata summary** to the daily session log:
 - Message counts (user / assistant / tool)
 - Topics — the first few real user prompts from the session
 - Tool-usage breakdown (e.g., `read_file: 4, search_replace: 3`)
@@ -2024,7 +2024,7 @@ This summary is searchable in future sessions but does **not** capture full cont
 
 ### Capturing rich knowledge with `/flush`
 
-For richer capture — decisions, patterns, debugging workflows, API discoveries — use `/flush` in the TUI. This triggers an LLM-generated summary of the current session's most important content and writes it to a dated session log under `~/.sage/memory/<project-slug>-<hash8>/sessions/`, where it is indexed and searchable in future sessions.
+For richer capture — decisions, patterns, debugging workflows, API discoveries — use `/flush` in the TUI. This triggers an LLM-generated summary of the current session's most important content and writes it to a dated session log under `~/.nexus/memory/<project-slug>-<hash8>/sessions/`, where it is indexed and searchable in future sessions.
 
 Use `/flush` when you want to preserve important context before compaction or at any point during a productive session.
 
@@ -2046,7 +2046,7 @@ Omit `workspace` or `global` and it defaults to workspace scope.
 
 ### Searching memory
 
-Grok searches memory automatically on the first turn of each session and after compaction. The first-turn injection can be disabled or given its own score threshold under `[memory.initial_injection]`. You can also invoke `memory_search` and `memory_get` directly via the model prompt:
+Nexus searches memory automatically on the first turn of each session and after compaction. The first-turn injection can be disabled or given its own score threshold under `[memory.initial_injection]`. You can also invoke `memory_search` and `memory_get` directly via the model prompt:
 
 ```
 Search memory for "auth middleware patterns"
@@ -2057,24 +2057,24 @@ Read my workspace MEMORY.md
 
 ```bash
 # Open workspace MEMORY.md in $EDITOR / $VISUAL
-sage memory edit
+nexus memory edit
 
 # Open global MEMORY.md
-sage memory edit --global
+nexus memory edit --global
 
 # Show memory statistics: file count, chunk count, and index size
-sage memory stats
+nexus memory stats
 ```
 
 ### Configuration reference
 
-Key options under `[memory]` in `~/.sage/config.toml`:
+Key options under `[memory]` in `~/.nexus/config.toml`:
 
 | Key | Default | Description |
 |-----|---------|-------------|
 | `enabled` | `false` | Enable memory (can also be set via CLI flag or env var) |
 | `session.save_on_end` | `true` | Write the lightweight metadata summary on session end |
-| `watcher.enabled` | `true` | Watch `~/.sage/memory/` for external edits and reindex on search |
+| `watcher.enabled` | `true` | Watch `~/.nexus/memory/` for external edits and reindex on search |
 | `search.max_results` | `6` | Default number of memory results to return |
 | `search.min_score` | `0.35` | Minimum relevance score threshold for explicit memory search and recovery paths |
 | `initial_injection.enabled` | `true` | Enable automatic first-turn memory injection |
@@ -2084,7 +2084,7 @@ Key options under `[memory]` in `~/.sage/config.toml`:
 
 ### Observability
 
-When first-turn memory injection runs, Grok emits the `sage-shell-memory_injection`
+When first-turn memory injection runs, Nexus emits the `nexus-shell-memory_injection`
 telemetry event. It includes:
 - whether the greeting fallback query path was used
 - result counts and top score
@@ -2094,7 +2094,7 @@ telemetry event. It includes:
 
 ## Sandbox
 
-Grok can restrict what the agent process and its spawned commands can access on
+Nexus can restrict what the agent process and its spawned commands can access on
 your filesystem and network using OS-level kernel primitives (Landlock on Linux,
 Seatbelt on macOS). This is off by default.
 
@@ -2102,13 +2102,13 @@ Seatbelt on macOS). This is off by default.
 
 ```bash
 # Run with workspace sandbox (read everywhere, write only to CWD + /tmp)
-sage --sandbox workspace
+nexus --sandbox workspace
 
 # Read-only mode (agent can read but not write anything)
-sage --sandbox read-only
+nexus --sandbox read-only
 
 # Maximum isolation (read/write CWD only, no child network)
-sage --sandbox strict
+nexus --sandbox strict
 ```
 
 ### Built-in Profiles
@@ -2116,16 +2116,16 @@ sage --sandbox strict
 | Profile         | FS Read            | FS Write                  | Child Network | Use Case                 |
 | --------------- | ------------------ | ------------------------- | ------------- | ------------------------ |
 | `off` (default) | Unrestricted       | Unrestricted              | Unrestricted  | No sandbox               |
-| `workspace`     | Everywhere         | CWD + `/tmp` + `~/.sage/` | Allowed       | Normal development       |
-| `read-only`     | Everywhere         | `~/.sage/` only           | Blocked       | Exploration, code review |
-| `strict`        | CWD + system paths | CWD + `/tmp` + `~/.sage/` | Blocked       | Untrusted code           |
+| `workspace`     | Everywhere         | CWD + `/tmp` + `~/.nexus/` | Allowed       | Normal development       |
+| `read-only`     | Everywhere         | `~/.nexus/` only           | Blocked       | Exploration, code review |
+| `strict`        | CWD + system paths | CWD + `/tmp` + `~/.nexus/` | Blocked       | Untrusted code           |
 
-Sensitive paths (`~/.ssh/`, `~/.aws/`, `~/.gnupg/`, `~/.sage/auth/`) are always
+Sensitive paths (`~/.ssh/`, `~/.aws/`, `~/.gnupg/`, `~/.nexus/auth/`) are always
 write-protected regardless of profile.
 
 ### Custom Profiles
 
-Create `~/.sage/sandbox.toml` (global) or `.sage/sandbox.toml` (per-project):
+Create `~/.nexus/sandbox.toml` (global) or `.nexus/sandbox.toml` (per-project):
 
 ```toml
 [profiles.devbox]
@@ -2146,12 +2146,12 @@ deny = ["/data/shared-secrets"]
 Use it:
 
 ```bash
-sage --sandbox devbox
+nexus --sandbox devbox
 ```
 
 ### How It Works
 
-The sandbox is applied to the **entire sage process** at startup using kernel
+The sandbox is applied to the **entire nexus process** at startup using kernel
 primitives — not per-command wrapping. This means all tool operations are
 covered:
 
@@ -2166,7 +2166,7 @@ model cannot convince the agent to relax restrictions at runtime.
 
 - **Platform support**: Sandbox enforcement uses Landlock on Linux (kernel ≥ 5.13)
   and Seatbelt on macOS. If the sandbox cannot be applied (e.g., unsupported
-  kernel, missing entitlements), Grok logs a warning and continues without
+  kernel, missing entitlements), Nexus logs a warning and continues without
   enforcement.
 
 - **Network restrictions are partial**: Profiles with `restrict_network` block
@@ -2177,24 +2177,24 @@ model cannot convince the agent to relax restrictions at runtime.
 
 ### Event Logging
 
-Sandbox events (profile applied, violations) are logged to `~/.sage/sandbox-events.jsonl`
+Sandbox events (profile applied, violations) are logged to `~/.nexus/sandbox-events.jsonl`
 for telemetry and debugging.
 
 ---
 
 ## Introspection
 
-Use `sage inspect` to see everything Grok discovers in the current directory:
+Use `nexus inspect` to see everything Nexus discovers in the current directory:
 
 ```bash
-sage inspect          # human-readable output
-sage inspect --json   # machine-readable JSON
+nexus inspect          # human-readable output
+nexus inspect --json   # machine-readable JSON
 ```
 
 The output shows all loaded configuration organized by type:
 
 - **Project Instructions** — AGENTS.md / CLAUDE.md files with token counts
-- **Skills** — from `.sage/skills/`, `~/.sage/skills/`, plugins, and config paths
+- **Skills** — from `.nexus/skills/`, `~/.nexus/skills/`, plugins, and config paths
 - **Agents** — built-in, user-defined, and plugin-provided subagents
 - **Plugins** — discovered plugins with what each provides (skills, agents, hooks, MCPs)
 - **MCP Servers** — from `config.toml`, plugins, `~/.claude.json`, and `.mcp.json`
@@ -2208,13 +2208,13 @@ Plugin-provided components appear in their respective sections with a `[plugin: 
 
 ## Claude Code Compatibility
 
-Grok automatically discovers configuration from Claude Code directories alongside native `.sage/` paths. No extra setup is needed.
+Nexus automatically discovers configuration from Claude Code directories alongside native `.nexus/` paths. No extra setup is needed.
 
 ### What is picked up
 
-| Component         | Claude Code location                                 | How Grok uses it                 |
+| Component         | Claude Code location                                 | How Nexus uses it                 |
 | ----------------- | ---------------------------------------------------- | -------------------------------- |
-| **Skills**        | `.claude/skills/`, `~/.claude/skills/`               | Loaded as skills (same as `.sage/skills/`) |
+| **Skills**        | `.claude/skills/`, `~/.claude/skills/`               | Loaded as skills (same as `.nexus/skills/`) |
 | **Agents**        | `.claude/agents/`, `~/.claude/agents/`               | Loaded as subagents              |
 | **Plugins**       | `.claude/plugins/`, `~/.claude/plugins/`             | Discovered with all components   |
 | **Installed plugins** | `~/.claude/plugins/installed_plugins.json`        | Each `installPath` is loaded     |
@@ -2225,13 +2225,13 @@ Grok automatically discovers configuration from Claude Code directories alongsid
 
 ### Plugin components
 
-Claude Code plugins can provide skills (`skills/`), commands (`commands/`), agents (`agents/`), hooks (`hooks/hooks.json`), MCP servers (`.mcp.json`), and LSP servers (`.lsp.json`). All component types are discovered and used by Grok at runtime.
+Claude Code plugins can provide skills (`skills/`), commands (`commands/`), agents (`agents/`), hooks (`hooks/hooks.json`), MCP servers (`.mcp.json`), and LSP servers (`.lsp.json`). All component types are discovered and used by Nexus at runtime.
 
 ---
 
 ## Built-in Tools
 
-Grok includes these tools by default:
+Nexus includes these tools by default:
 
 | Tool             | Description                                                    |
 | ---------------- | -------------------------------------------------------------- |
@@ -2272,22 +2272,22 @@ disallowedTools:
 
 ### `web_fetch`
 
-Fetch a specific URL and return its content as markdown. **Disabled by default** — enable with `SAGE_WEB_FETCH=1`. 
+Fetch a specific URL and return its content as markdown. **Disabled by default** — enable with `NEXUS_WEB_FETCH=1`. 
 
-When no custom `allowed_domains` is set, the tool permits a default allowlist of useful documentation sites (SpaceXAI, language docs, frameworks, cloud providers, databases, etc.). Domains not on the allowlist prompt the user for approval; `--always-approve` auto-approves all. Domain matching is case-insensitive, strips `www.` prefixes, and supports path-scoped entries (e.g. `x.ai/company`).
+When no custom `allowed_domains` is set, the tool permits a default allowlist of useful documentation sites (Nexus, language docs, frameworks, cloud providers, databases, etc.). Domains not on the allowlist prompt the user for approval; `--always-approve` auto-approves all. Domain matching is case-insensitive, strips `www.` prefixes, and supports path-scoped entries (e.g. `x.ai/company`).
 
 ---
 
 ## Session Persistence
 
-Grok automatically persists conversations to disk. This works across all modes: TUI, headless, and agent stdio.
+Nexus automatically persists conversations to disk. This works across all modes: TUI, headless, and agent stdio.
 
 ### Storage Layout
 
-Sessions are stored under `~/.sage/sessions/`, organized by URL-encoded working directory:
+Sessions are stored under `~/.nexus/sessions/`, organized by URL-encoded working directory:
 
 ```
-~/.sage/sessions/<encoded-cwd>/<session-id>/
+~/.nexus/sessions/<encoded-cwd>/<session-id>/
   summary.json            # metadata: title, timestamps, model, message count
   updates.jsonl           # ACP session update stream (conversation + tool calls)
   chat_history.jsonl      # raw chat messages sent to the model
@@ -2317,23 +2317,23 @@ Control session behavior with flags:
 
 ```bash
 # New session each time (default)
-sage -p "Hello"
+nexus -p "Hello"
 
 # Create or resume a named session
-sage -p "Remember: X=42" -s my-session
-sage -p "What is X?" -s my-session
+nexus -p "Remember: X=42" -s my-session
+nexus -p "What is X?" -s my-session
 
 # Resume existing session (errors if not found)
-sage -p "Continue" -r my-session
+nexus -p "Continue" -r my-session
 
 # Continue most recent session in current directory
-sage -p "What were we doing?" -c
+nexus -p "What were we doing?" -c
 ```
 
 Session ID is returned in JSON output:
 
 ```bash
-sage -p "Hello" --output-format json | jq -r '.sessionId'
+nexus -p "Hello" --output-format json | jq -r '.sessionId'
 ```
 
 ### Agent stdio (ACP)
@@ -2363,19 +2363,19 @@ The agent persists all session updates automatically. Clients can reconnect and 
 
 | Path                  | Description                                         |
 | --------------------- | --------------------------------------------------- |
-| `~/.sage/config.toml` | Configuration file                                  |
-| `~/.sage/sessions/`   | Persisted sessions (organized by working directory) |
-| `~/.sage/auth.json`   | Authentication credentials (auto-managed)           |
-| `~/.sage/memory/`     | Cross-session memory files and index                |
-| `~/.sage/skills/`     | User-scoped skill definitions                       |
-| `~/.sage/plugins/`    | User-scoped plugins                                 |
-| `~/.sage/agents/`     | User-scoped agent definitions                       |
-| `.sage/config.toml`   | Project-scoped config (MCP servers)                 |
-| `.sage/skills/`       | Project-scoped skill definitions                    |
-| `.sage/plugins/`      | Project-scoped plugins                              |
-| `.sage/agents/`       | Project-scoped agent definitions                    |
-| `.sage/hooks/`        | Project-scoped hooks                                |
-| `.sage/lsp.json`      | LSP server configuration                            |
+| `~/.nexus/config.toml` | Configuration file                                  |
+| `~/.nexus/sessions/`   | Persisted sessions (organized by working directory) |
+| `~/.nexus/auth.json`   | Authentication credentials (auto-managed)           |
+| `~/.nexus/memory/`     | Cross-session memory files and index                |
+| `~/.nexus/skills/`     | User-scoped skill definitions                       |
+| `~/.nexus/plugins/`    | User-scoped plugins                                 |
+| `~/.nexus/agents/`     | User-scoped agent definitions                       |
+| `.nexus/config.toml`   | Project-scoped config (MCP servers)                 |
+| `.nexus/skills/`       | Project-scoped skill definitions                    |
+| `.nexus/plugins/`      | Project-scoped plugins                              |
+| `.nexus/agents/`       | Project-scoped agent definitions                    |
+| `.nexus/hooks/`        | Project-scoped hooks                                |
+| `.nexus/lsp.json`      | LSP server configuration                            |
 | `~/.claude/skills/`   | User-scoped skills (Claude Code compat)             |
 | `~/.claude/plugins/`  | User-scoped plugins (Claude Code compat)            |
 | `~/.claude.json`      | MCP servers (Claude Code compat)                    |
@@ -2387,33 +2387,33 @@ The agent persists all session updates automatically. Clients can reconnect and 
 
 | Variable                         | Description                                                                                              |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `XAI_API_KEY`         | API key from [console.x.ai](https://console.x.ai). Used for custom endpoint auth and API key login      |
-| `SAGE_CLI_CHAT_PROXY_BASE_URL`  | Override the cli-chat-proxy URL (default: `https://cli-chat-proxy.sage.local/v1`)                          |
-| `SAGE_MODELS_BASE_URL`          | Custom base URL for inference. Model list auto-fetched from `{base_url}/models` (see [Custom Models Endpoint](#custom-models-endpoint)) |
-| `SAGE_MODELS_LIST_URL`          | Override the model list URL if it differs from `{SAGE_MODELS_BASE_URL}/models`                                              |
-| `SAGE_AUTH_PROVIDER_COMMAND`     | External auth binary (alternative to config file). See [External Auth Provider](#external-auth-provider) |
-| `SAGE_AUTH_TOKEN_TTL`            | Token lifetime in seconds for external auth providers that output bare tokens. See [External Auth Provider](#external-auth-provider) |
-| `SAGE_AUTH_EARLY_INVALIDATION_SECS` | Seconds before `expires_at` to consider a token expired (default: `300`). See [Automatic Credential Refresh](#automatic-credential-refresh) |
-| `SAGE_OIDC_ISSUER`              | OIDC issuer URL (alternative to config file). See [OIDC](#oidc-customer-sso)                             |
-| `SAGE_OIDC_CLIENT_ID`           | OIDC client ID (alternative to config file). See [OIDC](#oidc-customer-sso)                              |
-| `SAGE_HOME`                     | Override config directory (default: `~/.sage`)                                                           |
-| `SAGE_SUBAGENTS`                | Enable (`1`) or disable (`0`) subagent/task tool support                                                 |
-| `SAGE_MEMORY`                   | Enable (`1`) or disable (`0`) cross-session memory                                                       |
-| `SAGE_AGENT`                    | Custom agent definition path or name (see [Agent Profiles](#agent-profiles))                             |
-| `SAGE_WEB_FETCH`                | Enable (`1`) or disable (`0`) the `web_fetch` tool                                                       |
-| `SAGE_WEB_FETCH_PROXY`          | Egress proxy URL for `web_fetch` requests (overridden by `[toolset.web_fetch] proxy_endpoint`)           |
-| `SAGE_RESPECT_GITIGNORE`        | Disable `.gitignore` filtering in tools when set to `0`                                                  |
-| `SAGE_FEEDBACK_ENABLED`         | Enable (`1`) or disable (`0`) feedback system independently from telemetry                               |
-| `SAGE_DEPLOYMENT_KEY`           | Management API key for enterprise deployments                                                            |
-| `SAGE_LOG_FILE`                 | Enable file logging by providing a file path (the value is used verbatim as the path)                    |
-| `SAGE_DEBUG_LOG`                | Debug firehose (set by `--debug`): truthy routes per-session logs to `~/.sage/debug/<sessionId>.txt`, a path writes that one file |
-| `RUST_LOG`                      | Log filter for stderr (headless `-p` defaults to `off`, other non-TUI modes to `error`; TUI captures stderr) and for the `SAGE_LOG_FILE` log; the `--debug` firehose ignores it |
+| `NEXUS_API_KEY`         | API key from [console.x.ai](https://console.x.ai). Used for custom endpoint auth and API key login      |
+| `NEXUS_CLI_CHAT_PROXY_BASE_URL`  | Override the cli-chat-proxy URL (default: `https://cli-chat-proxy.sage.local/v1`)                          |
+| `NEXUS_MODELS_BASE_URL`          | Custom base URL for inference. Model list auto-fetched from `{base_url}/models` (see [Custom Models Endpoint](#custom-models-endpoint)) |
+| `NEXUS_MODELS_LIST_URL`          | Override the model list URL if it differs from `{NEXUS_MODELS_BASE_URL}/models`                                              |
+| `NEXUS_AUTH_PROVIDER_COMMAND`     | External auth binary (alternative to config file). See [External Auth Provider](#external-auth-provider) |
+| `NEXUS_AUTH_TOKEN_TTL`            | Token lifetime in seconds for external auth providers that output bare tokens. See [External Auth Provider](#external-auth-provider) |
+| `NEXUS_AUTH_EARLY_INVALIDATION_SECS` | Seconds before `expires_at` to consider a token expired (default: `300`). See [Automatic Credential Refresh](#automatic-credential-refresh) |
+| `NEXUS_OIDC_ISSUER`              | OIDC issuer URL (alternative to config file). See [OIDC](#oidc-customer-sso)                             |
+| `NEXUS_OIDC_CLIENT_ID`           | OIDC client ID (alternative to config file). See [OIDC](#oidc-customer-sso)                              |
+| `NEXUS_HOME`                     | Override config directory (default: `~/.nexus`)                                                           |
+| `NEXUS_SUBAGENTS`                | Enable (`1`) or disable (`0`) subagent/task tool support                                                 |
+| `NEXUS_MEMORY`                   | Enable (`1`) or disable (`0`) cross-session memory                                                       |
+| `NEXUS_AGENT`                    | Custom agent definition path or name (see [Agent Profiles](#agent-profiles))                             |
+| `NEXUS_WEB_FETCH`                | Enable (`1`) or disable (`0`) the `web_fetch` tool                                                       |
+| `NEXUS_WEB_FETCH_PROXY`          | Egress proxy URL for `web_fetch` requests (overridden by `[toolset.web_fetch] proxy_endpoint`)           |
+| `NEXUS_RESPECT_GITIGNORE`        | Disable `.gitignore` filtering in tools when set to `0`                                                  |
+| `NEXUS_FEEDBACK_ENABLED`         | Enable (`1`) or disable (`0`) feedback system independently from telemetry                               |
+| `NEXUS_DEPLOYMENT_KEY`           | Management API key for enterprise deployments                                                            |
+| `NEXUS_LOG_FILE`                 | Enable file logging by providing a file path (the value is used verbatim as the path)                    |
+| `NEXUS_DEBUG_LOG`                | Debug firehose (set by `--debug`): truthy routes per-session logs to `~/.nexus/debug/<sessionId>.txt`, a path writes that one file |
+| `RUST_LOG`                      | Log filter for stderr (headless `-p` defaults to `off`, other non-TUI modes to `error`; TUI captures stderr) and for the `NEXUS_LOG_FILE` log; the `--debug` firehose ignores it |
 
 ---
 
 ## Shell Completions
 
-Generate completions for your shell and install them to enable tab completion for `sage` commands and flags.
+Generate completions for your shell and install them to enable tab completion for `nexus` commands and flags.
 
 **Note:** The paths below are recommended defaults. Some environments do not automatically source the standard locations — you may need to adapt them to your shell framework or distro conventions.
 
@@ -2423,22 +2423,22 @@ Generate and install:
 
 ```bash
 mkdir -p ~/.local/share/bash-completion/completions
-sage completions bash > ~/.local/share/bash-completion/completions/sage
+nexus completions bash > ~/.local/share/bash-completion/completions/nexus
 ```
 
 Reload your shell or run `source ~/.bashrc`.
 
-Alternative (Grok-managed location):
+Alternative (Nexus-managed location):
 
 ```bash
-mkdir -p ~/.sage/completions/bash
-sage completions bash > ~/.sage/completions/bash/sage.bash
+mkdir -p ~/.nexus/completions/bash
+nexus completions bash > ~/.nexus/completions/bash/nexus.bash
 ```
 
 Add to `~/.bashrc`:
 
 ```bash
-[[ -r "$HOME/.sage/completions/bash/sage.bash" ]] && source "$HOME/.sage/completions/bash/sage.bash"
+[[ -r "$HOME/.nexus/completions/bash/nexus.bash" ]] && source "$HOME/.nexus/completions/bash/nexus.bash"
 ```
 
 ### Zsh
@@ -2447,7 +2447,7 @@ Generate and install:
 
 ```bash
 mkdir -p ~/.zsh/completions
-sage completions zsh > ~/.zsh/completions/_grok
+nexus completions zsh > ~/.zsh/completions/_nexus
 ```
 
 Add to `~/.zshrc`:
@@ -2458,24 +2458,24 @@ autoload -Uz compinit
 compinit
 ```
 
-Alternative (Grok-managed location):
+Alternative (Nexus-managed location):
 
 ```bash
-mkdir -p ~/.sage/completions/zsh
-sage completions zsh > ~/.sage/completions/zsh/_grok
+mkdir -p ~/.nexus/completions/zsh
+nexus completions zsh > ~/.nexus/completions/zsh/_nexus
 ```
 
 Add to `~/.zshrc`:
 
 ```zsh
-fpath=("$HOME/.sage/completions/zsh" $fpath)
+fpath=("$HOME/.nexus/completions/zsh" $fpath)
 autoload -Uz compinit
 compinit
 ```
 
 ### After Upgrading
 
-Regenerate completions after upgrading `sage` — the script reflects the CLI of the installed version.
+Regenerate completions after upgrading `nexus` — the script reflects the CLI of the installed version.
 
 ---
 
@@ -2483,42 +2483,42 @@ Regenerate completions after upgrading `sage` — the script reflects the CLI of
 
 ### Debug logging
 
-Write logs to a file for debugging. The TUI captures stderr, so `RUST_LOG` alone won't produce visible output in production — use `sage --debug` or `SAGE_LOG_FILE` instead:
+Write logs to a file for debugging. The TUI captures stderr, so `RUST_LOG` alone won't produce visible output in production — use `nexus --debug` or `NEXUS_LOG_FILE` instead:
 
 ```bash
-# Per-session debug log (~/.sage/debug/<sessionId>.txt)
-sage --debug
+# Per-session debug log (~/.nexus/debug/<sessionId>.txt)
+nexus --debug
 
 # Log to a custom path
-SAGE_LOG_FILE=/tmp/sage-debug.log sage
+NEXUS_LOG_FILE=/tmp/nexus-debug.log nexus
 
 # Tail the most-recently-opened session's log in another terminal (Unix symlink)
-tail -f ~/.sage/debug/latest.txt
+tail -f ~/.nexus/debug/latest.txt
 ```
 
-The `--debug` firehose uses a fixed filter (first-party crates at `debug`) and is not narrowed by `RUST_LOG`. A `SAGE_LOG_FILE` log defaults to `debug` and honors `RUST_LOG`, so you can set module-level filters for targeted debugging:
+The `--debug` firehose uses a fixed filter (first-party crates at `debug`) and is not narrowed by `RUST_LOG`. A `NEXUS_LOG_FILE` log defaults to `debug` and honors `RUST_LOG`, so you can set module-level filters for targeted debugging:
 
 ```bash
 # Debug auth, info for everything else
-SAGE_LOG_FILE=/tmp/sage-debug.log RUST_LOG="info,sage_shell::auth=debug" sage
+NEXUS_LOG_FILE=/tmp/nexus-debug.log RUST_LOG="info,nexus_shell::auth=debug" nexus
 ```
 
 ### Authentication fails
 
 ```bash
 # Clear credentials and re-login
-sage login
+nexus login
 
 # Debug auth issues — check the log for "auth:" entries
-sage --debug-file /tmp/sage-auth.log -p "hello"
-grep "auth:" /tmp/sage-auth.log
+nexus --debug-file /tmp/nexus-auth.log -p "hello"
+grep "auth:" /tmp/nexus-auth.log
 ```
 
 ### Model not found
 
 ```bash
 # List available models
-sage models
+nexus models
 
 # Check config.toml for typos in [model.*] sections
 ```
@@ -2548,16 +2548,16 @@ Session files are plain JSON/JSONL and can be inspected directly:
 
 ```bash
 # Find sessions for the current directory
-ls ~/.sage/sessions/
+ls ~/.nexus/sessions/
 
 # Read session metadata
-cat ~/.sage/sessions/<encoded-cwd>/<session-id>/summary.json | jq .
+cat ~/.nexus/sessions/<encoded-cwd>/<session-id>/summary.json | jq .
 
 # View conversation history
-cat ~/.sage/sessions/<encoded-cwd>/<session-id>/updates.jsonl | head -20
+cat ~/.nexus/sessions/<encoded-cwd>/<session-id>/updates.jsonl | head -20
 
 # Count turns in a session
-wc -l ~/.sage/sessions/<encoded-cwd>/<session-id>/chat_history.jsonl
+wc -l ~/.nexus/sessions/<encoded-cwd>/<session-id>/chat_history.jsonl
 ```
 
 ### Context window full

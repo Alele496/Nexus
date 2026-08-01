@@ -3,7 +3,7 @@ license = "Apache-2.0"
 name = "nexus-version"
 version = "0.2.105"
 edition.workspace = true
-description = "Lockstepped sage CLI version."
+description = "Lockstepped nexus CLI version."
 
 [dependencies]
 semver = { workspace = true }

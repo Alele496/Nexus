@@ -1,6 +1,6 @@
 # Session Management
 
-Grok saves every conversation to disk automatically. Whether you work in the TUI, in headless mode, or over agent stdio, Grok records the exchange as a session. You can resume, rewind, or compact it. This document describes how to manage sessions.
+Nexus saves every conversation to disk automatically. Whether you work in the TUI, in headless mode, or over agent stdio, Nexus records the exchange as a session. You can resume, rewind, or compact it. This document describes how to manage sessions.
 
 ---
 
@@ -15,16 +15,16 @@ A session is a persistent conversation with full history. It includes:
 - Token usage and turn counts
 - Subagent sessions (when enabled)
 
-Sessions are identified by a unique session ID (a UUIDv7 when Grok generates it; a client may supply its own ID with `-s`) and stored on disk under `~/.sage/sessions/`. Set `SAGE_HOME` to override the base directory; when it is unset, Grok uses `~/.sage`.
+Sessions are identified by a unique session ID (a UUIDv7 when Nexus generates it; a client may supply its own ID with `-s`) and stored on disk under `~/.nexus/sessions/`. Set `NEXUS_HOME` to override the base directory; when it is unset, Nexus uses `~/.nexus`.
 
 ---
 
 ## Storage Layout
 
-Grok stores each session in its own directory, grouped by working directory. It URL-encodes the working directory to name the group. When the encoded name exceeds 255 bytes, it instead uses a slug plus a hash and records the original path in a `.cwd` file inside the group.
+Nexus stores each session in its own directory, grouped by working directory. It URL-encodes the working directory to name the group. When the encoded name exceeds 255 bytes, it instead uses a slug plus a hash and records the original path in a `.cwd` file inside the group.
 
 ```
-~/.sage/sessions/<encoded-cwd>/<session-id>/
+~/.nexus/sessions/<encoded-cwd>/<session-id>/
   summary.json            # metadata: summary/title, timestamps, model ID, message counts
   updates.jsonl           # ACP session update stream (conversation + tool calls)
   chat_history.jsonl      # raw chat messages sent to the model
@@ -54,13 +54,13 @@ This clears the current context and begins a new conversation. Alias: `/clear`.
 
 ### Exit
 
-End the session and quit Grok:
+End the session and quit Nexus:
 
 ```
 /quit
 ```
 
-Alias: `/exit`. To leave the current session but stay in Grok, use `/home` to return to the welcome screen.
+Alias: `/exit`. To leave the current session but stay in Nexus, use `/home` to return to the welcome screen.
 
 ---
 
@@ -85,14 +85,14 @@ To switch between, rename, or close the sessions that are currently active (the 
 Resume a specific session by ID:
 
 ```bash
-sage --resume <session-id>
+nexus --resume <session-id>
 ```
 
-Run `sage --resume` without an ID to resume the most recent session for the current directory.
+Run `nexus --resume` without an ID to resume the most recent session for the current directory.
 
 ### From the Welcome Screen
 
-When you launch `sage`, the welcome screen lists recent sessions for the current directory. Select one to resume it.
+When you launch `nexus`, the welcome screen lists recent sessions for the current directory. Select one to resume it.
 
 ---
 
@@ -128,7 +128,7 @@ Alias: `/title`.
 /rewind
 ```
 
-When you run `/rewind` (or press **Esc Esc** within 800ms while idle with an empty prompt and conversation messages), Grok:
+When you run `/rewind` (or press **Esc Esc** within 800ms while idle with an empty prompt and conversation messages), Nexus:
 
 1. Shows a list of rewind points (one per user prompt)
 2. Lets you select which point to rewind to
@@ -154,7 +154,7 @@ The optional `context` argument lets you provide additional instructions about w
 
 ### Auto-Compact
 
-Grok automatically compacts the conversation when the context window approaches its limit. You will see a notification when auto-compact triggers. The `context_window` setting on your model configuration controls when this threshold is reached.
+Nexus automatically compacts the conversation when the context window approaches its limit. You will see a notification when auto-compact triggers. The `context_window` setting on your model configuration controls when this threshold is reached.
 
 ---
 
@@ -184,13 +184,13 @@ In headless mode, you manage sessions through command-line flags:
 
 ```bash
 # New session each time (default)
-sage -p "Hello"
+nexus -p "Hello"
 
 # Resume an existing session by ID (errors if it does not exist)
-sage -p "Continue where we left off" -r <session-id>
+nexus -p "Continue where we left off" -r <session-id>
 
 # Continue the most recent session in the current directory
-sage -p "What were we doing?" -c
+nexus -p "What were we doing?" -c
 ```
 
 In headless mode, resume an existing session with `-r`/`--resume`, which errors if the session does not exist, or continue the most recent session in the current directory with `-c`/`--continue`. Pass the session ID from JSON output (see below) to `-r`.
@@ -200,7 +200,7 @@ Use `-s`/`--session-id` only to **create** a new session with a **UUID** (errors
 To read the session ID back, request JSON output:
 
 ```bash
-sage -p "Hello" --output-format json | jq -r '.sessionId'
+nexus -p "Hello" --output-format json | jq -r '.sessionId'
 ```
 
 ---
@@ -228,28 +228,28 @@ The agent persists all session updates automatically. Clients can reconnect and 
 
 ---
 
-## The sage sessions Subcommand
+## The nexus sessions Subcommand
 
-List or search sessions from the command line. `sage sessions` requires a subcommand:
+List or search sessions from the command line. `nexus sessions` requires a subcommand:
 
 ```bash
 # List recent sessions for the current directory
-sage sessions list
+nexus sessions list
 
 # Limit the number of results (default 20)
-sage sessions list --limit 50
+nexus sessions list --limit 50
 
 # Search sessions by keyword (matches titles and prompts)
-sage sessions search "rate limit"
+nexus sessions search "rate limit"
 ```
 
-`sage sessions list` shows sessions for the current working directory, grouped by worktree label. Each row lists the session ID, the creation and update dates, the source status, and the summary. `sage sessions search` combines a local SQLite index with remote results.
+`nexus sessions list` shows sessions for the current working directory, grouped by worktree label. Each row lists the session ID, the creation and update dates, the source status, and the summary. `nexus sessions search` combines a local SQLite index with remote results.
 
 ---
 
 ## Worktree Sessions
 
-When working with subagents or session forks, Grok can create isolated git worktrees per session. Each worktree gets its own copy of the working directory, so file changes in one session do not affect another.
+When working with subagents or session forks, Nexus can create isolated git worktrees per session. Each worktree gets its own copy of the working directory, so file changes in one session do not affect another.
 
 Worktree sessions are managed internally through the `x.ai/git/worktree/*` extension methods. Key operations:
 
@@ -257,7 +257,7 @@ Worktree sessions are managed internally through the `x.ai/git/worktree/*` exten
 - **Apply**: Merge worktree changes back into the main working directory
 - **Remove**: Clean up a worktree when the session is done
 
-Resume a session in a fresh worktree with `sage -w -r <session-id>`.
+Resume a session in a fresh worktree with `nexus -w -r <session-id>`.
 
 ---
 
@@ -265,13 +265,13 @@ Resume a session in a fresh worktree with `sage -w -r <session-id>`.
 
 ### Persistence Format
 
-Grok stores the conversation as newline-delimited JSON (JSONL). Each line in `updates.jsonl` is a self-contained ACP session update event. This format supports:
+Nexus stores the conversation as newline-delimited JSON (JSONL). Each line in `updates.jsonl` is a self-contained ACP session update event. This format supports:
 
 - Incremental writes (append-only during a session)
 - Efficient streaming reads (for session restore)
 - Easy debugging (each line is valid JSON)
 
-The smaller state files -- `summary.json`, `plan.json`, and `signals.json` -- are plain JSON rather than JSONL. JSONL is the source of truth for session content; `sage sessions search` additionally maintains a local SQLite FTS5 index over session titles and prompts for fast keyword search.
+The smaller state files -- `summary.json`, `plan.json`, and `signals.json` -- are plain JSON rather than JSONL. JSONL is the source of truth for session content; `nexus sessions search` additionally maintains a local SQLite FTS5 index over session titles and prompts for fast keyword search.
 
 ### Session Metadata
 

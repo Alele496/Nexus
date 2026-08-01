@@ -3,7 +3,7 @@ license = "Apache-2.0"
 name = "nexus-voice"
 version = "0.1.0"
 edition.workspace = true
-description = "Voice dictation (streaming STT) for Sage CLI"
+description = "Voice dictation (streaming STT) for Nexus CLI"
 
 [dependencies]
 anyhow = { workspace = true }

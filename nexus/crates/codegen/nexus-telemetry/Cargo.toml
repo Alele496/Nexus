@@ -3,7 +3,7 @@ license = "Apache-2.0"
 name = "nexus-telemetry"
 version = "0.1.0"
 edition.workspace = true
-description = "Telemetry engine: product events + Mixpanel emission + Sentry error reporting for Sage sessions"
+description = "Telemetry engine: product events + Mixpanel emission + Sentry error reporting for Nexus sessions"
 authors = ["xAI"]
 
 [features]

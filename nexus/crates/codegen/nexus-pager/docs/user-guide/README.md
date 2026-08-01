@@ -1,6 +1,6 @@
-# Sage User Guide
+# Nexus User Guide
 
-Learn how to install, configure, and extend Sage, the terminal-based AI coding assistant from SpaceXAI.
+Learn how to install, configure, and extend Nexus, the terminal-based AI coding assistant.
 
 ---
 
@@ -20,7 +20,7 @@ Start here. These guides cover what you need on your first day.
 
 ## Tier 2: Core Feature Docs
 
-Customize and extend Sage.
+Customize and extend Nexus.
 
 | # | Document | Description |
 |---|----------|-------------|
@@ -37,11 +37,11 @@ Customize and extend Sage.
 
 ## Tier 3: Advanced Usage Docs
 
-Automate, script, and integrate Sage with other systems.
+Automate, script, and integrate Nexus with other systems.
 
 | # | Document | Description |
 |---|----------|-------------|
-| 14 | [Headless Mode and Scripting](14-headless-mode.md) | `sage -p`, output formats, CI/CD integration, and piping |
+| 14 | [Headless Mode and Scripting](14-headless-mode.md) | `nexus -p`, output formats, CI/CD integration, and piping |
 | 15 | [Agent Mode and IDE Integration](15-agent-mode.md) | ACP stdio transport, WebSocket relay, and SDK integration |
 | 16 | [Subagents and Personas](16-subagents.md) | Parallel child sessions, agent types, personas, and capability modes |
 | 17 | [Session Management](17-sessions.md) | Save, load, resume, rewind, compact, and the session persistence format |

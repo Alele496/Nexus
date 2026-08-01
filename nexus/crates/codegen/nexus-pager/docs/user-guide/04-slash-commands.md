@@ -4,8 +4,8 @@ Type `/` in the prompt to access commands. Each command runs an action immediate
 
 Slash commands come from two sources:
 
-- **Shell builtins** -- handled by the agent backend (sage-shell)
-- **Pager builtins** -- handled by the TUI frontend (sage-pager)
+- **Shell builtins** -- handled by the agent backend (nexus-shell)
+- **Pager builtins** -- handled by the TUI frontend (nexus-pager)
 
 Both sets are available in the autocomplete menu. Skills installed via SKILL.md files also appear as slash commands.
 
@@ -40,7 +40,7 @@ Compress conversation history to save context window space. Optionally specify w
 /compact keep the auth implementation details
 ```
 
-When the context window fills up, Grok auto-compacts at 85% usage (configurable via `[session] auto_compact_threshold_percent` in config.toml).
+When the context window fills up, Nexus auto-compacts at 85% usage (configurable via `[session] auto_compact_threshold_percent` in config.toml).
 
 ### `/context`
 
@@ -132,7 +132,7 @@ Switch to a different model. Accepts model IDs or display names (case-insensitiv
 
 ```
 /model sage-build
-/model Sage
+/model Nexus
 /model Reasoning X high
 ```
 
@@ -214,7 +214,7 @@ fullscreen) switches to the experimental scrollback-native mode; `/fullscreen`
 TUI. Both relaunch the pager on the same conversation for this session only —
 they do not write `config.toml`. Descriptions and the relaunch banner tell you
 how to switch back (`/fullscreen` ⇄ `/minimal`). The `--minimal` /
-`--fullscreen` CLI flags are likewise session-scoped. To make plain `sage` open
+`--fullscreen` CLI flags are likewise session-scoped. To make plain `nexus` open
 in a given mode by default, use `/settings` → **Default screen mode**, or set
 `[ui] screen_mode` in `config.toml`.
 
@@ -243,7 +243,7 @@ Open the current saved plan preview. Aliases: `/show-plan`, `/plan-view`.
 
 ## Memory
 
-The `/flush`, `/dream`, and `/memory` commands require `--experimental-memory` or `SAGE_MEMORY=1`. `/remember` is always available.
+The `/flush`, `/dream`, and `/memory` commands require `--experimental-memory` or `NEXUS_MEMORY=1`. `/remember` is always available.
 
 ### `/memory`
 
@@ -353,7 +353,7 @@ Generate a video from an image or text description. Plans shots, generates sourc
 
 ### `/loop [interval] <prompt>`
 
-Run a prompt on a recurring interval. Specify the interval as `30m`, `1 hour`, or `every 2 days`. If you omit it, Grok prompts you.
+Run a prompt on a recurring interval. Specify the interval as `30m`, `1 hour`, or `every 2 days`. If you omit it, Nexus prompts you.
 
 ```
 /loop 30m check deploy status
@@ -370,7 +370,7 @@ Recurring tasks auto-expire after 7 days. Cancel with `scheduler_delete` (the jo
 
 ### `/goal`
 
-Set, manage, or check an autonomous goal. Grok works toward the objective across turns and reports progress.
+Set, manage, or check an autonomous goal. Nexus works toward the objective across turns and reports progress.
 
 ```
 /goal Migrate the auth module to the new API
@@ -553,7 +553,7 @@ Toggle message timestamps on or off.
 
 ## Skills as Slash Commands
 
-Any enabled skill with `user-invocable: true` in its SKILL.md frontmatter appears as a slash command. (A skill turned off via `/skills` is not advertised.) For example, if you have a skill at `~/.sage/skills/commit/SKILL.md`, you can invoke it with:
+Any enabled skill with `user-invocable: true` in its SKILL.md frontmatter appears as a slash command. (A skill turned off via `/skills` is not advertised.) For example, if you have a skill at `~/.nexus/skills/commit/SKILL.md`, you can invoke it with:
 
 ```
 /commit fix typo in README

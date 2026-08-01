@@ -1,6 +1,6 @@
 # Hook Examples
 
-Sample hooks for Grok. Copy to `~/.sage/hooks/` to enable globally, or to `<project>/.sage/hooks/` for project-scoped hooks (requires `/hooks-trust`).
+Sample hooks for Nexus. Copy to `~/.nexus/hooks/` to enable globally, or to `<project>/.nexus/hooks/` for project-scoped hooks (requires `/hooks-trust`).
 
 ## Available Examples
 
@@ -13,10 +13,10 @@ Denies obviously destructive shell commands before they execute:
 
 **Install:**
 ```sh
-mkdir -p ~/.sage/hooks/bin
-cp examples/hooks/safe-shell.json ~/.sage/hooks/
-cp examples/hooks/bin/safe-shell-guard.sh ~/.sage/hooks/bin/
-chmod +x ~/.sage/hooks/bin/safe-shell-guard.sh
+mkdir -p ~/.nexus/hooks/bin
+cp examples/hooks/safe-shell.json ~/.nexus/hooks/
+cp examples/hooks/bin/safe-shell-guard.sh ~/.nexus/hooks/bin/
+chmod +x ~/.nexus/hooks/bin/safe-shell-guard.sh
 ```
 
 ### 2. No Recursive Grep (`no-recursive-grep.json`)
@@ -38,10 +38,10 @@ allowed.
 
 **Install:**
 ```sh
-mkdir -p ~/.sage/hooks/bin
-cp examples/hooks/no-recursive-grep.json ~/.sage/hooks/
-cp examples/hooks/bin/no-recursive-grep-guard.py ~/.sage/hooks/bin/
-chmod +x ~/.sage/hooks/bin/no-recursive-grep-guard.py
+mkdir -p ~/.nexus/hooks/bin
+cp examples/hooks/no-recursive-grep.json ~/.nexus/hooks/
+cp examples/hooks/bin/no-recursive-grep-guard.py ~/.nexus/hooks/bin/
+chmod +x ~/.nexus/hooks/bin/no-recursive-grep-guard.py
 ```
 (Requires `python3` on `PATH`.)
 
@@ -49,28 +49,28 @@ chmod +x ~/.sage/hooks/bin/no-recursive-grep-guard.py
 
 **Type:** passive (`SessionStart` + `SessionEnd`)
 
-Appends session metadata to `~/.sage/session-audit.log` — event, session ID, cwd, timestamp.
+Appends session metadata to `~/.nexus/session-audit.log` — event, session ID, cwd, timestamp.
 
 **Install:**
 ```sh
-mkdir -p ~/.sage/hooks/bin
-cp examples/hooks/session-log.json ~/.sage/hooks/
-cp examples/hooks/bin/session-log.sh ~/.sage/hooks/bin/
-chmod +x ~/.sage/hooks/bin/session-log.sh
+mkdir -p ~/.nexus/hooks/bin
+cp examples/hooks/session-log.json ~/.nexus/hooks/
+cp examples/hooks/bin/session-log.sh ~/.nexus/hooks/bin/
+chmod +x ~/.nexus/hooks/bin/session-log.sh
 ```
 
 ### 4. Tool Activity Logger (`tool-logger.json`)
 
 **Type:** passive (`PreToolUse` + `PostToolUse`)
 
-Logs all tool calls to `~/.sage/tool-activity.log` — tool name, event type, effective tool name, backgrounded status.
+Logs all tool calls to `~/.nexus/tool-activity.log` — tool name, event type, effective tool name, backgrounded status.
 
 **Install:**
 ```sh
-mkdir -p ~/.sage/hooks/bin
-cp examples/hooks/tool-logger.json ~/.sage/hooks/
-cp examples/hooks/bin/tool-logger.sh ~/.sage/hooks/bin/
-chmod +x ~/.sage/hooks/bin/tool-logger.sh
+mkdir -p ~/.nexus/hooks/bin
+cp examples/hooks/tool-logger.json ~/.nexus/hooks/
+cp examples/hooks/bin/tool-logger.sh ~/.nexus/hooks/bin/
+chmod +x ~/.nexus/hooks/bin/tool-logger.sh
 ```
 
 ## Format
@@ -93,7 +93,7 @@ Hook files use the Claude-compatible JSON format:
 ```
 
 - **Event names:** `SessionStart`, `PreToolUse`, `PostToolUse`, `SessionEnd`
-- **Matcher:** regex on tool name. Claude names like `Bash`, `Read`, `Edit` are auto-expanded to also match Grok names (`run_terminal_cmd`, `read_file`, `search_replace`)
+- **Matcher:** regex on tool name. Claude names like `Bash`, `Read`, `Edit` are auto-expanded to also match Nexus names (`run_terminal_cmd`, `read_file`, `search_replace`)
 - **Timeout:** in seconds (default: 5)
 - **Command:** path to script (relative to hook file directory) or inline shell command
 
@@ -116,4 +116,4 @@ or
 
 ## Uninstall
 
-Remove the JSON file from `~/.sage/hooks/`. The hook stops running on the next session.
+Remove the JSON file from `~/.nexus/hooks/`. The hook stops running on the next session.

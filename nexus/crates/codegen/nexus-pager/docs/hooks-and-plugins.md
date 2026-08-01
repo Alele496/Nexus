@@ -1,6 +1,6 @@
 # Hooks & Plugins Guide
 
-Sage supports **hooks** (event-driven shell commands) and **plugins** (bundles of skills, agents, hooks, and MCP servers). Both are managed through a unified modal interface.
+Nexus supports **hooks** (event-driven shell commands) and **plugins** (bundles of skills, agents, hooks, and MCP servers). Both are managed through a unified modal interface.
 
 ## Opening the Modal
 
@@ -21,7 +21,7 @@ The modal has three tabs: **Hooks**, **Plugins**, and **Marketplace**. Switch be
 Hooks are shell commands (or HTTP calls) that run automatically on events like `session_start`, `post_tool_use`, `notification`, etc. See [Creating Custom Hooks](custom-hooks.md) for how to write your own.
 
 Hooks are grouped by source:
-- **Global hooks** — from `~/.sage/hooks/`
+- **Global hooks** — from `~/.nexus/hooks/`
 - **Project hooks** — from `.sage/hooks/` in your repo
 - **Plugin hooks** — bundled with installed plugins
 - **Custom hooks** — added manually via a path
@@ -58,7 +58,7 @@ Each plugin shows (when expanded):
 - **Description**
 - **Conflicts** — ⚠ warning if any
 
-Plugin hooks automatically receive `SAGE_PLUGIN_ROOT` and `SAGE_PLUGIN_DATA` environment variables (see the [Plugins guide](../user-guide/09-plugins.md#environment-variables-in-plugin-hooks)).
+Plugin hooks automatically receive `NEXUS_PLUGIN_ROOT` and `NEXUS_PLUGIN_DATA` environment variables (see the [Plugins guide](../user-guide/09-plugins.md#environment-variables-in-plugin-hooks)).
 
 ### Shortcuts (Plugins tab)
 
@@ -78,7 +78,7 @@ Browse and install plugins from configured marketplace sources.
 
 Sources are loaded from:
 1. **config.toml** — `[[marketplace.sources]]` entries
-2. **settings.json** — `extraKnownMarketplaces` from `~/.sage/settings.json` or `~/.claude/settings.json`
+2. **settings.json** — `extraKnownMarketplaces` from `~/.nexus/settings.json` or `~/.claude/settings.json`
 
 Each source shows its plugins with:
 - **Name** and **version**
@@ -98,12 +98,12 @@ Each source shows its plugins with:
 
 ### Adding Marketplace Sources
 
-Press `a` on the Marketplace tab (or run `sage plugin marketplace add <source>`)
+Press `a` on the Marketplace tab (or run `nexus plugin marketplace add <source>`)
 with a git URL, a GitHub shorthand (`owner/repo`), or a local directory path
 (`/absolute`, `~/dir`, or `./relative`). Local paths are stored as `path`
 sources — handy for developing a marketplace from an existing checkout.
 
-Sources land in `~/.sage/config.toml`:
+Sources land in `~/.nexus/config.toml`:
 
 ```toml
 [[marketplace.sources]]
@@ -115,7 +115,7 @@ name = "Local Dev"
 path = "~/dev/my-plugins"
 ```
 
-Or in `~/.sage/settings.json` / `~/.claude/settings.json`:
+Or in `~/.nexus/settings.json` / `~/.claude/settings.json`:
 
 ```json
 {
@@ -160,5 +160,5 @@ While an action is in progress, the modal shows "Processing..." and blocks input
 
 - [Creating Custom Hooks](custom-hooks.md) — step-by-step guide to writing your own hooks and scripts
 - [Hooks user guide](user-guide/10-hooks.md) — events, matchers, trust model
-- [Hook Examples](../../../sage-hooks/examples/README.md) — ready-to-use sample hooks
+- [Hook Examples](../../nexus-hooks/examples/README.md) — ready-to-use sample hooks
 - [Plugins user guide](user-guide/09-plugins.md) — install, trust, and marketplace

@@ -1,13 +1,13 @@
 # Monitoring Usage (External OpenTelemetry)
 
-> **Status: alpha.** The schema below is versioned (`grok_code.schema.version = v1`);
+> **Status: alpha.** The schema below is versioned (`nexus_code.schema.version = v1`);
 > additive changes may occur without notice, renames/removals will bump the
 > version and be called out in the changelog.
 
-Grok CLI can export usage **metrics** and **events** to your organization's
+Nexus CLI can export usage **metrics** and **events** to your organization's
 own OpenTelemetry collector, so platform teams can monitor adoption, token
 consumption, tool-permission decisions, and errors across the fleet — without
-any data flowing through SpaceXAI.
+any data flowing through Nexus.
 
 ## Related settings
 
@@ -15,10 +15,10 @@ These knobs are independent of each other (and of this guide's external OTEL str
 
 | Setting | How to set it |
 |---------|---------------|
-| Telemetry master switch | `[features] telemetry` / `SAGE_TELEMETRY_ENABLED` |
+| Telemetry master switch | `[features] telemetry` / `NEXUS_TELEMETRY_ENABLED` |
 | `/privacy` | `/privacy opt-in` / `/privacy opt-out`, or Settings |
-| Trace upload | `[telemetry] trace_upload` / `SAGE_TELEMETRY_TRACE_UPLOAD` |
-| External OpenTelemetry | `SAGE_EXTERNAL_OTEL` / `[telemetry] otel_*` (this guide) |
+| Trace upload | `[telemetry] trace_upload` / `NEXUS_TELEMETRY_TRACE_UPLOAD` |
+| External OpenTelemetry | `NEXUS_EXTERNAL_OTEL` / `[telemetry] otel_*` (this guide) |
 
 See also [Authentication](02-authentication.md#related-settings) and
 [Configuration](05-configuration.md#telemetry).
@@ -32,26 +32,26 @@ The external stream is:
 - **Content-free by default**: no prompts, no code, no file paths (extension
   only), no tool arguments, no bash commands, and MCP/skill/plugin names
   collapsed to categories. Optional content gates re-enable some of these.
-- **Structurally separate** from SpaceXAI-internal telemetry: its exporters carry
-  only the headers you configure, never SpaceXAI credentials.
-- **Independent of SpaceXAI data-retention opt-outs**: it works even when
+- **Structurally separate** from Nexus-internal telemetry: its exporters carry
+  only the headers you configure, never Nexus credentials.
+- **Independent of Nexus data-retention opt-outs**: it works even when
   `telemetry` is disabled and for ZDR (zero-data-retention) teams. Those
-  settings govern SpaceXAI-side retention; the external stream is governed solely
+  settings govern Nexus-side retention; the external stream is governed solely
   by your own OTEL configuration.
 
 ## Quick start
 
 ```bash
-export SAGE_EXTERNAL_OTEL=1                  # master switch
+export NEXUS_EXTERNAL_OTEL=1                  # master switch
 export OTEL_METRICS_EXPORTER=otlp
 export OTEL_LOGS_EXPORTER=otlp
 export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf  # or grpc
 export OTEL_EXPORTER_OTLP_ENDPOINT=https://collector.corp.example:4318
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <collector-token>"
-sage
+nexus
 ```
 
-`SAGE_EXTERNAL_OTEL=1` alone enables **nothing** — you must also select at
+`NEXUS_EXTERNAL_OTEL=1` alone enables **nothing** — you must also select at
 least one exporter. Conversely, the `OTEL_*` vars alone enable nothing
 without the master switch.
 
@@ -59,7 +59,7 @@ without the master switch.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `SAGE_EXTERNAL_OTEL` | `0` | Master switch. Distinct from `SAGE_TELEMETRY_ENABLED`, which controls SpaceXAI-internal product analytics — the two govern opposite-pointing data flows. |
+| `NEXUS_EXTERNAL_OTEL` | `0` | Master switch. Distinct from `NEXUS_TELEMETRY_ENABLED`, which controls Nexus-internal product analytics — the two govern opposite-pointing data flows. |
 | `OTEL_METRICS_EXPORTER` | `none` | `otlp` \| `console` \| `none`. |
 | `OTEL_LOGS_EXPORTER` | `none` | `otlp` \| `console` \| `none`. Gates the event stream. |
 | `OTEL_EXPORTER_OTLP_PROTOCOL` | `http/protobuf` | `http/protobuf` \| `grpc`. |
@@ -72,7 +72,7 @@ without the master switch.
 | `OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE` | `delta` | `delta` \| `cumulative`. |
 | `OTEL_METRICS_INCLUDE_SESSION_ID` | `1` | Attach `session.id` to metrics (cardinality opt-out). |
 | `OTEL_METRICS_INCLUDE_VERSION` | `0` | Attach `app.version` to metrics. |
-| `OTEL_LOG_USER_PROMPTS` | `0` | Content gate: prompt text on `grok_code.user_prompt` (60 KB cap, secret-scrubbed). |
+| `OTEL_LOG_USER_PROMPTS` | `0` | Content gate: prompt text on `nexus_code.user_prompt` (60 KB cap, secret-scrubbed). |
 | `OTEL_LOG_TOOL_DETAILS` | `0` | Content gate: tool parameters (4 KB cap), full file paths, verbatim MCP/skill/plugin names. Bash command text is **never** exported in v1, even with this gate. |
 
 `OTEL_RESOURCE_ATTRIBUTES` is deliberately ignored: the resource is built
@@ -80,7 +80,7 @@ from a fixed, audited attribute set.
 
 > **Migration note:** older releases could share `OTEL_EXPORTER_OTLP_*` with
 > the product's own analytics pipeline. That behavior is deprecated: when
-> `SAGE_EXTERNAL_OTEL` is set, product analytics ignores those vars, and the
+> `NEXUS_EXTERNAL_OTEL` is set, product analytics ignores those vars, and the
 > CLI refuses to activate the external stream in any configuration where
 > product analytics already consumed them — your collector only receives the
 > external stream you opted into.
@@ -103,7 +103,7 @@ otel_log_tool_details = false
 ```
 
 The config keys are `otel_*` under `[telemetry]`; the **env vars keep their
-standard OTEL names** (`SAGE_EXTERNAL_OTEL`, `OTEL_*`) for ecosystem
+standard OTEL names** (`NEXUS_EXTERNAL_OTEL`, `OTEL_*`) for ecosystem
 interop, so the two layers use deliberately different namespaces. The
 `otel_protocol` config key maps to `OTEL_EXPORTER_OTLP_PROTOCOL`.
 
@@ -111,7 +111,7 @@ There is deliberately no `headers` key: supply collector auth via
 `OTEL_EXPORTER_OTLP_HEADERS` so tokens are never stored on disk.
 
 Managed deployments can additionally enable org-wide telemetry by distributing
-the `[telemetry]` `otel_*` keys through `sage setup` managed config /
+the `[telemetry]` `otel_*` keys through `nexus setup` managed config /
 requirements pins, or force-disable it fleet-wide with the same local config
 layers (`external_otel_disabled`, content-gate locks).
 
@@ -123,25 +123,25 @@ layers (`external_otel_disabled`, content-gate locks).
 | `service.version`, `client.version` | build/client versions |
 | `app.entrypoint` | `cli` \| `headless` \| `agent` |
 | `terminal.type` | terminal emulator brand |
-| `grok_code.schema.version` | `v1` |
+| `nexus_code.schema.version` | `v1` |
 
 Identity attributes (`user.id`, and `organization.id` / `team.id` /
 `deployment.id` when known) are attached per metric data point and per event
 once authentication completes. `prompt.id` (per-prompt UUID) appears on
 events only, never metrics.
 
-## Metrics (meter scope `ai.xai.grok_code`)
+## Metrics (meter scope `ai.xai.nexus_code`)
 
 | Metric | Unit | Attributes |
 |---|---|---|
-| `grok_code.session.count` | `{session}` | base attrs only |
-| `grok_code.token.usage` | `{token}` | `type` = `input` \| `output` \| `reasoning` \| `cache_read`; `model` |
-| `grok_code.turn.count` | `{turn}` | `outcome` = `completed` \| `cancelled` \| `error`; `model` |
-| `grok_code.tool.decision` | `{decision}` | `tool_name`, `decision` = `allow` \| `deny` \| `cancelled` \| `followup`, `access_kind`, `permission_mode` |
-| `grok_code.tool.usage` | `{call}` | `tool_name`, `outcome` |
-| `grok_code.error.count` | `{error}` | `error_category`, `model` |
+| `nexus_code.session.count` | `{session}` | base attrs only |
+| `nexus_code.token.usage` | `{token}` | `type` = `input` \| `output` \| `reasoning` \| `cache_read`; `model` |
+| `nexus_code.turn.count` | `{turn}` | `outcome` = `completed` \| `cancelled` \| `error`; `model` |
+| `nexus_code.tool.decision` | `{decision}` | `tool_name`, `decision` = `allow` \| `deny` \| `cancelled` \| `followup`, `access_kind`, `permission_mode` |
+| `nexus_code.tool.usage` | `{call}` | `tool_name`, `outcome` |
+| `nexus_code.error.count` | `{error}` | `error_category`, `model` |
 
-There is no `cost.usage` metric: join `grok_code.token.usage` with your own
+There is no `cost.usage` metric: join `nexus_code.token.usage` with your own
 price sheet. `lines_of_code.count` and `active_time.total` are planned for a
 later phase.
 
@@ -159,23 +159,23 @@ active.
 
 | `event.name` | Attributes |
 |---|---|
-| `grok_code.session_start` | `model`, `permission_mode`, `mcp_server_count`, `plugin_count`, `skill_count`, `hook_count`, `memory_enabled`, `is_git_repo`, `client_identifier` |
-| `grok_code.session_end` | `duration_secs`, `turn_count`, `tool_call_count`, `compaction_count`, `model` |
-| `grok_code.user_prompt` | `prompt_length`, `model`, `screen_mode?` (`fullscreen` \| `inline` \| `minimal` \| `headless` \| `other`); `prompt` (**prompts**) |
-| `grok_code.turn_completed` | `outcome`, `duration_ms`, `tool_call_count`, `model`, `error_category?`, `cancellation_category?` |
-| `grok_code.api_request` | `model`, `duration_ms`, `stop_reason?`, `input_tokens`, `output_tokens`, `reasoning_tokens`, `cache_read_tokens` |
-| `grok_code.api_error` | `error_category`, `model`, `status_code?`, `duration_ms?` |
-| `grok_code.tool_result` | `tool_name`, `outcome`, `success`, `duration_ms`, `file_extension`; `tool_parameters`, `file_path` (**details**) |
-| `grok_code.tool_decision` | `tool_name`, `decision`, `access_kind`, `permission_mode`, `source` |
-| `grok_code.mcp_server_connection` | `status`, `transport_type`, `duration_ms`, `tool_count?`, `error_type?`; `mcp_server.name` (**details**; collapsed to `mcp_server` otherwise) |
-| `grok_code.permission_mode_changed` | `to_mode`, `trigger` |
-| `grok_code.skill_activated` | `skill_source`; `skill.name` (**details**) |
-| `grok_code.plugin_loaded` | `install_kind?`, `success`, `error_category?`; `plugin_name` (**details**) |
-| `grok_code.compaction` | `duration_ms`, `tokens_before`, `tokens_after`, `model?` |
-| `grok_code.subagent` | `phase` = `launched` \| `completed`, `subagent_type?`, `outcome?`, `duration_ms?` |
-| `grok_code.auth` | `auth_method` |
-| `grok_code.internal_error` | `error_type` (class only — no message, no location) |
-| `grok_code.model_switched` | `from_model`, `to_model`, `success`, `error_code?` |
+| `nexus_code.session_start` | `model`, `permission_mode`, `mcp_server_count`, `plugin_count`, `skill_count`, `hook_count`, `memory_enabled`, `is_git_repo`, `client_identifier` |
+| `nexus_code.session_end` | `duration_secs`, `turn_count`, `tool_call_count`, `compaction_count`, `model` |
+| `nexus_code.user_prompt` | `prompt_length`, `model`, `screen_mode?` (`fullscreen` \| `inline` \| `minimal` \| `headless` \| `other`); `prompt` (**prompts**) |
+| `nexus_code.turn_completed` | `outcome`, `duration_ms`, `tool_call_count`, `model`, `error_category?`, `cancellation_category?` |
+| `nexus_code.api_request` | `model`, `duration_ms`, `stop_reason?`, `input_tokens`, `output_tokens`, `reasoning_tokens`, `cache_read_tokens` |
+| `nexus_code.api_error` | `error_category`, `model`, `status_code?`, `duration_ms?` |
+| `nexus_code.tool_result` | `tool_name`, `outcome`, `success`, `duration_ms`, `file_extension`; `tool_parameters`, `file_path` (**details**) |
+| `nexus_code.tool_decision` | `tool_name`, `decision`, `access_kind`, `permission_mode`, `source` |
+| `nexus_code.mcp_server_connection` | `status`, `transport_type`, `duration_ms`, `tool_count?`, `error_type?`; `mcp_server.name` (**details**; collapsed to `mcp_server` otherwise) |
+| `nexus_code.permission_mode_changed` | `to_mode`, `trigger` |
+| `nexus_code.skill_activated` | `skill_source`; `skill.name` (**details**) |
+| `nexus_code.plugin_loaded` | `install_kind?`, `success`, `error_category?`; `plugin_name` (**details**) |
+| `nexus_code.compaction` | `duration_ms`, `tokens_before`, `tokens_after`, `model?` |
+| `nexus_code.subagent` | `phase` = `launched` \| `completed`, `subagent_type?`, `outcome?`, `duration_ms?` |
+| `nexus_code.auth` | `auth_method` |
+| `nexus_code.internal_error` | `error_type` (class only — no message, no location) |
+| `nexus_code.model_switched` | `from_model`, `to_model`, `success`, `error_code?` |
 
 ## Privacy model
 
@@ -229,14 +229,14 @@ Example queries (PromQL, with the Prometheus exporter above):
 
 ```promql
 # Tokens by model and type across the org, 1h rate
-sum by (model, type) (rate(grok_code_token_usage_total[1h]))
+sum by (model, type) (rate(nexus_code_token_usage_total[1h]))
 
 # Sessions per team per day
-sum by (team_id) (increase(grok_code_session_count_total[1d]))
+sum by (team_id) (increase(nexus_code_session_count_total[1d]))
 
 # Tool-permission denial ratio
-sum(rate(grok_code_tool_decision_total{decision="deny"}[1h]))
-  / sum(rate(grok_code_tool_decision_total[1h]))
+sum(rate(nexus_code_tool_decision_total{decision="deny"}[1h]))
+  / sum(rate(nexus_code_tool_decision_total[1h]))
 ```
 
 ## Debugging

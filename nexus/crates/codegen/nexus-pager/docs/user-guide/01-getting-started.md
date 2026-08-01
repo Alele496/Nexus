@@ -1,6 +1,6 @@
 # Getting Started
 
-Sage is a terminal-based AI coding assistant from SpaceXAI. It runs as a TUI (Terminal User Interface) that understands your codebase, executes shell commands, edits files, searches the web, and manages tasks.
+Nexus is a terminal-based AI coding assistant. It runs as a TUI (Terminal User Interface) that understands your codebase, executes shell commands, edits files, searches the web, and manages tasks.
 
 You can use it interactively as a full-screen TUI, run it headlessly for scripting and CI/CD, or integrate it into editors via the Agent Client Protocol (ACP).
 
@@ -29,40 +29,40 @@ irm https://x.ai/cli/install.ps1 | iex
 Install a specific version:
 
 ```powershell
-$env:SAGE_VERSION="0.1.42"; irm https://x.ai/cli/install.ps1 | iex
+$env:NEXUS_VERSION="0.1.42"; irm https://x.ai/cli/install.ps1 | iex
 ```
 
-The PowerShell installer automatically adds `%USERPROFILE%\.sage\bin` to your User PATH. Alternatively, install via [Git for Windows](https://gitforwindows.org/) (Git Bash) or MSYS2 using the bash script above. WSL users get the Linux binary automatically.
+The PowerShell installer automatically adds `%USERPROFILE%\.nexus\bin` to your User PATH. Alternatively, install via [Git for Windows](https://gitforwindows.org/) (Git Bash) or MSYS2 using the bash script above. WSL users get the Linux binary automatically.
 
 Verify the installation:
 
 ```bash
-sage --version
+nexus --version
 ```
 
 Update to the latest version at any time:
 
 ```bash
-sage update
+nexus update
 ```
 
 ---
 
 ## First Launch
 
-Start Grok by running:
+Start Nexus by running:
 
 ```bash
-sage
+nexus
 ```
 
-On first launch, Grok opens your browser to authenticate with sage.local. After you sign in, Grok stores your credentials in `~/.sage/auth.json`, where they persist across sessions. Grok refreshes your credentials automatically and prompts you to sign in again when they can no longer be renewed.
+On first launch, Nexus opens your browser to authenticate with sage.local. After you sign in, Nexus stores your credentials in `~/.nexus/auth.json`, where they persist across sessions. Nexus refreshes your credentials automatically and prompts you to sign in again when they can no longer be renewed.
 
-If you prefer API key authentication (e.g., for CI/CD or environments without a browser), set the `XAI_API_KEY` environment variable instead:
+If you prefer API key authentication (e.g., for CI/CD or environments without a browser), set the `NEXUS_API_KEY` environment variable instead:
 
 ```bash
-export XAI_API_KEY="xai-..."
-sage
+export NEXUS_API_KEY="xai-..."
+nexus
 ```
 
 See [Authentication](02-authentication.md) for the full set of auth options including OIDC, external auth providers, and device code flow.
@@ -71,12 +71,12 @@ See [Authentication](02-authentication.md) for the full set of auth options incl
 
 ## Basic Interaction
 
-Once authenticated, Grok presents a full-screen TUI with two main areas:
+Once authenticated, Nexus presents a full-screen TUI with two main areas:
 
-- **Scrollback** -- the conversation history showing your prompts, Grok's responses, tool calls, file edits, and more.
+- **Scrollback** -- the conversation history showing your prompts, Nexus's responses, tool calls, file edits, and more.
 - **Prompt** -- the input area at the bottom where you type messages.
 
-Type a message and press `Enter` to send it. Grok reads files, runs commands, and edits code as needed. Each tool run streams into the scrollback in real time.
+Type a message and press `Enter` to send it. Nexus reads files, runs commands, and edits code as needed. Each tool run streams into the scrollback in real time.
 
 Press `Tab` to move focus between the prompt and the scrollback. While a turn is running, `Ctrl+C` cancels it (or clears a non-empty draft first); `Esc` is a no-op mid-turn. Idle, press `Esc` twice within 800ms to clear a non-empty prompt, or (with an empty prompt and conversation messages) to open rewind — see [Keyboard Shortcuts](03-keyboard-shortcuts.md#escape). With the scrollback focused, use the arrow keys to select entries and to collapse or expand them. To navigate with `j`/`k` and fold with `h`/`l` instead, enable Vim mode.
 
@@ -99,10 +99,10 @@ The `@` operator opens a fuzzy file picker. By default it respects `.gitignore` 
 
 ### Permissions
 
-By default, Grok asks for permission before executing shell commands or editing files. You can approve individually or toggle always-approve mode:
+By default, Nexus asks for permission before executing shell commands or editing files. You can approve individually or toggle always-approve mode:
 
 - Press `Ctrl+O` to toggle always-approve mode
-- Use the `--yolo` flag at launch: `sage --yolo`
+- Use the `--yolo` flag at launch: `nexus --yolo`
 - Type `/always-approve` in the prompt to toggle the mode
 
 ---
@@ -111,19 +111,19 @@ By default, Grok asks for permission before executing shell commands or editing 
 
 ### Sessions
 
-Every conversation is a **session**. Sessions are automatically saved to `~/.sage/sessions/` and can be resumed later. Each session tracks the full conversation history, tool calls, file edits, and task state.
+Every conversation is a **session**. Sessions are automatically saved to `~/.nexus/sessions/` and can be resumed later. Each session tracks the full conversation history, tool calls, file edits, and task state.
 
 - Start a new session: `Ctrl+N` or `/new`
 - Resume a previous session: `/resume` in the TUI, or `--resume <ID>` from the CLI
-- Continue the most recent session: `sage -c`
+- Continue the most recent session: `nexus -c`
 
 ### Scrollback
 
 The scrollback is the main display area. It shows:
 
 - **User prompts** -- your messages, rendered as sticky headers
-- **Agent messages** -- Grok's responses with full markdown rendering and syntax highlighting
-- **Thinking blocks** -- Grok's reasoning process (collapsible)
+- **Agent messages** -- Nexus's responses with full markdown rendering and syntax highlighting
+- **Thinking blocks** -- Nexus's reasoning process (collapsible)
 - **Tool calls** -- file edits (with inline diffs), command executions, search results, and more
 - **Task lists** -- TODO items tracking progress
 
@@ -131,7 +131,7 @@ Collapse or expand the selected entry with the `Left`/`Right` arrow keys (or `h`
 
 ### Tools
 
-Grok has built-in tools for:
+Nexus has built-in tools for:
 
 | Tool | Description |
 |------|-------------|
@@ -165,54 +165,54 @@ See [Slash Commands](04-slash-commands.md) for the complete reference.
 
 ```bash
 # Launch the interactive TUI and submit an initial prompt as the first turn
-sage "fix the failing auth test and run it"
+nexus "fix the failing auth test and run it"
 
 # Initial prompt in a new git worktree. Use --worktree=<name> (with `=`) so the
-# prompt isn't swallowed as the worktree name — `sage -w "refactor module X"`
+# prompt isn't swallowed as the worktree name — `nexus -w "refactor module X"`
 # would treat "refactor module X" as the worktree label, not the prompt.
-sage --worktree=feat "refactor module X"
+nexus --worktree=feat "refactor module X"
 
 # Base the worktree on a specific branch (e.g. main) instead of the current HEAD:
-sage -w --ref main "implement feature from main"
+nexus -w --ref main "implement feature from main"
 
 
 # Start in a specific project directory
-sage --cwd ~/projects/my-app
+nexus --cwd ~/projects/my-app
 
 # Add project-specific rules
-sage --rules "Always use TypeScript. Prefer functional components."
+nexus --rules "Always use TypeScript. Prefer functional components."
 
 # Auto-approve all tool executions
-sage --yolo
+nexus --yolo
 
 # Use a specific model
-sage -m sage-build
+nexus -m sage-build
 
 # Resume a previous session
-sage --resume <session-id>
+nexus --resume <session-id>
 
 # Continue the most recent session
-sage -c
+nexus -c
 
-# Experimental scrollback-native render mode. Sticky: plain `sage` reopens in
+# Experimental scrollback-native render mode. Sticky: plain `nexus` reopens in
 # the mode last chosen via --minimal/--fullscreen (or /minimal//fullscreen).
-sage --minimal
+nexus --minimal
 
 # Back to the standard fullscreen TUI (and make it sticky again)
-sage --fullscreen
+nexus --fullscreen
 
 # Headless mode (for scripts)
-sage -p "Explain this codebase"
+nexus -p "Explain this codebase"
 ```
 
 ---
 
 ## Headless Mode
 
-Run Grok non-interactively for scripting, CI/CD, and automation:
+Run Nexus non-interactively for scripting, CI/CD, and automation:
 
 ```bash
-sage -p "Your prompt here"
+nexus -p "Your prompt here"
 ```
 
 Output formats:
@@ -226,22 +226,22 @@ Output formats:
 Example CI/CD usage:
 
 ```bash
-sage -p "Review changes for bugs" --output-format json --yolo | jq -r '.text'
+nexus -p "Review changes for bugs" --output-format json --yolo | jq -r '.text'
 ```
 
 ---
 
 ## Project Rules (AGENTS.md)
 
-Add per-project instructions by creating an `AGENTS.md` file in your repository. Grok reads these files and injects their contents as a project-instructions message at the start of the conversation:
+Add per-project instructions by creating an `AGENTS.md` file in your repository. Nexus reads these files and injects their contents as a project-instructions message at the start of the conversation:
 
 ```
-~/.sage/AGENTS.md           # Global rules (apply to all projects)
+~/.nexus/AGENTS.md           # Global rules (apply to all projects)
 <repo-root>/AGENTS.md       # Repository-level rules
 <cwd>/AGENTS.md             # Directory-level rules (highest priority)
 ```
 
-Deeper files take precedence. Grok also reads `CLAUDE.md` files for compatibility.
+Deeper files take precedence. Nexus also reads `CLAUDE.md` files for compatibility.
 
 ---
 

@@ -14,7 +14,7 @@ Agents and personas both customize behavior, but they operate at different level
 |---|---|---|
 | **What they configure** | The whole session: model, tools, prompt mode, system prompt | A behavioral overlay added to a subagent's prompt |
 | **Scope** | Primary session or subagent | Subagents only |
-| **How you set them** | At startup, or with agent definitions (`.md` files in `.sage/agents/` or `~/.sage/agents/`) | In `config.toml` (`[subagents.personas]`) or `.toml` files under `.sage/personas/`; applied during subagent resolution |
+| **How you set them** | At startup, or with agent definitions (`.md` files in `.sage/agents/` or `~/.nexus/agents/`) | In `config.toml` (`[subagents.personas]`) or `.toml` files under `.sage/personas/`; applied during subagent resolution |
 | **What they control** | Model, tool availability, prompt body, skills | Tone, output format, task focus, and input/output contracts |
 | **Who edits them** | You -- create, delete, or toggle them in the agents modal or by editing files | You -- define custom personas in config or files; bundled personas are read-only |
 | **Examples** | `sage-build`, `explore`, `plan` | `researcher`, `concise` |
@@ -30,11 +30,11 @@ Manage both in the agents modal. Open it with `/config-agents` (alias `/agents`)
 Disable subagents with an environment variable or the config file:
 
 ```bash
-export SAGE_SUBAGENTS=0              # Environment variable
+export NEXUS_SUBAGENTS=0              # Environment variable
 ```
 
 ```toml
-# ~/.sage/config.toml
+# ~/.nexus/config.toml
 [subagents]
 enabled = false
 ```
@@ -79,17 +79,17 @@ instructions = "You are a thorough researcher. Always cite specific file paths."
 description = "Deep investigator."
 ```
 
-Sage discovers file-based personas from these locations, in priority order:
+Nexus discovers file-based personas from these locations, in priority order:
 
 - `.sage/personas/*.toml` (project)
-- `~/.sage/personas/*.toml` (user)
+- `~/.nexus/personas/*.toml` (user)
 - The bundled personas directory (lowest priority)
 
 Each file defines one persona, and the file name (without the extension) becomes the persona name. Inline `config.toml` personas take precedence over files. Only `.toml` files are discovered.
 
 Manage personas in the Personas tab of the agents modal (`/personas`). Bundled personas are read-only; personas you define are editable.
 
-> **Note:** Sage applies personas through subagent resolution and roles, not through a `spawn_subagent` parameter. The main agent does not pass a persona name when it spawns a child.
+> **Note:** Nexus applies personas through subagent resolution and roles, not through a `spawn_subagent` parameter. The main agent does not pass a persona name when it spawns a child.
 
 ### Persona Fields
 
@@ -125,7 +125,7 @@ Each field has a `name`, an `io_type` (defaults to `file`), a `required` flag, a
 
 ### Persona Resolution
 
-When a persona applies, Sage resolves the effective model and reasoning effort in this order, highest priority first:
+When a persona applies, Nexus resolves the effective model and reasoning effort in this order, highest priority first:
 
 1. Explicit spawn-time override
 2. Role default
@@ -193,7 +193,7 @@ For tasks that modify files, run a subagent in an isolated git worktree with `is
 - Its changes stay isolated from the parent until you merge them.
 - The subagent's result includes the worktree path.
 
-Sage manages worktrees through the `x.ai/git/worktree/*` extension methods, including an apply operation that merges changes back into the main working directory.
+Nexus manages worktrees through the `x.ai/git/worktree/*` extension methods, including an apply operation that merges changes back into the main working directory.
 
 ---
 
@@ -234,13 +234,13 @@ instructions = "Be concise. No filler words."
 # instructions_file = ".sage/personas/concise.md"  # or load from a file
 ```
 
-Sage also discovers roles from `.sage/roles/*.toml` and personas from `.sage/personas/*.toml`. Inline `config.toml` definitions take precedence over files.
+Nexus also discovers roles from `.sage/roles/*.toml` and personas from `.sage/personas/*.toml`. Inline `config.toml` definitions take precedence over files.
 
 ---
 
 ## The Tasks Pane (TUI)
 
-Sage shows running and finished work in side panes on the agent screen:
+Nexus shows running and finished work in side panes on the agent screen:
 
 - Press `Ctrl+B` to toggle the tasks pane, which lists active and completed subagents and background commands with their status.
 - Press `Ctrl+T` to toggle the separate todo pane.

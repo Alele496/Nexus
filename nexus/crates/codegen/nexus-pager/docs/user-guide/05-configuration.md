@@ -1,6 +1,6 @@
 # Configuration
 
-Grok reads configuration from local config files, environment variables, and
+Nexus reads configuration from local config files, environment variables, and
 CLI flags. This document covers the common options.
 
 ---
@@ -10,8 +10,8 @@ CLI flags. This document covers the common options.
 Configuration is resolved in this order (highest priority first):
 
 1. **CLI flags** (e.g., `--yolo`, `--model`, `--sandbox`)
-2. **Environment variables** (e.g., `XAI_API_KEY`, `SAGE_MEMORY`)
-3. **config.toml** (`~/.sage/config.toml`)
+2. **Environment variables** (e.g., `NEXUS_API_KEY`, `NEXUS_MEMORY`)
+3. **config.toml** (`~/.nexus/config.toml`)
 4. **Managed / requirements config** (local files your org may deploy, e.g.
    `managed_config.toml` / `requirements.toml`)
 5. **Built-in defaults**
@@ -20,9 +20,9 @@ Configuration is resolved in this order (highest priority first):
 
 ## config.toml (Main Configuration)
 
-Location: `~/.sage/config.toml`
+Location: `~/.nexus/config.toml`
 
-If the file does not exist, Grok uses built-in defaults. Specify only the values you want to override.
+If the file does not exist, Nexus uses built-in defaults. Specify only the values you want to override.
 
 ### General Settings
 
@@ -101,7 +101,7 @@ simple_mode = false
 ```
 
 You can also toggle this setting from the settings pane (`/settings` →
-**Disable vim input mode**); Grok writes your choice to `[ui] simple_mode` in
+**Disable vim input mode**); Nexus writes your choice to `[ui] simple_mode` in
 `config.toml`.
 
 `simple_mode` and `vim_mode` are independent: `simple_mode` changes the prompt
@@ -142,7 +142,7 @@ that is `always_allow_all_sessions`. Note that the per-command "Always allow"
 rows appear only when `[ui] remember_tool_approvals = true` (default: false).
 See [22-permissions-and-safety.md](22-permissions-and-safety.md).
 
-The setting can also be overridden with the `SAGE_DEFAULT_SELECTED_PERMISSION`
+The setting can also be overridden with the `NEXUS_DEFAULT_SELECTED_PERMISSION`
 environment variable — handy for headless / agent test runs that shouldn't
 mutate `config.toml`. Precedence: env var → `config.toml` →
 `always_allow_all_sessions` (the default).
@@ -158,8 +158,8 @@ active in the **scrollback** pane. It does not affect the input prompt.
 | `true` | All vim-style scrollback bindings are active, exactly as listed in [Keyboard Shortcuts](03-keyboard-shortcuts.md). |
 
 Toggle `vim_mode` at runtime with `/vim-mode`, or from the settings pane
-(`/settings` → **Vim scrollback navigation**). Grok writes the change to
-`[ui] vim_mode` in `~/.sage/config.toml` immediately and applies it to every
+(`/settings` → **Vim scrollback navigation**). Nexus writes the change to
+`[ui] vim_mode` in `~/.nexus/config.toml` immediately and applies it to every
 future pager session — including new agents and subagents started in the same
 process. There is no separate per-session override; whatever is in
 `config.toml` is the source of truth on next launch.
@@ -170,7 +170,7 @@ navigation, while `simple_mode` controls editing in the prompt.
 #### Screen Mode
 
 The `screen_mode` setting under `[ui]` is the **default render mode** for plain
-`sage` launches. Configure it from `/settings` → **Default screen mode**
+`nexus` launches. Configure it from `/settings` → **Default screen mode**
 (restart required), or edit `config.toml` by hand. Both choices write
 `config.toml`. CLI flags (`--minimal` / `--fullscreen`) and slash commands
 (`/minimal` / `/fullscreen`) are session-scoped and do **not** write this key —
@@ -218,8 +218,8 @@ invert_scroll = false
 
 Each setting also has an environment-variable override, applied on first load
 only — handy for headless / test runs that shouldn't mutate `config.toml`:
-`SAGE_SCROLL_SPEED`, `SAGE_SCROLL_MODE`, `SAGE_INVERT_SCROLL`
-(`1`/`true`/`0`/`false`), and `SAGE_SCROLL_LINES`. Precedence: env var →
+`NEXUS_SCROLL_SPEED`, `NEXUS_SCROLL_MODE`, `NEXUS_INVERT_SCROLL`
+(`1`/`true`/`0`/`false`), and `NEXUS_SCROLL_LINES`. Precedence: env var →
 `config.toml` → default. Unrecognized values fall back to the default, and
 out-of-range numbers clamp to the allowed range.
 
@@ -241,14 +241,14 @@ allow_local = false                              # true = allow localhost / 127.
 ```
 
 `allow_local` is off by default (SSRF fail-closed). When `true` (or
-`SAGE_WEB_FETCH_ALLOW_LOCAL=1`), `web_fetch` may reach **explicit** loopback
+`NEXUS_WEB_FETCH_ALLOW_LOCAL=1`), `web_fetch` may reach **explicit** loopback
 hosts only — private, link-local, and cloud-metadata ranges stay blocked.
 Resolution: TOML > env > default off.
 
 `[toolset.ask_user_question]` is honored across **requirements.toml**, **managed
 config**, and **user `config.toml`**. Precedence: requirements → env
-(`SAGE_ASK_USER_QUESTION_TIMEOUT_ENABLED` /
-`SAGE_ASK_USER_QUESTION_TIMEOUT_SECS`) → user config → managed →
+(`NEXUS_ASK_USER_QUESTION_TIMEOUT_ENABLED` /
+`NEXUS_ASK_USER_QUESTION_TIMEOUT_SECS`) → user config → managed →
 defaults. Set `timeout_enabled = false` in your user config to disable the
 automatic questionnaire timeout for yourself; `timeout_secs` must be a
 positive integer. `timeout_enabled` can also be toggled from the settings
@@ -265,7 +265,7 @@ auth_provider_command = "/usr/local/bin/my-auth-provider"
 auth_provider_label = "Acme Corp"
 auth_token_ttl = 3600
 
-[grok_com_config.oidc]
+[nexus_com_config.oidc]
 issuer = "https://acme.okta.com"
 client_id = "0oa1b2c3d4e5f6g7h8i9"
 # scopes = ["openid", "profile", "email", "offline_access", "api:access"]
@@ -283,14 +283,14 @@ base_url = "https://api.example.com/v1"  # OpenAI-compatible endpoint
 name = "Display Name"                 # shown in model picker
 description = "Model description"     # optional
 api_key = "sk-..."                    # API key for this provider
-env_key = "XAI_API_KEY"               # env var(s) holding the API key; string or array (first set, non-empty wins)
+env_key = "NEXUS_API_KEY"               # env var(s) holding the API key; string or array (first set, non-empty wins)
 temperature = 0.7                     # sampling temperature (0.0-2.0)
 top_p = 0.95                          # nucleus sampling parameter
 max_completion_tokens = 8192          # max tokens per response
 context_window = 128000               # context window size (for auto-compact)
 ```
 
-Credential resolution: `api_key` > `env_key` > signed-in session token > `XAI_API_KEY`.
+Credential resolution: `api_key` > `env_key` > signed-in session token > `NEXUS_API_KEY`.
 
 Override built-in models by using their name as the section key:
 
@@ -322,13 +322,13 @@ url = "https://mcp.example.com/api/mcp"  # HTTP/SSE transport
 headers = { "x-mcp-session-id" = "{{session_id}}" }
 ```
 
-MCP servers can also be configured per-project in `.sage/config.toml`. Project-scoped config contributes `[mcp_servers]`, `[plugins]`, and `[permission]` rules; other sections load only from `~/.sage/config.toml`.
+MCP servers can also be configured per-project in `.sage/config.toml`. Project-scoped config contributes `[mcp_servers]`, `[plugins]`, and `[permission]` rules; other sections load only from `~/.nexus/config.toml`.
 
-Priority for `[mcp_servers]` and `[plugins]`: `.sage/config.toml` (current dir) > `<repo-root>/.sage/config.toml` > `~/.sage/config.toml`. `[permission]` rules are not overridden by priority; they merge across all files with `deny` > `ask` > `allow` (see [22-permissions-and-safety.md](22-permissions-and-safety.md)).
+Priority for `[mcp_servers]` and `[plugins]`: `.sage/config.toml` (current dir) > `<repo-root>/.sage/config.toml` > `~/.nexus/config.toml`. `[permission]` rules are not overridden by priority; they merge across all files with `deny` > `ask` > `allow` (see [22-permissions-and-safety.md](22-permissions-and-safety.md)).
 
 ### Memory
 
-Persist knowledge across sessions (requires `--experimental-memory` or `SAGE_MEMORY=1`).
+Persist knowledge across sessions (requires `--experimental-memory` or `NEXUS_MEMORY=1`).
 
 ```toml
 [memory]
@@ -413,7 +413,7 @@ Each cell can be toggled via environment variable or `config.toml`. See the
 environment-variables reference for the env var names. Resolution order:
 env var > config.toml > default (on).
 
-`sage inspect` reports cells that still need session-start resolution as
+`nexus inspect` reports cells that still need session-start resolution as
 `?` until a value is available; cells with an explicit env or TOML value
 use that value. Affected discovery entries report
 `compatibilityStatus: "unresolved"` in JSON and `[compat unresolved]` in
@@ -429,9 +429,9 @@ disabled = ["user/a1b2c3d4/noisy-plugin"]
 
 ### Hints
 
-The `[hints]` table holds small persisted UI preferences — mostly "stop asking me" opt-outs. Grok writes these for you when you pick a "don't ask again" / "reset in config.toml" option in the TUI, but you can edit or remove them by hand. Deleting a key restores the default behavior.
+The `[hints]` table holds small persisted UI preferences — mostly "stop asking me" opt-outs. Nexus writes these for you when you pick a "don't ask again" / "reset in config.toml" option in the TUI, but you can edit or remove them by hand. Deleting a key restores the default behavior.
 
-`[hints]` is read from the **effective config merge** (same precedence as other settings): system managed → user `managed_config.toml` → user `config.toml` → user `requirements.toml` → system `requirements.toml`. Higher-priority layers override lower ones. The TUI only **writes** opt-outs to user `~/.sage/config.toml`.
+`[hints]` is read from the **effective config merge** (same precedence as other settings): system managed → user `managed_config.toml` → user `config.toml` → user `requirements.toml` → system `requirements.toml`. Higher-priority layers override lower ones. The TUI only **writes** opt-outs to user `~/.nexus/config.toml`.
 
 ```toml
 [hints]
@@ -443,7 +443,7 @@ fork_worktree_mode = "ask"             # /fork worktree prompt: "ask" | "always"
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `project_picker_disabled` | bool | `false` | When `true`, skips the picker that asks you to choose a project directory on the first prompt when Grok is launched from a non-project directory (home, Desktop, Downloads, `/tmp`). Set automatically when you choose **"Don't ask me again"** in that picker. Teams can pin this in `managed_config.toml` or `requirements.toml` via `[hints] project_picker_disabled = true`. |
+| `project_picker_disabled` | bool | `false` | When `true`, skips the picker that asks you to choose a project directory on the first prompt when Nexus is launched from a non-project directory (home, Desktop, Downloads, `/tmp`). Set automatically when you choose **"Don't ask me again"** in that picker. Teams can pin this in `managed_config.toml` or `requirements.toml` via `[hints] project_picker_disabled = true`. |
 | `memory_modal_fullscreen` | bool | `false` | Remembers whether the memory modal was last opened fullscreen. |
 | `new_session_worktree_mode` | string | `"never"` | Worktree prompt for `/new`: `ask` shows the popup, `always` creates a worktree, `never` skips it. |
 | `fork_worktree_mode` | string | `"ask"` | Worktree prompt for `/fork`: `ask`, `always`, or `never`. |
@@ -493,28 +493,28 @@ items = ["action-required", "spinner", "activity", "session-name", "sage"]
 | VS Code | BEL | Yes | No |
 | Apple Terminal | BEL | No | No |
 | VTE (GNOME Terminal) | OSC 777 | Yes | No |
-| Grok Desktop | None (native) | N/A | N/A |
+| Nexus Desktop | None (native) | N/A | N/A |
 | Unknown | BEL | No | No |
 
-When `method = "auto"`, Grok detects the terminal brand and selects the best
+When `method = "auto"`, Nexus detects the terminal brand and selects the best
 protocol automatically. Set `method` explicitly to override auto-detection.
 
 #### Notification Hooks
 
 Run custom commands when events occur. Hooks receive environment variables
-`$SAGE_EVENT`, `$SAGE_MESSAGE`, and `$SAGE_SESSION_ID`.
+`$NEXUS_EVENT`, `$NEXUS_MESSAGE`, and `$NEXUS_SESSION_ID`.
 
 ```toml
 # macOS native notification
 [[ui.notifications.hooks]]
-command = "terminal-notifier -title 'Grok' -message '$SAGE_MESSAGE'"
+command = "terminal-notifier -title 'Nexus' -message '$NEXUS_MESSAGE'"
 events = ["turn_complete", "approval_required"]
 only_unfocused = true
 timeout_secs = 10
 
 # Push to ntfy server
 [[ui.notifications.hooks]]
-command = "curl -s -d '$SAGE_MESSAGE' ntfy.sh/my-sage-alerts"
+command = "curl -s -d '$NEXUS_MESSAGE' ntfy.sh/my-sage-alerts"
 events = ["turn_complete"]
 only_unfocused = true
 timeout_secs = 10
@@ -549,7 +549,7 @@ Then restart tmux. If passthrough is not available (tmux < 3.3), set
 
 **Focus tracking not working:**
 Some terminals do not report focus events. If `condition = "unfocused"` never
-fires, try `condition = "always"` as a fallback. Grok supports focus tracking
+fires, try `condition = "always"` as a fallback. Nexus supports focus tracking
 in every detected terminal except Apple Terminal and unrecognized terminals.
 
 **Sleep prevention not taking effect:**
@@ -567,10 +567,10 @@ See [Keyboard Shortcuts](03-keyboard-shortcuts.md) for the complete reference.
 
 Independent knobs (see [Monitoring Usage](24-monitoring-usage.md#related-settings)):
 
-- **`[features] telemetry`** / `SAGE_TELEMETRY_ENABLED`: product analytics master switch. `/privacy` does not change it.
+- **`[features] telemetry`** / `NEXUS_TELEMETRY_ENABLED`: product analytics master switch. `/privacy` does not change it.
 - **`/privacy`** / Settings: coding data sharing (separate from telemetry).
-- **`[telemetry] trace_upload`** / `SAGE_TELEMETRY_TRACE_UPLOAD`: session traces; follows telemetry when unset.
-- **`[telemetry] otel_*`** / `SAGE_EXTERNAL_OTEL`: external OTEL to your collector (below).
+- **`[telemetry] trace_upload`** / `NEXUS_TELEMETRY_TRACE_UPLOAD`: session traces; follows telemetry when unset.
+- **`[telemetry] otel_*`** / `NEXUS_EXTERNAL_OTEL`: external OTEL to your collector (below).
 
 When telemetry is enabled, enterprises that run their own collector can redirect
 it or selectively disable parts of it under `[telemetry]`:
@@ -583,13 +583,13 @@ mixpanel_enabled = false                                  # disable Mixpanel pro
 trace_upload = false                                      # disable session/trace uploads (inherits the telemetry toggle when unset)
 ```
 
-Set these only to point telemetry at your own infrastructure or to turn parts of it off. The built-in endpoint and credentials are managed by Grok; leave them unset to use the defaults.
+Set these only to point telemetry at your own infrastructure or to turn parts of it off. The built-in endpoint and credentials are managed by Nexus; leave them unset to use the defaults.
 
 The same `[telemetry]` table also configures the **external OpenTelemetry stream**, an independent opt-in (it does not require the telemetry toggle above) that ships a curated, content-free usage schema to your *own* OTLP collector. Collector auth is supplied via `OTEL_EXPORTER_OTLP_HEADERS` and is never stored on disk. See [Monitoring & Usage](24-monitoring-usage.md) for the full schema, env vars, and privacy model.
 
 ```toml
 [telemetry]
-otel_enabled = true                                       # external OTEL master switch (= SAGE_EXTERNAL_OTEL)
+otel_enabled = true                                       # external OTEL master switch (= NEXUS_EXTERNAL_OTEL)
 otel_metrics_exporter = "otlp"                            # otlp | console | none
 otel_logs_exporter = "otlp"                               # otlp | console | none
 otel_endpoint = "https://collector.corp.example:4318"     # OTLP base endpoint
@@ -612,12 +612,12 @@ auth_provider_label = "Acme Corp"
 auth_token_ttl = 3600
 
 [models]
-default = "company-sage"
+default = "company-nexus"
 
-[model.company-sage]
+[model.company-nexus]
 model = "sage-build"
 base_url = "https://sage-proxy.acme.com/"
-name = "Sage Latest (Proxy)"
+name = "Nexus Latest (Proxy)"
 context_window = 128000
 
 [features]
@@ -628,7 +628,7 @@ telemetry = false
 
 ## pager.toml (Appearance Configuration)
 
-Location: `~/.sage/pager.toml`
+Location: `~/.nexus/pager.toml`
 
 Controls the visual appearance and behavior of the TUI. Changes are applied on restart.
 
@@ -757,55 +757,55 @@ Key environment variables. See the README for the complete list.
 
 | Variable | Description |
 |----------|-------------|
-| `XAI_API_KEY` | API key from console.x.ai |
-| `SAGE_AUTH_PROVIDER_COMMAND` | External auth binary path |
-| `SAGE_AUTH_PROVIDER_LABEL` | Display name on TUI login screen |
-| `SAGE_AUTH_TOKEN_TTL` | Token lifetime in seconds |
-| `SAGE_AUTH_EARLY_INVALIDATION_SECS` | Seconds before expiry to refresh (default: 300) |
-| `SAGE_OIDC_ISSUER` | OIDC issuer URL |
-| `SAGE_OIDC_CLIENT_ID` | OIDC client ID |
+| `NEXUS_API_KEY` | API key from console.x.ai |
+| `NEXUS_AUTH_PROVIDER_COMMAND` | External auth binary path |
+| `NEXUS_AUTH_PROVIDER_LABEL` | Display name on TUI login screen |
+| `NEXUS_AUTH_TOKEN_TTL` | Token lifetime in seconds |
+| `NEXUS_AUTH_EARLY_INVALIDATION_SECS` | Seconds before expiry to refresh (default: 300) |
+| `NEXUS_OIDC_ISSUER` | OIDC issuer URL |
+| `NEXUS_OIDC_CLIENT_ID` | OIDC client ID |
 
 ### Endpoints
 
 | Variable | Description |
 |----------|-------------|
-| `SAGE_CLI_CHAT_PROXY_BASE_URL` | Override API proxy base URL |
+| `NEXUS_CLI_CHAT_PROXY_BASE_URL` | Override API proxy base URL |
 
 ### Features
 
 | Variable | Description |
 |----------|-------------|
-| `SAGE_MEMORY` | Enable (`1`) or disable (`0`) cross-session memory |
-| `SAGE_SUBAGENTS` | Enable (`1`) or disable (`0`) subagents |
-| `SAGE_WEB_FETCH` | Enable (`1`) or disable (`0`) the web_fetch tool |
-| `SAGE_WEB_FETCH_ALLOW_LOCAL` | Allow `web_fetch` to explicit loopback hosts only (`localhost` / `127.0.0.0/8` / `::1`). Same as `[toolset.web_fetch] allow_local`. Default off. Private/metadata stay blocked. |
-| `SAGE_AGENT` | Custom agent definition path or name |
-| `SAGE_SANDBOX` | Sandbox profile (off, workspace, devbox, read-only, strict; or a custom profile name) |
+| `NEXUS_MEMORY` | Enable (`1`) or disable (`0`) cross-session memory |
+| `NEXUS_SUBAGENTS` | Enable (`1`) or disable (`0`) subagents |
+| `NEXUS_WEB_FETCH` | Enable (`1`) or disable (`0`) the web_fetch tool |
+| `NEXUS_WEB_FETCH_ALLOW_LOCAL` | Allow `web_fetch` to explicit loopback hosts only (`localhost` / `127.0.0.0/8` / `::1`). Same as `[toolset.web_fetch] allow_local`. Default off. Private/metadata stay blocked. |
+| `NEXUS_AGENT` | Custom agent definition path or name |
+| `NEXUS_SANDBOX` | Sandbox profile (off, workspace, devbox, read-only, strict; or a custom profile name) |
 
 ### Logging
 
 | Variable | Description |
 |----------|-------------|
-| `SAGE_LOG_FILE` | Write logs to this file path (the value is used verbatim as the path) |
-| `RUST_LOG` | Log level filter (for example `debug`); controls the `SAGE_LOG_FILE` log and headless stderr output |
+| `NEXUS_LOG_FILE` | Write logs to this file path (the value is used verbatim as the path) |
+| `RUST_LOG` | Log level filter (for example `debug`); controls the `NEXUS_LOG_FILE` log and headless stderr output |
 
 ### Paths
 
 | Variable | Description |
 |----------|-------------|
-| `SAGE_HOME` | Override config directory (default: `~/.sage`) |
-| `SAGE_RESPECT_GITIGNORE` | Force gitignore filtering on (`1`) or off (`0`); overrides `[tools] respect_gitignore` |
+| `NEXUS_HOME` | Override config directory (default: `~/.nexus`) |
+| `NEXUS_RESPECT_GITIGNORE` | Force gitignore filtering on (`1`) or off (`0`); overrides `[tools] respect_gitignore` |
 
 ### Telemetry
 
 | Variable | Description |
 |----------|-------------|
-| `SAGE_TELEMETRY_ENABLED` | Enable/disable telemetry |
-| `SAGE_TELEMETRY_TRACE_UPLOAD` | Enable/disable session trace upload |
-| `SAGE_TELEMETRY_MIXPANEL_ENABLED` | Enable/disable Mixpanel specifically |
-| `SAGE_EXTERNAL_OTEL` | External OTEL to your collector (see [24-monitoring-usage.md](24-monitoring-usage.md)) |
-| `SAGE_FEEDBACK_ENABLED` | Enable/disable feedback system |
-| `SAGE_DEPLOYMENT_KEY` | Management API key for enterprise |
+| `NEXUS_TELEMETRY_ENABLED` | Enable/disable telemetry |
+| `NEXUS_TELEMETRY_TRACE_UPLOAD` | Enable/disable session trace upload |
+| `NEXUS_TELEMETRY_MIXPANEL_ENABLED` | Enable/disable Mixpanel specifically |
+| `NEXUS_EXTERNAL_OTEL` | External OTEL to your collector (see [24-monitoring-usage.md](24-monitoring-usage.md)) |
+| `NEXUS_FEEDBACK_ENABLED` | Enable/disable feedback system |
+| `NEXUS_DEPLOYMENT_KEY` | Management API key for enterprise |
 
 ---
 
@@ -813,16 +813,16 @@ Key environment variables. See the README for the complete list.
 
 | Path | Description |
 |------|-------------|
-| `~/.sage/config.toml` | Main configuration file |
-| `~/.sage/pager.toml` | TUI appearance configuration |
-| `~/.sage/auth.json` | Authentication credentials (auto-managed) |
-| `~/.sage/sessions/` | Persisted sessions (organized by working directory) |
-| `~/.sage/memory/` | Cross-session memory files and index |
-| `~/.sage/skills/` | User-scoped skill definitions |
-| `~/.sage/plugins/` | User-scoped plugins |
-| `~/.sage/agents/` | User-scoped agent definitions |
-| `~/.sage/lsp.json` | LSP server configuration (user-scoped) |
-| `~/.sage/logs/` | Internal log files (for example `unified.jsonl`, MCP server logs) |
+| `~/.nexus/config.toml` | Main configuration file |
+| `~/.nexus/pager.toml` | TUI appearance configuration |
+| `~/.nexus/auth.json` | Authentication credentials (auto-managed) |
+| `~/.nexus/sessions/` | Persisted sessions (organized by working directory) |
+| `~/.nexus/memory/` | Cross-session memory files and index |
+| `~/.nexus/skills/` | User-scoped skill definitions |
+| `~/.nexus/plugins/` | User-scoped plugins |
+| `~/.nexus/agents/` | User-scoped agent definitions |
+| `~/.nexus/lsp.json` | LSP server configuration (user-scoped) |
+| `~/.nexus/logs/` | Internal log files (for example `unified.jsonl`, MCP server logs) |
 | `.sage/config.toml` | Project-scoped MCP servers, plugins, and permission rules |
 | `.sage/skills/` | Project-scoped skill definitions |
 | `.sage/plugins/` | Project-scoped plugins |
@@ -838,7 +838,7 @@ Some configuration can be set per-project by placing files in `.sage/` within yo
 
 | File | What it configures |
 |------|--------------------|
-| `.sage/config.toml` | MCP servers, plugins, permission rules, and the `[mcp] max_output_bytes` tool-result cap (other sections load only from `~/.sage/config.toml`) |
+| `.sage/config.toml` | MCP servers, plugins, permission rules, and the `[mcp] max_output_bytes` tool-result cap (other sections load only from `~/.nexus/config.toml`) |
 | `.sage/skills/` | Project-specific skills |
 | `.sage/hooks/` | Project-specific lifecycle hooks |
 | `.sage/agents/` | Project-specific agent definitions |
@@ -856,14 +856,14 @@ Language servers power passive diagnostics and the optional `lsp` tool (see the 
 
 | Source | Location | Scope |
 |--------|----------|-------|
-| User | `~/.sage/lsp.json` | All projects |
+| User | `~/.nexus/lsp.json` | All projects |
 | Project | `.sage/lsp.json` | Current repository |
 | Plugin | A trusted plugin's `.lsp.json` file, or an inline `lspServers` block in its `plugin.json` | Wherever the plugin is enabled |
 
 When the same server name is defined by more than one source, it is resolved in this order (highest priority first):
 
 1. **Project** -- `.sage/lsp.json`
-2. **User** -- `~/.sage/lsp.json`
+2. **User** -- `~/.nexus/lsp.json`
 3. **Plugins** -- file-based `.lsp.json`, then inline `lspServers`, in plugin load order
 
 Project and user entries replace lower-priority ones with the same name. Plugin entries only add servers whose names are not already defined by a local file, so a local `lsp.json` always wins over a plugin. Plugin LSP servers load only after the plugin is trusted (see [Plugins](09-plugins.md)).

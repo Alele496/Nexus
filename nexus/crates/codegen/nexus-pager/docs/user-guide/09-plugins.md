@@ -11,11 +11,11 @@ A plugin is a directory that holds any combination of these components:
 - **Skills** -- a `skills/` directory of SKILL.md files
 - **Slash commands** -- a `commands/` directory of command files
 - **Agents** -- an `agents/` directory of agent definitions
-- **Hooks** -- a `hooks/hooks.json` file of lifecycle hooks. Plugin hooks also receive `SAGE_PLUGIN_ROOT` and `SAGE_PLUGIN_DATA` (see the [Hooks guide](10-hooks.md) for every environment variable passed to hooks).
+- **Hooks** -- a `hooks/hooks.json` file of lifecycle hooks. Plugin hooks also receive `NEXUS_PLUGIN_ROOT` and `NEXUS_PLUGIN_DATA` (see the [Hooks guide](10-hooks.md) for every environment variable passed to hooks).
 - **MCP servers** -- a `.mcp.json` file of server configurations
 - **LSP servers** -- a `.lsp.json` file of language server configurations
 
-If a plugin includes a `plugin.json` manifest, the manifest can override paths or add metadata; otherwise components load from the convention directories. The manifest is optional: without one, Grok discovers the components above from their standard directories.
+If a plugin includes a `plugin.json` manifest, the manifest can override paths or add metadata; otherwise components load from the convention directories. The manifest is optional: without one, Nexus discovers the components above from their standard directories.
 
 For example, a `team-tools` plugin might include a deploy skill, a code-review agent, pre-commit hooks, and a Linear MCP server. Install them together in one step.
 
@@ -25,28 +25,28 @@ Plugin hooks receive two environment variables beyond the standard ones set for 
 
 | Variable             | Description |
 |----------------------|-------------|
-| `SAGE_PLUGIN_ROOT`   | Absolute path to the plugin's installed directory. |
-| `SAGE_PLUGIN_DATA`   | Absolute path to the plugin's writable data directory, for plugin state, caches, and logs. |
+| `NEXUS_PLUGIN_ROOT`   | Absolute path to the plugin's installed directory. |
+| `NEXUS_PLUGIN_DATA`   | Absolute path to the plugin's writable data directory, for plugin state, caches, and logs. |
 
-Grok sets these values and overrides any value you declare for the same key in the hook JSON's `env` map. (Grok also sets the `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` aliases for compatibility.) See the [Hooks guide](10-hooks.md) for every environment variable passed to hooks.
+Nexus sets these values and overrides any value you declare for the same key in the hook JSON's `env` map. (Nexus also sets the `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` aliases for compatibility.) See the [Hooks guide](10-hooks.md) for every environment variable passed to hooks.
 
 ---
 
 ## Plugin locations
 
-Grok discovers plugins from these locations, in priority order:
+Nexus discovers plugins from these locations, in priority order:
 
 | Location | Scope | Trust |
 |----------|-------|-------|
 | `_meta.pluginDirs` (`session/new` / `session/load`) | Session -- loaded for that session only | Trusted automatically |
-| `--plugin-dir` (CLI flag, `sage agent`) | Process -- loaded for that agent process only | Trusted automatically |
+| `--plugin-dir` (CLI flag, `nexus agent`) | Process -- loaded for that agent process only | Trusted automatically |
 | `.sage/plugins/` | Project -- shared with the team through version control | Requires trust |
-| `~/.sage/plugins/` | User -- personal plugins for every project | Trusted automatically |
+| `~/.nexus/plugins/` | User -- personal plugins for every project | Trusted automatically |
 | `[plugins].paths` (config) | Custom directories you add in `config.toml` | Depends on location |
 
-Grok also reads the `.claude/plugins/` equivalents for compatibility. When two plugins share a name, the higher-priority location wins.
+Nexus also reads the `.claude/plugins/` equivalents for compatibility. When two plugins share a name, the higher-priority location wins.
 
-The Agent SDKs load per-session plugins through `GrokOptions.plugins`, which arrives as `_meta.pluginDirs` on `session/new` and `session/load`; because the caller controls the directory, these plugins are always trusted -- their hooks and MCP servers activate without a prompt, and they never persist beyond the session. The `--plugin-dir` flag is the process-wide equivalent for direct CLI use (repeatable: `sage agent --no-leader --plugin-dir A --plugin-dir B stdio`); it applies to dedicated agent processes only and is ignored in leader mode (the shared leader discovers its own plugins).
+The Agent SDKs load per-session plugins through `NexusOptions.plugins`, which arrives as `_meta.pluginDirs` on `session/new` and `session/load`; because the caller controls the directory, these plugins are always trusted -- their hooks and MCP servers activate without a prompt, and they never persist beyond the session. The `--plugin-dir` flag is the process-wide equivalent for direct CLI use (repeatable: `nexus agent --no-leader --plugin-dir A --plugin-dir B stdio`); it applies to dedicated agent processes only and is ignored in leader mode (the shared leader discovers its own plugins).
 
 ---
 
@@ -115,18 +115,18 @@ Manage plugins without starting an interactive session.
 ### Plugin commands
 
 ```bash
-sage plugin list [--json] [--available]   # List installed plugins (--available requires --json)
-sage plugin install <source> --trust      # Git URL, GitHub shorthand (user/repo), or local path
-sage plugin uninstall <name> [--confirm] [--keep-data]   # Aliases: rm, remove
-sage plugin update [<name>]               # Omit the name to update all plugins
-sage plugin enable <name>
-sage plugin disable <name>
-sage plugin details <name>                # Show the plugin's component inventory
-sage plugin validate [<path>]             # Validate plugin.json (default: current directory)
-sage plugin tag [<path>] [--push] [--force] [--dry-run]   # Tag a release from the manifest version
+nexus plugin list [--json] [--available]   # List installed plugins (--available requires --json)
+nexus plugin install <source> --trust      # Git URL, GitHub shorthand (user/repo), or local path
+nexus plugin uninstall <name> [--confirm] [--keep-data]   # Aliases: rm, remove
+nexus plugin update [<name>]               # Omit the name to update all plugins
+nexus plugin enable <name>
+nexus plugin disable <name>
+nexus plugin details <name>                # Show the plugin's component inventory
+nexus plugin validate [<path>]             # Validate plugin.json (default: current directory)
+nexus plugin tag [<path>] [--push] [--force] [--dry-run]   # Tag a release from the manifest version
 ```
 
-Run `sage plugin install <source>` without `--trust` and Grok prints the source and warns that installing will activate the plugin's hooks, MCP servers, and skills, then stops without installing. Add `--trust` to install it.
+Run `nexus plugin install <source>` without `--trust` and Nexus prints the source and warns that installing will activate the plugin's hooks, MCP servers, and skills, then stops without installing. Add `--trust` to install it.
 
 The `<source>` argument accepts:
 
@@ -151,7 +151,7 @@ verified against the fetched checkout):
 require_sha = true
 ```
 
-or `SAGE_MARKETPLACE_REQUIRE_SHA=1`. Both are tighten-only: either one enables
+or `NEXUS_MARKETPLACE_REQUIRE_SHA=1`. Both are tighten-only: either one enables
 the policy and neither can switch it back off. With the policy on, unpinned
 remote installs, marketplace installs without a published `sha`, and updates of
 branch-tracking installs are refused.
@@ -164,27 +164,27 @@ source's content by publishing `sha` entries in `plugin-index.json`.
 ### Marketplace commands
 
 ```bash
-sage plugin marketplace list [--json]
-sage plugin marketplace add <url>         # Git URL, GitHub shorthand (user/repo), or local path
-sage plugin marketplace remove <url>      # Git URL or local path of a configured source
-sage plugin marketplace update [<name>]   # Omit the name to refresh all sources
+nexus plugin marketplace list [--json]
+nexus plugin marketplace add <url>         # Git URL, GitHub shorthand (user/repo), or local path
+nexus plugin marketplace remove <url>      # Git URL or local path of a configured source
+nexus plugin marketplace update [<name>]   # Omit the name to refresh all sources
 ```
 
 ### Example: set up a team marketplace
 
 ```bash
-sage plugin marketplace add my-org/team-plugins
-sage plugin marketplace list
-sage plugin install my-org/team-plugins --trust
-sage plugin list
-sage plugin update
+nexus plugin marketplace add my-org/team-plugins
+nexus plugin marketplace list
+nexus plugin install my-org/team-plugins --trust
+nexus plugin list
+nexus plugin update
 ```
 
 ---
 
 ## Slash commands
 
-In an interactive session, these commands open the modal on a specific tab. They take no arguments — manage plugins from the modal or with the `sage plugin` CLI.
+In an interactive session, these commands open the modal on a specific tab. They take no arguments — manage plugins from the modal or with the `nexus plugin` CLI.
 
 | Command | Opens |
 |---------|-------|
@@ -198,7 +198,7 @@ In an interactive session, these commands open the modal on a specific tab. They
 
 ## Configuration
 
-Configure plugin directories and per-plugin state in `~/.sage/config.toml`:
+Configure plugin directories and per-plugin state in `~/.nexus/config.toml`:
 
 ```toml
 [plugins]
@@ -207,11 +207,11 @@ disabled = ["user/a1b2c3d4/noisy-plugin"]    # Plugin IDs or names to skip
 enabled = ["project/9f8e7d6c/team-tools"]    # Plugin IDs or names to force on
 ```
 
-List a plugin in `disabled` to discover it but skip loading its components. List a plugin in `enabled` to activate it — plugins are disabled by default unless a CLI override or an explicit config path enables them, so add them here to turn them on. Each entry is either a plain plugin name (as shown by `sage plugin list`) or a full plugin ID in the form `<scope>/<hash>/<name>`.
+List a plugin in `disabled` to discover it but skip loading its components. List a plugin in `enabled` to activate it — plugins are disabled by default unless a CLI override or an explicit config path enables them, so add them here to turn them on. Each entry is either a plain plugin name (as shown by `nexus plugin list`) or a full plugin ID in the form `<scope>/<hash>/<name>`.
 
 ### Hide the plugins UI
 
-To hide the hooks and plugins UI — the `/hooks` and `/plugins` commands and the scrollback annotations — set this in `~/.sage/pager.toml`:
+To hide the hooks and plugins UI — the `/hooks` and `/plugins` commands and the scrollback annotations — set this in `~/.nexus/pager.toml`:
 
 ```toml
 disable_plugins = true
@@ -251,7 +251,7 @@ Add sources under `extraKnownMarketplaces`, keyed by name. Each entry's `source`
 }
 ```
 
-Place this file at `~/.sage/settings.json` or `~/.claude/settings.json`.
+Place this file at `~/.nexus/settings.json` or `~/.claude/settings.json`.
 
 ---
 
@@ -259,21 +259,21 @@ Place this file at `~/.sage/settings.json` or `~/.claude/settings.json`.
 
 Enabling a plugin loads its skills, slash commands, and agents. Trust is separate and controls whether a plugin's code runs: even for an enabled plugin, its hooks, MCP servers, and LSP servers stay inactive until you trust it. This prevents an untrusted repository from running code on your machine.
 
-Grok trusts plugins from `~/.sage/plugins/` automatically. Project plugins in `.sage/plugins/` require explicit trust. To trust a plugin, install it with `--trust`:
+Nexus trusts plugins from `~/.nexus/plugins/` automatically. Project plugins in `.sage/plugins/` require explicit trust. To trust a plugin, install it with `--trust`:
 
 ```bash
-sage plugin install <source> --trust
+nexus plugin install <source> --trust
 ```
 
 ---
 
 ## Inspect plugins
 
-Run `sage inspect` to see every discovered plugin and what it provides:
+Run `nexus inspect` to see every discovered plugin and what it provides:
 
 ```bash
-sage inspect          # Show plugins with their skills, agents, hooks, and MCP servers
-sage inspect --json   # Emit machine-readable JSON
+nexus inspect          # Show plugins with their skills, agents, hooks, and MCP servers
+nexus inspect --json   # Emit machine-readable JSON
 ```
 
 Plugin-provided components appear in their sections (Skills, Agents, MCP Servers, and so on) with a `plugin: <name>` label, so you can see where each component originates.

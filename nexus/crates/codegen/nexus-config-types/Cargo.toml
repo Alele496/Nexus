@@ -3,7 +3,7 @@ license = "Apache-2.0"
 name = "nexus-config-types"
 version = "0.1.0"
 edition.workspace = true
-description = "Leaf configuration value types for the sage CLI, extracted from nexus-shell for dependency inversion."
+description = "Leaf configuration value types for the nexus CLI, extracted from nexus-shell for dependency inversion."
 
 [dependencies]
 agent-client-protocol = { workspace = true }

@@ -1,17 +1,17 @@
 # Custom Models
 
-Grok connects to custom model endpoints for alternative providers, self-hosted models, and overriding built-in settings. This guide explains how to select models, configure endpoints, and integrate third-party providers.
+Nexus connects to custom model endpoints for alternative providers, self-hosted models, and overriding built-in settings. This guide explains how to select models, configure endpoints, and integrate third-party providers.
 
 ---
 
 ## Default Models
 
-By default, Grok uses models hosted by SpaceXAI, and new sessions start with `sage-build`. Default models require no configuration. Authenticate with `sage login` or an API key, then start a session.
+By default, Nexus uses built-in models, and new sessions start with `sage-build`. Default models require no configuration. Authenticate with `nexus login` or an API key, then start a session.
 
 List all available models:
 
 ```bash
-sage models
+nexus models
 ```
 
 ---
@@ -21,7 +21,7 @@ sage models
 ### CLI Flag
 
 ```bash
-sage -p "Hello" -m sage-build
+nexus -p "Hello" -m sage-build
 ```
 
 ### Slash Command
@@ -44,7 +44,7 @@ Press `Ctrl+M` from the scrollback pane to open the model picker. It lists all a
 
 ### Config Default
 
-Set a persistent default in `~/.sage/config.toml`:
+Set a persistent default in `~/.nexus/config.toml`:
 
 ```toml
 [models]
@@ -55,7 +55,7 @@ default = "sage-build"
 
 ## Supported API Backends
 
-Grok supports three API backends. Set `api_backend` in your `[model.*]` config to choose which protocol the model uses:
+Nexus supports three API backends. Set `api_backend` in your `[model.*]` config to choose which protocol the model uses:
 
 | Value | API | Default |
 |-------|-----|---------|
@@ -63,15 +63,15 @@ Grok supports three API backends. Set `api_backend` in your `[model.*]` config t
 | `"responses"` | OpenAI Responses (`/v1/responses`) | |
 | `"messages"` | Anthropic Messages (`/v1/messages`) | |
 
-When you omit `api_backend`, Grok uses `chat_completions`.
+When you omit `api_backend`, Nexus uses `chat_completions`.
 
-To send provider-specific authentication or version headers -- for example, Anthropic's `x-api-key` -- use the `extra_headers` field described below. Grok sends those headers verbatim with every request to the endpoint.
+To send provider-specific authentication or version headers -- for example, Anthropic's `x-api-key` -- use the `extra_headers` field described below. Nexus sends those headers verbatim with every request to the endpoint.
 
 ---
 
 ## Configuring Custom Models
 
-Add custom model endpoints in `~/.sage/config.toml` under `[model.<name>]` sections:
+Add custom model endpoints in `~/.nexus/config.toml` under `[model.<name>]` sections:
 
 ```toml
 [model.my-model]
@@ -80,7 +80,7 @@ base_url = "https://api.example.com/v1"   # OpenAI-compatible endpoint
 name = "Display Name"                     # Shown in the model picker
 description = "Model description"          # Optional description
 api_key = "sk-..."                        # API key for this provider (optional)
-env_key = "XAI_API_KEY"                   # Env var holding the API key (optional; string or array)
+env_key = "NEXUS_API_KEY"                   # Env var holding the API key (optional; string or array)
 api_backend = "chat_completions"          # "chat_completions", "responses", or "messages"
 temperature = 0.7                         # Sampling temperature
 top_p = 0.95                              # Nucleus sampling parameter
@@ -91,16 +91,16 @@ extra_headers = { "x-api-key" = "sk-..." } # Extra request headers, sent verbati
 
 ### Credential Resolution
 
-Grok resolves the API key in this order:
+Nexus resolves the API key in this order:
 
 1. The `api_key` field in the model config
 2. The environment variable(s) named by `env_key` — a single string or an array of names. The first set, non-empty value wins (for example `env_key = ["ANTHROPIC_AUTH_TOKEN", "LC_ANTHROPIC_AUTH_TOKEN"]` for SSH `LC_*` forwarding)
-3. Your signed-in session token (from `sage login`), for a model with no `api_key`/`env_key` of its own
-4. The `XAI_API_KEY` environment variable (global fallback; Grok also accepts `SAGE_CODE_XAI_API_KEY` for backward compatibility)
+3. Your signed-in session token (from `nexus login`), for a model with no `api_key`/`env_key` of its own
+4. The `NEXUS_API_KEY` environment variable (global fallback; Nexus also accepts `NEXUS_CODE_XAI_API_KEY` for backward compatibility)
 
 ### Context Window
 
-The `context_window` value tells Grok when to trigger auto-compaction. When you override a known model, Grok inherits that model's context window. When you define a new model and omit `context_window`, Grok defaults to 200,000 tokens, so set it explicitly to match your provider.
+The `context_window` value tells Nexus when to trigger auto-compaction. When you override a known model, Nexus inherits that model's context window. When you define a new model and omit `context_window`, Nexus defaults to 200,000 tokens, so set it explicitly to match your provider.
 
 ### Global Default Headers
 
@@ -148,7 +148,7 @@ temperature = 0.5
 api_key = "sk-custom"
 ```
 
-When you override a built-in model, Grok starts with the default configuration (including the correct `base_url`), then applies only the fields you specify. Unspecified fields inherit from the default.
+When you override a built-in model, Nexus starts with the default configuration (including the correct `base_url`), then applies only the fields you specify. Unspecified fields inherit from the default.
 
 ### Priority Order
 
@@ -174,7 +174,7 @@ context_window = 200000
 extra_headers = { "x-api-key" = "sk-ant-...", "anthropic-version" = "2023-06-01" }
 ```
 
-The `messages` backend uses the Anthropic Messages protocol. Anthropic authenticates with an `x-api-key` header rather than `Authorization: Bearer`, so pass your key through `extra_headers`, which Grok sends verbatim.
+The `messages` backend uses the Anthropic Messages protocol. Anthropic authenticates with an `x-api-key` header rather than `Authorization: Bearer`, so pass your key through `extra_headers`, which Nexus sends verbatim.
 
 ### OpenAI (Chat Completions)
 
@@ -240,22 +240,22 @@ temperature = 0.8
 
 ## Custom Models Endpoint
 
-Point Grok at a custom OpenAI-compatible `/v1/models` endpoint instead of the default. Use this when your models sit behind a corporate gateway or a self-hosted inference service.
+Point Nexus at a custom OpenAI-compatible `/v1/models` endpoint instead of the default. Use this when your models sit behind a corporate gateway or a self-hosted inference service.
 
 ### Environment Variables
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `SAGE_MODELS_BASE_URL` | Yes | Base URL for inference. Grok fetches the model list from `{base_url}/models`. |
-| `XAI_API_KEY` | Yes | API key sent as `Authorization: Bearer`. Grok also accepts `SAGE_CODE_XAI_API_KEY`. |
-| `SAGE_MODELS_LIST_URL` | No | Override the model-list URL when it differs from `{base_url}/models`. |
+| `NEXUS_MODELS_BASE_URL` | Yes | Base URL for inference. Nexus fetches the model list from `{base_url}/models`. |
+| `NEXUS_API_KEY` | Yes | API key sent as `Authorization: Bearer`. Nexus also accepts `NEXUS_CODE_XAI_API_KEY`. |
+| `NEXUS_MODELS_LIST_URL` | No | Override the model-list URL when it differs from `{base_url}/models`. |
 
 ### Setup
 
 ```bash
-export SAGE_MODELS_BASE_URL="https://api.acme.com/v1"
-export XAI_API_KEY="xai-..."
-sage
+export NEXUS_MODELS_BASE_URL="https://api.acme.com/v1"
+export NEXUS_API_KEY="xai-..."
+nexus
 ```
 
 ### Config File Alternative
@@ -269,11 +269,11 @@ models_base_url = "https://api.acme.com/v1"
 api_key = "my-api-key"
 ```
 
-When you use `[endpoints]` with partial model overrides, Grok inherits the `base_url` from the endpoints config, so you do not need to specify it in each `[model.*]` section.
+When you use `[endpoints]` with partial model overrides, Nexus inherits the `base_url` from the endpoints config, so you do not need to specify it in each `[model.*]` section.
 
 ### Auth Behavior
 
-When you set `models_base_url`, Grok uses API key auth (`Authorization: Bearer`) instead of session auth. You do not need `sage login` -- the API key is enough.
+When you set `models_base_url`, Nexus uses API key auth (`Authorization: Bearer`) instead of session auth. You do not need `nexus login` -- the API key is enough.
 
 ---
 
@@ -289,10 +289,10 @@ web_search = "sage-4.20-multi-agent"
 Or via environment variable:
 
 ```bash
-export SAGE_WEB_SEARCH_MODEL="sage-4.20-multi-agent"
+export NEXUS_WEB_SEARCH_MODEL="sage-4.20-multi-agent"
 ```
 
-If you point web search at a custom model, you also need a `[model.*]` entry so Grok can reach it. Server-side ("backend") web search runs only when the model sets `supports_backend_search = true` (and the build enables backend search); it does not depend on `api_backend`:
+If you point web search at a custom model, you also need a `[model.*]` entry so Nexus can reach it. Server-side ("backend") web search runs only when the model sets `supports_backend_search = true` (and the build enables backend search); it does not depend on `api_backend`:
 
 ```toml
 [models]
@@ -309,13 +309,13 @@ supports_backend_search = true
 
 ```bash
 # List available models (including custom)
-sage models
+nexus models
 
 # Use in the TUI via slash command
 /model my-model
 
 # Use in headless mode
-sage -p "Hello" -m my-model
+nexus -p "Hello" -m my-model
 
 # Set as default in config.toml:
 [models]
@@ -338,12 +338,12 @@ auth_provider_label = "Acme Corp"
 auth_token_ttl = 3600
 
 [models]
-default = "company-sage"
+default = "company-nexus"
 
-[model.company-sage]
+[model.company-nexus]
 model = "sage-build"
 base_url = "https://sage-proxy.acme.com/"
-name = "Sage Latest (Proxy)"
+name = "Nexus Latest (Proxy)"
 context_window = 128000
 
 [features]
@@ -358,7 +358,7 @@ telemetry = false
 
 ```bash
 # List available models
-sage models
+nexus models
 
 # Check config.toml for typos in [model.*] sections
 ```
@@ -369,14 +369,14 @@ Verify the endpoint is reachable:
 
 ```bash
 curl -s https://api.example.com/v1/models \
-  -H "Authorization: Bearer $XAI_API_KEY"
+  -H "Authorization: Bearer $NEXUS_API_KEY"
 ```
 
 ### Debug Logging
 
 ```bash
-RUST_LOG=debug SAGE_LOG_FILE=/tmp/sage.log sage
-tail -f /tmp/sage.log
+RUST_LOG=debug NEXUS_LOG_FILE=/tmp/nexus.log nexus
+tail -f /tmp/nexus.log
 ```
 
 Look for log entries containing `model` or `sampling` to trace model selection and API calls.

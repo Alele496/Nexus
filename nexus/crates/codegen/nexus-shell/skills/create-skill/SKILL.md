@@ -1,15 +1,15 @@
 ---
 name: create-skill
 description: >
-  Interactively create a new Grok skill (SKILL.md + optional scripts/references).
+  Interactively create a new Nexus skill (SKILL.md + optional scripts/references).
   Use when the user wants to create a skill, scaffold a skill, or runs /create-skill.
 metadata:
-  short-description: "Create a new Grok skill"
+  short-description: "Create a new Nexus skill"
 ---
 
 # Create Skill
 
-Interactively gather requirements from the user and create a fully working Grok skill on disk.
+Interactively gather requirements from the user and create a fully working Nexus skill on disk.
 
 ## Step 1: Gather information
 
@@ -17,8 +17,8 @@ Ask the user the following questions **one at a time as regular conversation que
 
 1. **Skill name** - ask the user to type a name. Lowercase letters (a-z), digits (0-9), and hyphens (-) only. Must start and end with a letter or digit. Must be 2-64 characters long (e.g. `deploy-k8s`). Validate the name before proceeding.
 2. **Scope** - present the user with two options:
-   - **Project** (Recommended): `<repo-root>/.sage/skills/<name>/SKILL.md` - available only in this repo, shareable with teammates
-   - **User**: `~/.sage/skills/<name>/SKILL.md` - available in all projects
+   - **Project** (Recommended): `<repo-root>/.nexus/skills/<name>/SKILL.md` - available only in this repo, shareable with teammates
+   - **User**: `~/.nexus/skills/<name>/SKILL.md` - available in all projects
    - Default to **Project** if inside a git repo, otherwise **User**.
 3. **What it should do** - ask the user to describe the workflow, paste an example prompt they keep repeating, or explain the task the skill should automate.
 
@@ -26,7 +26,7 @@ Ask the user the following questions **one at a time as regular conversation que
 
 Write a `description` frontmatter value that includes:
 - What the skill does (1-2 sentences)
-- Trigger phrases and keywords so Grok knows when to auto-invoke it
+- Trigger phrases and keywords so Nexus knows when to auto-invoke it
 - The slash command name (e.g. "Use when the user runs /deploy-k8s")
 
 Show the drafted description to the user and let them approve or edit it.
@@ -40,8 +40,8 @@ mkdir -p <SKILL_DIR>
 ```
 
 Where `<SKILL_DIR>` is:
-- User scope: `~/.sage/skills/<name>`
-- Project scope: `<repo-root>/.sage/skills/<name>`
+- User scope: `~/.nexus/skills/<name>`
+- Project scope: `<repo-root>/.nexus/skills/<name>`
 
 If the skill needs helper scripts, also create `<SKILL_DIR>/scripts/`.
 If the skill needs reference docs, also create `<SKILL_DIR>/references/`.
@@ -69,7 +69,7 @@ Also write any supporting files (scripts, references) using the same create meth
 2. Tell the user the skill is ready and how to use it:
    - Slash command: `/<skill-name>`
    - TUI menu: `/skills <skill-name>`
-   - Automatic: Grok will invoke it when the description matches user intent
+   - Automatic: Nexus will invoke it when the description matches user intent
 3. Tell the user the skill should appear in the slash menu within a few seconds (skills auto-reload when files change on disk).
 
 ## Guidelines
