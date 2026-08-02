@@ -14,6 +14,10 @@
   <a href="https://github.com/Alele496/Nexus/releases"><img src="https://img.shields.io/github/v/release/Alele496/Nexus" alt="Release"></a>
 </p>
 
+> **仓库描述：Nexus — AI 开发中台 — 多模型支持、多 Agent 协作、端到端自动化。**
+
+Nexus 是一个开源、本地优先的 AI 开发中台。说一句需求，它调度一支六人 Agent 团队——理解需求、拆解任务、并行改码、三维审查、受控发布，并把经验沉淀进跨会话记忆。支持 DeepSeek / OpenAI / Anthropic / 任意 OpenAI 兼容 API，单二进制跨平台运行。
+
 ---
 
 ## 你现在的处境
@@ -122,6 +126,8 @@ Nexus 不绑定任何模型厂商。DeepSeek、GPT、Claude、私有化部署—
 
 **不同任务用不同模型**——复杂重构用思考最深的，批量格式化用最快的，敏感项目用内网部署的。首次运行自动弹出设置向导，填 Key 30 秒搞定。
 
+> 每个模型通过 `[model.<id>]` 配置段独立指定 `base_url`、`api_backend`（`chat_completions` / `responses` / `messages` 三种协议）和 `api_key`。详见下文[数据目录与配置](#数据目录与配置)。
+
 ---
 
 ## 不只是聊天
@@ -154,13 +160,20 @@ Markdown 存储 + 混合检索（全文 + 可选向量），带 dream 整合和�
 
 CodeGraph 符号索引 + Graphify 文件级图谱，让 Agent 理解代码库更快——而 Nexus 自己就是这个图谱的用户，也是你参与开发的入口。
 
+### 会话与 Worktree 会话
+
+- `/resume` 恢复历史会话，上下文完整保留；`/fork` 从当前会话分支出新会话
+- **Worktree 会话**把项目检出一个独立的 git worktree 再开工（如 `~/.nexus/worktrees/{repo-slug}/{label}`），主仓库和会话各自独立，互不污染
+- 会话按工作目录归档在 `~/.nexus/sessions/`，包含摘要、完整对话流与提示词历史，随时可恢复
+- 注意：**worktree 目录名只是标签，不等于 git 分支名**；分支被删除后 worktree 会处于游离 HEAD，重建同名分支即可（见[常见问题排查](#常见问题排查)）
+
 ---
 
 ## 快速开始
 
-1. **下载**：从 [Releases](https://github.com/Alele496/Nexus/releases) 下载对应平台最新版
-2. **配置**：首次运行自动弹出设置向导，选提供商、填 Key，30 秒
-3. **说需求**：`/new` 新建会话，Agent 团队就位，直接说你想做什么
+### 方式一：下载预编译二进制（推荐）
+
+从 [GitHub Releases](https://github.com/Alele496/Nexus/releases) 下载对应平台最新版，直接运行即可，无需安装。
 
 | 平台 | 文件 |
 |------|------|
@@ -168,7 +181,35 @@ CodeGraph 符号索引 + Graphify 文件级图谱，让 Agent 理解代码库更
 | Linux | `nexus-<version>-linux-x86_64` |
 | macOS | `nexus-<version>-macos-aarch64` |
 
-Windows 用户请下载 zip 包（裸 exe 会被 SmartScreen 拦截）。解压后若仍提示"Windows 已保护你的电脑"：右键 exe → 属性 → 勾选"解除锁定"；或用 7-Zip 解压（不携带"来自网络"标记）。这是未签名程序的正常提示——项目构建完全开源，CI 流水线在 [GitHub Actions](https://github.com/Alele496/Nexus/actions) 公开可审计。
+### 方式二：命令行安装脚本
+
+**Windows (PowerShell)：**
+```powershell
+irm https://raw.githubusercontent.com/Alele496/Nexus/agent-dev/nexus/crates/codegen/nexus-pager/scripts/install.ps1 | iex
+```
+
+**Linux / macOS：**
+```bash
+curl -fsSL https://raw.githubusercontent.com/Alele496/Nexus/agent-dev/nexus/crates/codegen/nexus-pager/scripts/install.sh | bash
+```
+
+脚本自动下载最新版本、写入 PATH，并生成 Shell 补全。
+
+### 方式三：包管理器（Windows）
+
+```powershell
+# Scoop
+scoop bucket add nexus https://github.com/Alele496/Nexus
+scoop install nexus
+```
+
+### 首次配置
+
+首次运行自动弹出设置向导：选提供商、填 API Key，30 秒完成。之后直接说需求即可。
+
+### Windows 注意事项
+
+请下载 **zip 包**（裸 exe 会被 SmartScreen 拦截）。解压后若仍提示"Windows 已保护你的电脑"：右键 exe → 属性 → 勾选"解除锁定"；或用 7-Zip 解压（不携带"来自网络"标记）。这是未签名程序的正常提示——项目构建完全开源，CI 流水线在 [GitHub Actions](https://github.com/Alele496/Nexus/actions) 公开可审计。
 
 ### 校验发布产物
 
@@ -196,6 +237,59 @@ cargo build -p nexus-bin --release --locked
 
 ---
 
+## 数据目录与配置
+
+Nexus 的默认数据目录是 `~/.nexus/`（可用环境变量 `NEXUS_HOME` 覆盖）。首次运行时若在向导里选择了自定义数据目录，会写入一个 `~/.nexus/nexus-home-path` 重定向文件，后续启动自动沿用。
+
+```
+~/.nexus/
+├── config.toml            # 主配置（设置向导也会写这里）
+├── nexus-home-path        # 可选：自定义数据目录的重定向文件
+├── sessions/              # 会话归档：sessions/{cwd编码}/{session-id}/
+│   └── <cwd编码>/
+│       └── <session-id>/
+│           ├── summary.json          # 会话摘要（模型、分支、cwd…）
+│           ├── updates.jsonl         # 完整对话流与工具调用
+│           └── prompt_history.jsonl  # 提示词历史
+├── worktrees/             # 会话 worktree：worktrees/{仓库slug}/{标签}/
+└── bin/                   # 程序自身（nexus / nexus.exe）
+```
+
+`config.toml` 按模型分段配置，每个 `[model.<id>]` 段独立指定提供商与协议：
+
+```toml
+[models]
+default = "deepseek-v4-pro"          # 默认模型
+default_reasoning_effort = "xhigh"   # 默认推理深度
+
+# Chat Completions 协议（OpenAI 兼容，带 /v1）
+[model.deepseek-v4-pro]
+model = "deepseek-v4-pro"
+name = "DeepSeek V4 Pro"
+base_url = "https://api.deepseek.com/v1"
+api_backend = "chat_completions"
+context_window = 1000000
+api_key = "sk-..."
+
+# Responses 协议（新版模型常用，base_url 不带 /v1）
+[model.deepseek-v4-flash]
+model = "deepseek-v4-flash"
+name = "DeepSeek V4 Flash"
+base_url = "https://api.deepseek.com"
+api_backend = "responses"
+context_window = 1000000
+api_key = "sk-..."
+```
+
+**环境变量：**
+
+| 变量 | 说明 |
+|------|------|
+| `NEXUS_HOME` | 数据目录（默认 `~/.nexus/`） |
+| `NEXUS_API_KEY` | 默认 API Key |
+
+---
+
 ## 与同类工具对比
 
 2026 年的 AI 编程工具分化成三派：**云上编码助手**（Claude Code、Codex）单 Agent 能力强但闭源、数据在云上；**办公工作台**（WorkBuddy）界面优美但面向职场人；**记忆型长驻 Agent**（Hermes Agent）持久记忆、自学习但 Windows 支持弱。Nexus 的战场在它们的交叉空白。
@@ -217,19 +311,49 @@ cargo build -p nexus-bin --release --locked
 
 ## 常用命令
 
+### 会话与导航
+
 ```
 /new              新建会话，Agent 团队就位
-/model            切换模型（DeepSeek / OpenAI / Anthropic / 自定义）
-/effort           调整推理深度（high → xhigh）
-/review           触发代码审查（安全 / 性能 / 可读性）
-/coordinator      启动调度，拆分并分配大任务
-/approve-scope    设置 Agent 审批作用域
 /resume           恢复历史会话，上下文完整保留
+/fork             分支当前会话
+/rewind           回退到之前轮次
 /compact          压缩上下文，释放 token 窗口
-/theme            切换主题，实时预览
+/cd <path>        切换工作目录
 /dashboard        打开团队看板
-/agent-graph      打开 Agent 关系拓扑图
-/help             命令和快捷键一览
+```
+
+### 多 Agent 与编排
+
+```
+/coordinator      启动调度，拆分并分配大任务
+/workflow run <name>   执行 DAG 工作流
+/fleet create <name>   创建舰队
+/fleet join <name>     加入舰队
+/fleet list            查看舰队状态
+/review           触发代码审查（安全 / 性能 / 可读性）
+/approve-scope    设置 Agent 审批作用域
+```
+
+### 项目与上下文
+
+```
+/project init      初始化项目上下文
+/project index     索引项目结构
+/project context   查看当前项目上下文
+/project graph     查看项目结构图
+/agent-graph       打开 Agent 关系拓扑图（同 /graph）
+```
+
+### 模型与工具
+
+```
+/model <name>      切换模型（DeepSeek / OpenAI / Anthropic / 自定义）
+/effort <level>    调整推理深度（high / xhigh）
+/plan              进入计划模式
+/mcps              MCP 服务器状态
+/theme             切换主题，实时预览
+/help              命令和快捷键一览
 ```
 
 ## 快捷键
@@ -274,6 +398,27 @@ Nexus 的架构设计遵循**关注点分离**——每个组件有明确的职�
 │         多仓库注册 · 健康巡检 · 批量操作                      │
 └─────────────────────────────────────────────────────────┘
 ```
+
+更细的命令与配置参考见 [`nexus/README.md`](nexus/README.md)，演进路线见 [`nexus/ROADMAP.md`](nexus/ROADMAP.md)，贡献指南见 [`nexus/CONTRIBUTING.md`](nexus/CONTRIBUTING.md)，安全披露见 [`nexus/SECURITY.md`](nexus/SECURITY.md)。
+
+---
+
+## 常见问题排查
+
+**模型请求失败，报错里出现 `cli-chat-proxy.nexus.local` / `server.nexus.local`？**
+这些是内置占位地址，不是真实服务。触发原因通常是：`[models] default` 指向的模型没有对应的 `[model.<id>]` 配置段，导致请求既没有正确的 `base_url` 也没有 `api_key`，落到占位地址上。修复：在 `config.toml` 给该模型补一个 `[model.<id>]` 段（参考上文示例），**改完重启 app** 生效。`api_backend` 选错也会导致 404/协议错误——新版模型一般用 `responses`（`base_url` 不带 `/v1`），OpenAI 兼容旧接口用 `chat_completions`（带 `/v1`）。
+
+**恢复 worktree 会话时提示找不到分支？**
+worktree 的**目录名只是标签，不是 git 分支**。若对应分支从未创建或被删除，worktree 会处于游离 HEAD（`(no branch)`）。在会话里 `git switch -c <分支名> <基提交>` 重建同名分支即可，已提交的工作不会丢。注意：worktree 里显示"已修改"的文件，可能只是相对旧基线产生的差异——先 `git log` / 对比主分支确认内容是否已提交，再决定是否丢弃。
+
+**Windows 报"Windows 已保护你的电脑"？**
+用 zip 包解压，右键 exe → 属性 → 勾选"解除锁定"，或用 7-Zip 解压。未签名程序的正常提示，产物哈希可在 Release 页校验。
+
+**中文用户名引发路径 / 构建报错？**
+构建或运行前设置 `TMP=C:/tmp`（绕过用户名中的非 ASCII 字符）。
+
+**改了 `config.toml` 不生效？**
+配置在启动时加载，改完需要重启 app。
 
 ---
 
