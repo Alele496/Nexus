@@ -133,8 +133,12 @@ impl JsonlStorageAdapter {
         }
         let mut scan_cwds: Vec<PathBuf> = Vec::new();
         if let Some(cwd_str) = cwd {
-            let enc = crate::util::nexus_home::encode_cwd_dirname(cwd_str);
-            scan_cwds.push(sessions_root.join(enc));
+            // Probe every separator-variant key: the same directory may have
+            // been written under a different path-separator style (e.g. the
+            // `F:/Sage-home\...` form produced by redirect-file homes).
+            for enc in crate::util::nexus_home::encode_cwd_dirname_candidates(cwd_str) {
+                scan_cwds.push(sessions_root.join(enc));
+            }
         } else {
             match std::fs::read_dir(&sessions_root) {
                 Ok(it) => {

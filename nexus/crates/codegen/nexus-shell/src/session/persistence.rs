@@ -418,9 +418,10 @@ fn is_persisted_session_dir(session_path: &Path) -> bool {
 /// Inner implementation of `session_exists_for_cwd` with an injectable root.
 /// Separated for deterministic tempdir-based tests.
 fn session_exists_for_cwd_in_root(session_id: &str, cwd: &str, sessions_root: &Path) -> bool {
-    let encoded = crate::util::nexus_home::encode_cwd_dirname(cwd);
-    let session_path = sessions_root.join(&encoded).join(session_id);
-    is_persisted_session_dir(&session_path)
+    crate::util::nexus_home::encode_cwd_dirname_candidates(cwd).into_iter().any(|encoded| {
+        let session_path = sessions_root.join(&encoded).join(session_id);
+        is_persisted_session_dir(&session_path)
+    })
 }
 
 /// Find the local child session id that was previously restored from `remote_session_id`
@@ -531,49 +532,59 @@ fn find_local_child_for_remote_in_root(
     cwd: &str,
     sessions_root: &Path,
 ) -> Option<String> {
-    let encoded = crate::util::nexus_home::encode_cwd_dirname(cwd);
-    let cwd_dir = sessions_root.join(&encoded);
-    if !cwd_dir.exists() {
-        return None;
-    }
-
     // Collect all matching children.  Multiple can exist when a user ran
     // `sage -r <remote_id>` before this fix was deployed.
     // Tuple: (updated_at, dir_mtime_nanos, session_id) — all sorted descending.
     let mut candidates: Vec<(String, u128, String)> = Vec::new();
 
-    let entries = std::fs::read_dir(&cwd_dir).ok()?;
-    for entry in entries.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
+    // Probe every separator-variant cwd key: the same directory may have been
+    // written under a different path-separator style (e.g. the `F:/Sage-home\...`
+    // form produced by redirect-file homes).
+    let cwd_dirs = crate::util::nexus_home::encode_cwd_dirname_candidates(cwd)
+        .into_iter()
+        .map(|encoded| sessions_root.join(encoded))
+        .filter(|p| p.exists())
+        .collect::<Vec<_>>();
+    if cwd_dirs.is_empty() {
+        return None;
+    }
+
+    for cwd_dir in cwd_dirs {
+        let Ok(entries) = std::fs::read_dir(&cwd_dir) else {
             continue;
-        }
-        let summary_path = path.join("summary.json");
-        if !summary_path.exists() {
-            continue;
-        }
-        // Parse minimum fields without deserializing the full Summary,
-        // so we don't fail on missing/extra fields from older/newer formats.
-        if let Ok(raw) = std::fs::read_to_string(&summary_path)
-            && let Ok(partial) = serde_json::from_str::<serde_json::Value>(&raw)
-            && partial.get("parent_session_id").and_then(|v| v.as_str()) == Some(remote_session_id)
-            && let Some(session_id) = path.file_name().and_then(|n| n.to_str())
-        {
-            let updated_at = partial
-                .get("updated_at")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            // Directory mtime as a tie-breaker for equal updated_at values.
-            let dir_mtime = std::fs::metadata(&path)
-                .and_then(|m| m.modified())
-                .map(|t| {
-                    t.duration_since(std::time::UNIX_EPOCH)
-                        .map(|d| d.as_nanos())
-                        .unwrap_or(0)
-                })
-                .unwrap_or(0);
-            candidates.push((updated_at, dir_mtime, session_id.to_string()));
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_dir() {
+                continue;
+            }
+            let summary_path = path.join("summary.json");
+            if !summary_path.exists() {
+                continue;
+            }
+            // Parse minimum fields without deserializing the full Summary,
+            // so we don't fail on missing/extra fields from older/newer formats.
+            if let Ok(raw) = std::fs::read_to_string(&summary_path)
+                && let Ok(partial) = serde_json::from_str::<serde_json::Value>(&raw)
+                && partial.get("parent_session_id").and_then(|v| v.as_str()) == Some(remote_session_id)
+                && let Some(session_id) = path.file_name().and_then(|n| n.to_str())
+            {
+                let updated_at = partial
+                    .get("updated_at")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                // Directory mtime as a tie-breaker for equal updated_at values.
+                let dir_mtime = std::fs::metadata(&path)
+                    .and_then(|m| m.modified())
+                    .map(|t| {
+                        t.duration_since(std::time::UNIX_EPOCH)
+                            .map(|d| d.as_nanos())
+                            .unwrap_or(0)
+                    })
+                    .unwrap_or(0);
+                candidates.push((updated_at, dir_mtime, session_id.to_string()));
+            }
         }
     }
 
@@ -702,28 +713,39 @@ pub(crate) fn find_summary_by_session_id_in_root(
 /// for that cwd. Sync and local-only — suitable for the startup path that must
 /// resolve the sandbox profile before the (irreversible) OS sandbox is applied.
 fn most_recent_local_summary_for_cwd_in_root(cwd: &str, sessions_root: &Path) -> Option<Summary> {
-    let encoded = crate::util::nexus_home::encode_cwd_dirname(cwd);
-    let cwd_dir = sessions_root.join(&encoded);
+    // Probe every separator-variant cwd key: the same directory may have been
+    // written under a different path-separator style (e.g. the `F:/Sage-home\...`
+    // form produced by redirect-file homes).
+    let cwd_dirs: Vec<PathBuf> = crate::util::nexus_home::encode_cwd_dirname_candidates(cwd)
+        .into_iter()
+        .map(|encoded| sessions_root.join(encoded))
+        .filter(|p| p.exists())
+        .collect();
     let mut best: Option<Summary> = None;
-    for entry in std::fs::read_dir(&cwd_dir).ok()?.flatten() {
-        let summary_path = entry.path().join("summary.json");
-        let Ok(bytes) = std::fs::read(&summary_path) else {
+    for cwd_dir in cwd_dirs {
+        let Ok(entries) = std::fs::read_dir(&cwd_dir) else {
             continue;
         };
-        let Ok(summary) = serde_json::from_slice::<Summary>(&bytes) else {
-            continue;
-        };
-        // Match `list_sessions`: skip hidden/subagent sessions so the peek reads
-        // the same session a `-c` / bare `--resume` actually resumes.
-        if summary.is_hidden() {
-            continue;
-        }
-        if best.as_ref().is_none_or(|b| {
-            let st = summary.last_active_at.unwrap_or(summary.updated_at);
-            let bt = b.last_active_at.unwrap_or(b.updated_at);
-            st > bt || (st == bt && summary.info.id.0.as_ref() < b.info.id.0.as_ref())
-        }) {
-            best = Some(summary);
+        for entry in entries.flatten() {
+            let summary_path = entry.path().join("summary.json");
+            let Ok(bytes) = std::fs::read(&summary_path) else {
+                continue;
+            };
+            let Ok(summary) = serde_json::from_slice::<Summary>(&bytes) else {
+                continue;
+            };
+            // Match `list_sessions`: skip hidden/subagent sessions so the peek reads
+            // the same session a `-c` / bare `--resume` actually resumes.
+            if summary.is_hidden() {
+                continue;
+            }
+            if best.as_ref().is_none_or(|b| {
+                let st = summary.last_active_at.unwrap_or(summary.updated_at);
+                let bt = b.last_active_at.unwrap_or(b.updated_at);
+                st > bt || (st == bt && summary.info.id.0.as_ref() < b.info.id.0.as_ref())
+            }) {
+                best = Some(summary);
+            }
         }
     }
     best

@@ -156,6 +156,43 @@ pub fn encode_cwd_dirname(cwd: &str) -> String {
     format!("{slug}-{hash16}")
 }
 
+/// Every on-disk session cwd-dir key that may hold sessions for `cwd`.
+///
+/// The same Windows directory is reachable under several path-separator
+/// styles (`F:\a\b`, `F:/a\b`, `F:/a/b`), and session dirs were historically
+/// keyed by the raw URL-encoding of whichever cwd string created them. Lookups
+/// must therefore probe every form; writers (`ensure_sessions_cwd_dir`) keep
+/// using [`encode_cwd_dirname`] alone, so new sessions stay under one key.
+///
+/// On non-Windows platforms this is just the single [`encode_cwd_dirname`]
+/// result. Results are deduplicated and in priority order.
+pub fn encode_cwd_dirname_candidates(cwd: &str) -> Vec<String> {
+    let mut keys: Vec<String> = Vec::with_capacity(3);
+    let mut push = |k: String| {
+        if !keys.contains(&k) {
+            keys.push(k);
+        }
+    };
+    push(encode_cwd_dirname(cwd));
+    #[cfg(windows)]
+    {
+        // `F:/a\b`: the form produced by `PathBuf::join` on a redirect-file
+        // home like `F:/Sage-home` — the common key for worktree sessions.
+        let bs = cwd.replace('/', "\\");
+        let bytes = bs.as_bytes();
+        if bytes.len() >= 2 && bytes[1] == b':' {
+            // `F:/Sage-home\...` — drive-letter forward slash, remaining
+            // separators backslash. Drop the separator right after the drive
+            // letter (already included as `/`).
+            let rest = bs[2..].strip_prefix(['\\', '/']).unwrap_or(&bs[2..]);
+            push(encode_cwd_dirname(&format!("{}/{}", &bs[..2], rest)));
+        }
+        // All-forward-slash form.
+        push(encode_cwd_dirname(&cwd.replace('\\', "/")));
+    }
+    keys
+}
+
 /// Recover the original CWD from a sessions CWD directory.
 ///
 /// Tries URL-decoding the directory name first (works for short/legacy dirs).
@@ -338,7 +375,16 @@ mod tests {
         // canonicalization must yield a plain path. No-op assertion on Unix.
         let home = default_nexus_home();
         assert!(!home.to_string_lossy().starts_with(r"\\?\"));
-        assert!(home.ends_with(".nexus"));
+        // The `.nexus` suffix only holds for the default location. A redirect
+        // file (`~/.nexus/nexus-home-path`, written by the first-run wizard)
+        // points the home at a user-chosen data directory instead.
+        #[allow(deprecated)]
+        let dot_nexus = std::env::home_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join(".nexus");
+        if read_nexus_home_redirect(&dot_nexus).is_none() {
+            assert!(home.ends_with(".nexus"));
+        }
     }
 
     #[test]
@@ -354,5 +400,47 @@ mod tests {
     #[test]
     fn slugify_truncates() {
         assert_eq!(slugify(&"a".repeat(100), 10).len(), 10);
+    }
+
+    #[test]
+    fn candidates_first_is_primary_and_deduplicated() {
+        let keys = encode_cwd_dirname_candidates("/home/user/project");
+        assert_eq!(keys.len(), 1, "non-Windows paths yield exactly one key");
+        assert_eq!(keys[0], encode_cwd_dirname("/home/user/project"));
+    }
+
+    #[test]
+    fn candidates_always_contain_the_primary_key() {
+        for cwd in [
+            "F:\\Sage-home\\worktrees\\git-agent-sys\\nexus-agent",
+            "F:/Sage-home\\worktrees\\git-agent-sys\\nexus-agent",
+            "E:\\Git仓库\\Agent-SYS",
+        ] {
+            let keys = encode_cwd_dirname_candidates(cwd);
+            assert!(keys.contains(&encode_cwd_dirname(cwd)), "missing primary for {cwd}");
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_backslash_cwd_includes_legacy_mixed_drive_key() {
+        // A session written with cwd `F:/Sage-home\...` (drive-letter forward
+        // slash, backslashes elsewhere) must be findable from the canonical
+        // `F:\Sage-home\...` form used by resume scans.
+        let backslash = "F:\\Sage-home\\worktrees\\git-agent-sys\\nexus-agent";
+        let mixed = "F:/Sage-home\\worktrees\\git-agent-sys\\nexus-agent";
+        let keys = encode_cwd_dirname_candidates(backslash);
+        assert!(
+            keys.contains(&encode_cwd_dirname(mixed)),
+            "backslash lookup must probe the legacy mixed-separator key"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn windows_mixed_cwd_still_matches_its_own_primary() {
+        let mixed = "F:/Sage-home\\worktrees\\git-agent-sys\\nexus-agent";
+        let keys = encode_cwd_dirname_candidates(mixed);
+        assert!(keys.contains(&encode_cwd_dirname(mixed)));
     }
 }

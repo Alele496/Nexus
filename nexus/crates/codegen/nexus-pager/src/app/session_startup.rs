@@ -83,12 +83,13 @@ pub fn fork_session_params(
 pub fn parent_session_is_worktree(session_id: &str, cwd: &Path) -> bool {
     let cwd_str = cwd.to_string_lossy();
     let sessions_root = nexus_shell::util::nexus_home::nexus_home().join("sessions");
-    let encoded = nexus_shell::util::nexus_home::encode_cwd_dirname(&cwd_str);
-    let summary_path = sessions_root
-        .join(encoded)
-        .join(session_id)
-        .join("summary.json");
-    if let Ok(bytes) = std::fs::read(&summary_path)
+    // Probe every separator-variant cwd key: worktree sessions may be stored
+    // under a different path-separator style (e.g. `F:/Sage-home\...`).
+    let mut summary_paths = nexus_shell::util::nexus_home::encode_cwd_dirname_candidates(&cwd_str)
+        .into_iter()
+        .map(|encoded| sessions_root.join(encoded).join(session_id).join("summary.json"));
+    if let Some(summary_path) = summary_paths.find(|p| p.exists())
+        && let Ok(bytes) = std::fs::read(&summary_path)
         && let Ok(v) = serde_json::from_slice::<serde_json::Value>(&bytes)
     {
         if v.get("session_kind").and_then(|k| k.as_str()) == Some("worktree") {
