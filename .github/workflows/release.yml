@@ -34,6 +34,9 @@ jobs:
       TMP: C:/tmp
       TEMP: C:/tmp
       TMPDIR: C:/tmp
+      # GitHub Actions forbids reading `secrets` in step-level `if`.
+      # Expose the token via job-level env so the signing steps can gate on it.
+      SIGNING_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     defaults:
       run:
         working-directory: nexus
@@ -76,7 +79,7 @@ jobs:
       # the job ships the unsigned exe exactly as before.
       - name: Upload unsigned binary to artifacts
         id: upload-unsigned
-        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        if: ${{ env.SIGNING_TOKEN != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: nexus-unsigned-exe
@@ -85,7 +88,7 @@ jobs:
 
       - name: Submit signing request to SignPath
         id: signpath
-        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        if: ${{ env.SIGNING_TOKEN != '' }}
         uses: SignPath/github-action-submit-signing-request@v2
         with:
           api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
@@ -98,7 +101,7 @@ jobs:
           wait-for-completion-timeout-in-seconds: 1800
 
       - name: Swap signed binary into the build output
-        if: ${{ secrets.SIGNPATH_API_TOKEN != '' }}
+        if: ${{ env.SIGNING_TOKEN != '' }}
         shell: bash
         run: |
           find target/release/signed -iname 'nexus*.exe' -exec cp -f {} target/release/nexus.exe \;
