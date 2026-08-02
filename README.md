@@ -1,7 +1,8 @@
 # Nexus
 
 <p align="center">
-  <strong>开源 · 本地优先 · 多 Agent 开发中台</strong>
+  <strong>开源 · 本地优先 · 多 Agent 开发中台</strong><br>
+  <strong>面向长生命周期 Agent 协作的 Runtime 平台</strong>
 </p>
 
 <p align="center">
@@ -14,9 +15,9 @@
   <a href="https://github.com/Alele496/Nexus/releases"><img src="https://img.shields.io/github/v/release/Alele496/Nexus" alt="Release"></a>
 </p>
 
-> **仓库描述：Nexus — AI 开发中台 — 多模型支持、多 Agent 协作、端到端自动化。**
+> **仓库描述：Nexus — 开源 AI 开发中台 — 多 Agent 协作、多模型支持（含 DeepSeek V4）、端到端自动化。**
 
-Nexus 是一个开源、本地优先的 AI 开发中台。说一句需求，它调度一支六人 Agent 团队——理解需求、拆解任务、并行改码、三维审查、受控发布，并把经验沉淀进跨会话记忆。支持 DeepSeek / OpenAI / Anthropic / 任意 OpenAI 兼容 API，单二进制跨平台运行。
+Nexus 是一个开源、本地优先的 **AI Agent 开发中台**，为长生命周期、多 Agent 协作任务提供编排、执行、记忆与治理能力。说一句需求，它调度一支六人 Agent 团队——理解需求、拆解任务、并行改码、三维审查、受控发布，并把经验沉淀进跨会话记忆。支持 DeepSeek / OpenAI / Anthropic / 任意 OpenAI 兼容 API，单二进制跨平台运行。
 
 ---
 
@@ -96,6 +97,8 @@ Nexus 不是单个助手，是一个**六人开发团队**，随时听你指挥�
 | **调度** | 动态编排、拆解分配子任务 | Coordinator |
 
 需要几个人上几个人，不需要养全职团队。
+
+这六个角色对应 Nexus 内部的 Agent Runtime 抽象——每个角色拥有独立上下文、权限边界与执行职责，共同构成一个完整的多 Agent 执行体系。
 
 ---
 
