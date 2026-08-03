@@ -191,12 +191,32 @@ impl nexus_tool_runtime::Tool for SendMessageTool {
                 "process_manager",
                 "Mailbox actor dropped reply",
             )
-        })?.map_err(|e| nexus_tool_runtime::ToolError::invalid_arguments(e.to_string()))?;
+        })?
+        .map_err(|error| match error {
+            super::types::MailboxError::AddressNotFound(addr) => {
+                nexus_tool_runtime::ToolError::invalid_arguments(format!(
+                    "recipient address not found: {addr}"
+                ))
+            }
+            super::types::MailboxError::StoreError(message) => {
+                nexus_tool_runtime::ToolError::custom("mailbox_store", message)
+            }
+        })?;
+
+        // The actor persists the message into the shared store and marks it
+        // delivered; report the real status rather than a hardcoded
+        // "pending" (which previously implied delivery that never happened).
+        let status = match sent.status {
+            super::types::MessageStatus::Pending => "pending",
+            super::types::MessageStatus::Delivered => "delivered",
+            super::types::MessageStatus::Read => "read",
+            super::types::MessageStatus::Archived => "archived",
+        };
 
         Ok(SendMessageOutput {
             message_id: sent.id,
             to: sent.to.display_name().to_string(),
-            status: "pending".to_string(),
+            status: status.to_string(),
         })
     }
 }

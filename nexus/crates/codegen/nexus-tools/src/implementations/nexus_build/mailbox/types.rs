@@ -1,10 +1,14 @@
 //! Agent Mailbox — persistent inter-agent messaging.
 //!
-//! Agents send messages to each other asynchronously, even across sessions.
-//! Messages are persisted via the Resources system (JSON serialization).
+//! Agents send messages to each other asynchronously, even across
+//! processes: the mailbox persists to a single shared file
+//! (`<nexus-home>/mailbox.json`, see [`store::MailboxStore`]) that every
+//! nexus process reads and writes under a cross-process file lock. Unlike
+//! other tool state it is NOT stored in the per-session
+//! `resources_state.json`.
 //!
 //! Architecture:
-//!   Agent A → send_message(to="agent-b", ...) → MailboxStore (persisted)
+//!   Agent A → send_message(to="agent-b", ...) → MailboxStore (shared file)
 //!   Agent B → check_mailbox() → retrieves pending messages
 //!   Leader → pushes new-message notifications to active recipient sessions
 
@@ -135,8 +139,11 @@ impl MailboxMessage {
     }
 }
 
-/// Persisted mailbox state, stored via Resources + ResourcesPersistence.
-/// Contains all non-archived messages across all agents and the label registry.
+/// Mailbox state persisted to the shared [`store::MailboxStore`] file.
+/// Contains all non-archived messages across all agents and the label
+/// registry. The `register_resource!` below keeps the type registered for
+/// tool-runtime lookups; actual persistence is handled by `MailboxStore`,
+/// not the per-session Resources snapshot.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct MailboxState {
     /// All active (non-archived) messages, newest first.
@@ -218,6 +225,12 @@ pub enum MailboxCommand {
     MarkRead {
         message_id: String,
         reply: oneshot::Sender<bool>,
+    },
+    /// Mark many messages as read in a single persisted update (used by
+    /// `check_mailbox` so N unread messages cost one fsync, not N).
+    MarkReadMany {
+        message_ids: Vec<String>,
+        reply: oneshot::Sender<usize>,
     },
     /// List sent messages for a session.
     SentItems {
