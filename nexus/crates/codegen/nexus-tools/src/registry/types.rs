@@ -1213,7 +1213,7 @@ impl ToolRegistryBuilder {
         }
         if let (Some(cmd_rx), Some(cancel_token)) = (mailbox_cmd_rx, &mailbox_cancel_token) {
             let actor = crate::implementations::nexus_build::mailbox::MailboxActor {
-                resources: shared_resources.clone(),
+                store: crate::implementations::nexus_build::mailbox::MailboxStore::at_nexus_home(),
                 cmd_rx,
                 cancel_token: cancel_token.clone(),
             };

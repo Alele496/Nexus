@@ -153,25 +153,22 @@ impl nexus_tool_runtime::Tool for CheckMailboxTool {
             )
         })?;
 
-        // Mark as read if requested.
+        // Mark as read if requested — one batched update (a single fsync
+        // on the shared store) rather than one command per message.
         if input.mark_read {
-            for msg in &messages {
-                if msg.is_unread() {
-                    let (mark_tx, _) = tokio::sync::oneshot::channel();
-                    let _ = sender.send(MailboxCommand::MarkRead {
-                        message_id: msg.id.clone(),
-                        reply: mark_tx,
-                    });
-                    // Fire-and-forget: marking read is best-effort.
-                }
+            let unread_ids: Vec<String> = messages
+                .iter()
+                .filter(|m| m.is_unread())
+                .map(|m| m.id.clone())
+                .collect();
+            if !unread_ids.is_empty() {
+                let (mark_tx, _) = tokio::sync::oneshot::channel();
+                let _ = sender.send(MailboxCommand::MarkReadMany {
+                    message_ids: unread_ids,
+                    reply: mark_tx,
+                });
+                // Fire-and-forget: marking read is best-effort.
             }
-            // Re-fetch to get updated status.
-            let (reply_tx2, _reply_rx2) = tokio::sync::oneshot::channel();
-            let _ = sender.send(MailboxCommand::Check {
-                session_id,
-                reply: reply_tx2,
-            });
-            // If the second check fails, just use the first result.
         }
 
         let count = messages.len();

@@ -3344,8 +3344,12 @@ impl DashboardState {
 
         // Approval shortcuts: a = approve, r = reject, Shift+A = approve all.
         // Works on the selected row when it's a NeedsInput agent.
-        // Skip during search/filter mode so typing 'a' or 'r' enters search text.
+        // Skip during search/filter mode or while typing in the dispatch
+        // input so 'a'/'r' fall through to the input as literal text —
+        // same `prompt_empty || list_focused` gate as the section-fold and
+        // overflow blocks above.
         if !self.search_mode
+            && (prompt_empty || self.list_focused)
             && (key.modifiers.is_empty() || key.modifiers.contains(KeyModifiers::SHIFT))
         {
             match key.code {
@@ -9001,6 +9005,43 @@ mod tests {
             state.dispatch.text(),
             "jk",
             "j/k must type in search mode, not navigate",
+        );
+    }
+
+    /// Regression: approval shortcuts (`a` approve / `r` reject) must not
+    /// eat letters while the dispatch input has text. The old gate only
+    /// skipped search mode, so `r`/`a` never reached the input box
+    /// (bug report: docs/bugs/dashboard-r-a-key-interception.md).
+    #[test]
+    fn approval_shortcuts_type_into_dispatch_input() {
+        let mut state = DashboardState::new();
+        let reg = crate::actions::ActionRegistry::defaults();
+        state.dispatch.set_text("AI-Cognitive-Mem");
+        for ch in "ra".chars() {
+            let ev = Event::Key(KeyEvent::new(KeyCode::Char(ch), KeyModifiers::NONE));
+            let _ = state.handle_input(&ev, &reg);
+        }
+        let text = state.dispatch.text();
+        assert!(
+            text.contains('r') && text.contains('a'),
+            "a/r must type into the dispatch input while it has text (got {text:?})",
+        );
+    }
+
+    /// Approval semantics are preserved: with an empty prompt and a selected
+    /// row, `r` still resolves to the reject action.
+    #[test]
+    fn approval_shortcut_reject_still_fires_on_empty_prompt() {
+        let state = make_state_with_selection();
+        let reg = crate::actions::ActionRegistry::defaults();
+        let key = KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE);
+        let outcome = state.clone_for_test().handle_key(&key, &reg);
+        assert!(
+            matches!(
+                outcome,
+                InputOutcome::Action(Action::DashboardRejectSelected)
+            ),
+            "r with empty prompt + selection must reject (got {outcome:?})",
         );
     }
 
