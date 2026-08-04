@@ -1390,6 +1390,14 @@ pub(super) fn dispatch_dashboard_dispatch_slash(app: &mut AppView, text: String)
                     .iter()
                     .map(|(id, info)| (info.name.clone(), id.clone()))
                     .collect(),
+                available_providers: nexus_provider_presets::PROVIDERS
+                    .iter()
+                    .filter(|p| !p.models.is_empty())
+                    .map(|p| p.name.to_string())
+                    .collect(),
+                current_provider: crate::app::dispatch::settings::ui::current_provider_for(
+                    &app.models,
+                ),
                 coding_data_sharing_opt_out: coding_data_sharing_opt_out_from_app,
                 plan_mode_active: false,
                 show_tips: show_tips_from_app,

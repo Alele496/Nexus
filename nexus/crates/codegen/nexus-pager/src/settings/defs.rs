@@ -840,6 +840,38 @@ pub fn default_settings() -> Vec<SettingMeta> {
             restart_required: false,
             hidden_in_minimal: false,
         },
+        // SHELL-owned. The active provider is a UI-layer concept derived from
+        // the active model (matched against `nexus-provider-presets` preset
+        // model lists) at snapshot-build time — no `[providers]` TOML section.
+        // Switching persists the preset's `[model."*"]` entries, `[models]
+        // default`, and `[endpoints] xai_api_base_url` via `set_provider`.
+        // Empty-string default = "no opinion" (current provider derived live).
+        SettingMeta {
+            key: "provider",
+            category: SettingCategory::Providers,
+            owner: SettingOwner::Shell,
+            label: "Active provider",
+            description: "AI provider preset. Switching writes that provider's model entries, sets the default model, and updates the API endpoint for new sessions.",
+            keywords: &[
+                "provider",
+                "ai",
+                "api",
+                "preset",
+                "deepseek",
+                "openai",
+                "claude",
+                "anthropic",
+                "endpoint",
+                "switch",
+            ],
+            kind: SettingKind::DynamicEnum {
+                default: "",
+                source: DynamicEnumSource::ActiveProviderCatalog,
+                supports_preview: false,
+            },
+            restart_required: false,
+            hidden_in_minimal: false,
+        },
         // SHELL-owned. Reads from `pager.current_model_name` (not
         // `cfg.models.default`) so the modal reflects `/model` switches.
         // Empty-string default = "no opinion" / use shell's resolution.

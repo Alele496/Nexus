@@ -38,6 +38,7 @@ members = [
     "crates/codegen/nexus-pager-render",
     "crates/codegen/nexus-paths",
     "crates/codegen/nexus-plugin-marketplace",
+    "crates/codegen/nexus-provider-presets",
     "crates/codegen/nexus-sampler",
     "crates/codegen/nexus-sampling-types",
     "crates/codegen/nexus-sandbox",

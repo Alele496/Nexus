@@ -29,6 +29,25 @@ pub(in crate::app::dispatch) fn save_success_toast(label: &str, on: bool) -> Str
     format!("\u{2713} {label}: {value}")
 }
 
+/// Derive the active provider from the current model id: the first preset
+/// whose curated model list contains the active model. Falls back to the
+/// Custom preset name when nothing matches (e.g. a user-added model on a
+/// hand-configured endpoint).
+pub(in crate::app::dispatch) fn current_provider_for(
+    models: &crate::acp::model_state::ModelState,
+) -> Option<String> {
+    let current_id = models.current_model_id_str()?;
+    for preset in nexus_provider_presets::PROVIDERS {
+        if preset.models.iter().any(|(id, _, _)| *id == current_id) {
+            return Some(preset.name.to_string());
+        }
+    }
+    nexus_provider_presets::PROVIDERS
+        .iter()
+        .find(|p| p.base_url.is_empty())
+        .map(|p| p.name.to_string())
+}
+
 /// Refresh every open settings modal's `ui_snapshot` + `pager_snapshot`
 /// so the next render reads the latest live state. The modal stores
 /// snapshots by value; without this, toggles would appear stuck.
@@ -86,6 +105,15 @@ pub(crate) fn refresh_open_settings_modals(app: &mut AppView) {
                     .map(|(id, info)| (info.name.clone(), id.clone()))
                     .collect(),
                 coding_data_sharing_opt_out: coding_data_sharing_opt_out_from_app,
+                // Provider is derived from the active model — no shell round-trip.
+                // Presets without curated models (the wizard-only Custom entry)
+                // are inert in the F2 picker, so exclude them here.
+                available_providers: nexus_provider_presets::PROVIDERS
+                    .iter()
+                    .filter(|p| !p.models.is_empty())
+                    .map(|p| p.name.to_string())
+                    .collect(),
+                current_provider: current_provider_for(&agent.session.models),
                 // Prefer optimistic pending over confirmed active.
                 plan_mode_active: agent.plan_mode_pending.unwrap_or(agent.plan_mode_active),
                 show_tips: show_tips_from_app,
@@ -211,6 +239,13 @@ pub(in crate::app::dispatch) fn dispatch_open_settings(app: &mut AppView) -> Vec
             .map(|(id, info)| (info.name.clone(), id.clone()))
             .collect(),
         coding_data_sharing_opt_out: coding_data_sharing_opt_out_from_app,
+        // Provider is derived from the active model — no shell round-trip.
+        available_providers: nexus_provider_presets::PROVIDERS
+            .iter()
+            .filter(|p| !p.models.is_empty())
+            .map(|p| p.name.to_string())
+            .collect(),
+        current_provider: current_provider_for(&agent.session.models),
         // Prefer optimistic pending over confirmed active.
         plan_mode_active: agent.plan_mode_pending.unwrap_or(agent.plan_mode_active),
         show_tips: show_tips_from_app,
@@ -658,6 +693,19 @@ fn agent_current_model_name(app: &AppView) -> Option<String> {
     None
 }
 
+/// Helper to derive the active provider from the active agent's current
+/// model id. Returns `None` when no agent is active or no model is
+/// selected. See [`agent_multiline_mode`] for the no-agent fallback
+/// rationale.
+fn agent_current_provider(app: &AppView) -> Option<String> {
+    if let ActiveView::Agent(id) = app.active_view
+        && let Some(agent) = app.agents.get(&id)
+    {
+        return current_provider_for(&agent.session.models);
+    }
+    None
+}
+
 /// Helper to clone the `(display_name, ModelId)` pairs from the
 /// active agent's catalog. Returns an empty `Vec` when no agent is
 /// active OR when the catalog is empty.
@@ -687,6 +735,12 @@ pub(crate) fn build_pager_snapshot(app: &AppView) -> crate::settings::PagerLocal
         auto_mode: agent_auto_mode(app),
         current_model_name: agent_current_model_name(app),
         available_models: agent_available_models(app),
+        available_providers: nexus_provider_presets::PROVIDERS
+            .iter()
+            .filter(|p| !p.models.is_empty())
+            .map(|p| p.name.to_string())
+            .collect(),
+        current_provider: agent_current_provider(app),
         coding_data_sharing_opt_out: app.coding_data_retention_opt_out,
         plan_mode_active: agent_plan_mode(app),
         show_tips: app.show_tips,
@@ -826,6 +880,24 @@ pub(in crate::app::dispatch) fn action_for_reset(
                     target: "settings",
                     value = %s,
                     "action_for_reset(default_model) received non-empty default — \
+                     registry/dispatch skew (default should be empty string)",
+                );
+                None
+            }
+        }
+        // provider: reset switches back to the first (built-in) preset.
+        // The registry default is the empty-string sentinel; a non-empty
+        // value here is registry/dispatch skew.
+        ("provider", SettingValue::String(s)) => {
+            if s.is_empty() {
+                nexus_provider_presets::PROVIDERS
+                    .first()
+                    .map(|p| Action::SetProvider(p.name.to_string()))
+            } else {
+                tracing::error!(
+                    target: "settings",
+                    value = %s,
+                    "action_for_reset(provider) received non-empty default — \
                      registry/dispatch skew (default should be empty string)",
                 );
                 None
@@ -1071,6 +1143,13 @@ pub(in crate::app::dispatch) fn apply_setting_rollback(
                 }
             }
         }
+        // provider: rollback is a no-op. The provider is derived from the
+        // active model (no in-memory provider state to revert), and the disk
+        // write failing means config.toml is untouched — the previous
+        // provider is already in effect. If a live model switch was in
+        // flight, it proceeds independently (the rollback payload is the
+        // prev provider name, not a model id to restore).
+        ("provider", SettingValue::String(_s)) => {}
         // max_thoughts_width: direct inner call.
         ("max_thoughts_width", SettingValue::Int(i)) => set_max_thoughts_width_inner(app, *i),
         // scroll_speed: direct inner call (clamp handled by inner).

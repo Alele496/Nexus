@@ -912,6 +912,13 @@ fn every_setting_has_action_for_reset_arm() {
         if meta.key == "default_reasoning_effort" {
             continue;
         }
+        // provider is derived from the active model (no shell round-trip),
+        // and the test catalog holds only "test-model" — which no preset
+        // matches, so the derived provider always reads back as the Custom
+        // preset rather than the reset default.
+        if meta.key == "provider" {
+            continue;
+        }
         let mut app = test_app_with_agent();
         move_setting_away_from_default(&mut app, meta.key);
         let _ = dispatch(action.unwrap(), &mut app);
@@ -1400,6 +1407,9 @@ fn move_setting_away_from_default(app: &mut AppView, key: crate::settings::Setti
         }
         "default_reasoning_effort" => {
             let _ = dispatch(Action::SetDefaultReasoningEffort("xhigh".to_string()), app);
+        }
+        "provider" => {
+            let _ = dispatch(Action::SetProvider("OpenAI".to_string()), app);
         }
         other => {
             panic!(

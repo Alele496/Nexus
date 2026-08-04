@@ -13,61 +13,8 @@ use std::path::{Path, PathBuf};
 /// 解决无 bat 脚本直接双击 exe 时，`NEXUS_HOME` 环境变量无法跨进程持久化的问题。
 const NEXUS_HOME_REDIRECT_FILENAME: &str = "nexus-home-path";
 
-/// 提供商预设：包含名称、默认模型列表、API 端点、后端类型等信息。
-struct ProviderPreset {
-    /// 显示名称
-    name: &'static str,
-    /// 默认 API 端点
-    base_url: &'static str,
-    /// API 后端类型
-    api_backend: &'static str,
-    /// 是否支持推理深度调节
-    supports_reasoning: bool,
-    /// 模型列表: (model_id, display_name, context_window)
-    models: &'static [(&'static str, &'static str, u64)],
-}
-
-const PROVIDERS: &[ProviderPreset] = &[
-    ProviderPreset {
-        name: "DeepSeek",
-        base_url: "https://api.deepseek.com/v1",
-        api_backend: "chat_completions",
-        supports_reasoning: true,
-        models: &[
-            ("deepseek-v4-pro", "DeepSeek V4 Pro — 最强推理，1M 上下文 (推荐)", 1_000_000),
-            ("deepseek-v4-flash", "DeepSeek V4 Flash — 更快响应，日常开发", 1_000_000),
-        ],
-    },
-    ProviderPreset {
-        name: "OpenAI",
-        base_url: "https://api.openai.com/v1",
-        api_backend: "chat_completions",
-        supports_reasoning: true,
-        models: &[
-            ("gpt-5.2", "GPT-5.2 — 最强综合能力 (推荐)", 128_000),
-            ("gpt-5.1", "GPT-5.1 — 平衡性能与速度", 128_000),
-            ("gpt-5-mini", "GPT-5 Mini — 轻量快速，日常任务", 128_000),
-        ],
-    },
-    ProviderPreset {
-        name: "Anthropic (Claude)",
-        base_url: "https://api.anthropic.com/v1",
-        api_backend: "messages",
-        supports_reasoning: false,
-        models: &[
-            ("claude-opus-4-7", "Claude Opus 4.7 — 最强推理，适合复杂任务 (推荐)", 200_000),
-            ("claude-sonnet-4-6", "Claude Sonnet 4.6 — 快速响应的主力模型", 200_000),
-            ("claude-haiku-4-5", "Claude Haiku 4.5 — 极速轻量，日常任务", 200_000),
-        ],
-    },
-    ProviderPreset {
-        name: "自定义 (OpenAI 兼容 API)",
-        base_url: "",
-        api_backend: "chat_completions",
-        supports_reasoning: false,
-        models: &[],
-    },
-];
+/// 提供商预设（与 F2 设置面板共享，见 `nexus-provider-presets`）。
+use nexus_provider_presets::{ProviderPreset, PROVIDERS};
 
 // ── 重定向文件管理 ──────────────────────────────────────────────────────
 

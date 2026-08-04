@@ -95,7 +95,7 @@ use super::settings::setters::{
     set_voice_stt_language,
     // Phase 1
     set_api_key, clear_api_key, set_proxy_http, set_proxy_https, set_proxy_no_proxy,
-    set_default_reasoning_effort,
+    set_default_reasoning_effort, set_provider,
 };
 use super::settings::ui::{
     dispatch_confirm_reset_setting, dispatch_open_command_palette, dispatch_open_howto_guides,
@@ -1009,6 +1009,7 @@ pub(crate) fn dispatch(action: Action, app: &mut AppView) -> Vec<Effect> {
         Action::SetProxyHttps(v) => set_proxy_https(app, v),
         Action::SetProxyNoProxy(v) => set_proxy_no_proxy(app, v),
         Action::SetDefaultReasoningEffort(v) => set_default_reasoning_effort(app, v),
+        Action::SetProvider(v) => set_provider(app, v),
         Action::PreviewTheme(v) => preview_theme(app, v),
         Action::PreviewAutoDarkTheme(v) => preview_auto_dark_theme(app, v),
         Action::PreviewAutoLightTheme(v) => preview_auto_light_theme(app, v),

@@ -29,6 +29,7 @@ nexus-telemetry = { workspace = true }
 nexus-workspace = { workspace = true }
 nexus-crash-handler = { path = "../nexus-crash-handler" }
 nexus-acp-lib = { workspace = true }
+nexus-provider-presets = { path = "../nexus-provider-presets" }
 
 # Async runtime + misc.
 tokio = { workspace = true, features = [

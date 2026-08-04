@@ -1,6 +1,6 @@
 //! Individual setting setters with persistence effects and toasts.
 
-use super::ui::{refresh_open_settings_modals, save_success_toast};
+use super::ui::{current_provider_for, refresh_open_settings_modals, save_success_toast};
 use crate::app::actions::Effect;
 use crate::app::app_view::{ActiveView, AppView};
 use agent_client_protocol as acp;
@@ -1682,6 +1682,128 @@ pub(in crate::app::dispatch) fn set_default_model(
         // `EventLoop::on_session_created` to apply once the session
         // id materialises. Mirrors `Action::SwitchModel` line 586.
         agent.session.deferred_model_switch = Some((new_id, None));
+    }
+    effects
+}
+
+/// Toast format for `provider`.
+fn save_provider_toast(provider_name: &str) -> String {
+    format!("\u{2713} Provider: {provider_name}")
+}
+
+/// Outer dispatcher for `Action::SetProvider`. Persists the provider switch
+/// (writes that provider's `[model.*]` entries, sets `[models].default` to
+/// its first model, and updates `[endpoints].xai_api_base_url`) via
+/// `Effect::PersistSetting("provider", name)` with the previous provider
+/// name as the rollback value.
+///
+/// Best-effort live switch to the provider's default model — only when that
+/// model already exists in the current catalog (mirrors `set_default_model`'s
+/// `available_has_new` gate; the shell rejects optimistic switches to unknown
+/// models). Otherwise the switch persists and the new `[models].default`
+/// takes effect on the next session. Idempotent: same provider already
+/// active → no-op.
+pub(in crate::app::dispatch) fn set_provider(
+    app: &mut AppView,
+    provider_name: String,
+) -> Vec<Effect> {
+    let ActiveView::Agent(aid) = app.active_view else {
+        tracing::error!(
+            target: "settings",
+            key = "provider",
+            "Action::SetProvider dispatched with no active agent — no-op",
+        );
+        return vec![];
+    };
+
+    let preset = match nexus_provider_presets::ProviderPreset::by_name(&provider_name) {
+        Some(p) => p,
+        None => {
+            tracing::error!(
+                target: "settings",
+                key = "provider",
+                name = %provider_name,
+                "Action::SetProvider dispatched with unknown provider name — \
+                 picker/registry skew; no-op",
+            );
+            return vec![];
+        }
+    };
+    let Some((new_default_id, _, _)) = preset.models.first() else {
+        tracing::error!(
+            target: "settings",
+            key = "provider",
+            name = %provider_name,
+            "Action::SetProvider dispatched for a preset with no models — no-op",
+        );
+        return vec![];
+    };
+
+    // Snapshot the previous provider + session id for the rollback payload
+    // and the live-switch gate.
+    let (prev_provider, session_id, new_default_id_owned) = {
+        let Some(agent) = app.agents.get(&aid) else {
+            tracing::error!(
+                target: "settings",
+                key = "provider",
+                "Action::SetProvider: active_view::Agent points to missing agent",
+            );
+            return vec![];
+        };
+        let prev_provider = current_provider_for(&agent.session.models).unwrap_or_default();
+        let session_id = agent.session.session_id.clone();
+        (prev_provider, session_id, (*new_default_id).to_string())
+    };
+
+    // Idempotent: same provider already active → no-op.
+    if prev_provider == provider_name {
+        return vec![];
+    }
+
+    // Best-effort live switch to the provider's default model. Only when it
+    // is already in the catalog — otherwise the persisted `[models].default`
+    // applies to the next session.
+    let new_id = acp::ModelId::new(std::sync::Arc::from(new_default_id_owned));
+    let available_has_new = app
+        .agents
+        .get(&aid)
+        .is_some_and(|agent| agent.session.models.available.contains_key(&new_id));
+
+    refresh_open_settings_modals(app);
+    tracing::info!(
+        target: "settings",
+        key = "provider",
+        new = %provider_name,
+        prev = %prev_provider,
+        live_switch = available_has_new,
+        "setting changed",
+    );
+    app.show_toast(&save_provider_toast(&provider_name));
+
+    let mut effects: Vec<Effect> = Vec::new();
+    effects.push(Effect::PersistSetting {
+        key: "provider",
+        value: crate::settings::SettingValue::String(provider_name),
+        rollback_value: crate::settings::SettingValue::String(prev_provider),
+    });
+
+    if available_has_new {
+        let prev_model_id = app
+            .agents
+            .get(&aid)
+            .and_then(|agent| agent.session.models.current.clone());
+        if let Some(sid) = session_id {
+            if let Some(agent) = app.agents.get_mut(&aid) {
+                agent.session.model_switch_pending = true;
+            }
+            effects.push(Effect::SwitchModel {
+                agent_id: aid,
+                session_id: sid,
+                model_id: new_id,
+                effort: None,
+                prev_model_id,
+            });
+        }
     }
     effects
 }

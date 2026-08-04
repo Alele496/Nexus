@@ -1012,6 +1012,10 @@ pub enum Action {
     SetProxyNoProxy(String),
     /// Set the default reasoning effort (high / xhigh).
     SetDefaultReasoningEffort(String),
+    /// Switch the active AI provider preset (e.g. "DeepSeek"). Writes that
+    /// provider's `[model.*]` entries, sets `[models].default` to its first
+    /// model, and updates `[endpoints].xai_api_base_url` for new sessions.
+    SetProvider(String),
 }
 /// Subcommand for [`Action::ReviewConfig`].
 #[derive(Debug)]

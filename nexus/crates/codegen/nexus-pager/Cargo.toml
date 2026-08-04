@@ -111,6 +111,7 @@ nexus-project = { workspace = true }
 nexus-workflow = { workspace = true }
 nexus-plugin-marketplace = { path = "../nexus-plugin-marketplace" }
 nexus-hooks-plugins-types = { path = "../nexus-hooks-plugins-types" }
+nexus-provider-presets = { path = "../nexus-provider-presets" }
 wait-timeout = { workspace = true }
 nexus-sandbox = { path = "../nexus-sandbox", default-features = false }
 

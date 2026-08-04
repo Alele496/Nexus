@@ -910,6 +910,14 @@ pub(crate) async fn persist_setting(
                 .await
                 .map_err(|e| e.to_string())
         }
+        "provider" => {
+            let SettingValue::String(s) = value else {
+                return Err(kind_mismatch("provider", "String", &value));
+            };
+            nexus_shell::util::config::set_provider(s)
+                .await
+                .map_err(|e| e.to_string())
+        }
         "scroll_speed" => {
             let SettingValue::Int(i) = value else {
                 return Err(kind_mismatch("scroll_speed", "Int", &value));

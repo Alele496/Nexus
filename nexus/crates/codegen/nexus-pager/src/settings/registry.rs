@@ -41,6 +41,7 @@ pub enum SettingCategory {
     Privacy,
     Proxy,
     Keys,
+    Providers,
     Models,
     Session,
     Advanced,
@@ -56,6 +57,7 @@ impl SettingCategory {
         Self::Privacy,
         Self::Proxy,
         Self::Keys,
+        Self::Providers,
         Self::Models,
         Self::Session,
         Self::Advanced,
@@ -71,6 +73,7 @@ impl SettingCategory {
             Self::Privacy => "Privacy",
             Self::Proxy => "Proxy",
             Self::Keys => "API Keys",
+            Self::Providers => "Providers",
             Self::Models => "Models",
             Self::Session => "Session",
             Self::Advanced => "Advanced",
@@ -107,6 +110,11 @@ pub enum DynamicEnumSource {
     /// Models from the active session's catalog. Prepends a
     /// `"(no override)"` sentinel so the user can clear the setting.
     ActiveModelCatalog,
+    /// Provider presets from `nexus-provider-presets`, in `PROVIDERS`
+    /// order. No clear sentinel — a provider is always in effect; the
+    /// current value is the preset matching the active model (falling
+    /// back to the Custom preset when nothing matches).
+    ActiveProviderCatalog,
 }
 
 /// Build the owned choice list for a `DynamicEnum` at picker-open time.
@@ -125,6 +133,17 @@ pub fn dynamic_enum_choices(
                 description: "Inherit the default model (no per-user override).".to_string(),
             });
             for (name, _id) in &snapshot.available_models {
+                out.push(OwnedEnumChoice {
+                    canonical: name.clone(),
+                    display: name.clone(),
+                    description: String::new(),
+                });
+            }
+            out
+        }
+        DynamicEnumSource::ActiveProviderCatalog => {
+            let mut out = Vec::with_capacity(snapshot.available_providers.len());
+            for name in &snapshot.available_providers {
                 out.push(OwnedEnumChoice {
                     canonical: name.clone(),
                     display: name.clone(),
@@ -260,6 +279,14 @@ pub struct PagerLocalSnapshot {
     /// Cloned into the snapshot so the modal's validator/resolver is
     /// self-contained (the modal outlives the borrow on `app.agents`).
     pub available_models: Vec<(String, acp::ModelId)>,
+    /// Provider preset display names (from `nexus-provider-presets`,
+    /// `PROVIDERS` order) for the provider picker's choice list.
+    pub available_providers: Vec<String>,
+    /// The provider preset matching the active model, or the Custom
+    /// preset when no preset matches. `None` only before the first
+    /// snapshot refresh; `current_value_for` folds that to the empty
+    /// string sentinel.
+    pub current_provider: Option<String>,
     /// Whether the user has opted OUT of coding data sharing.
     /// Lives in auth metadata (no `UiConfig` field). Inverted mapping:
     /// `opt_out == false` → canonical "opt-in". Snapshot default is
@@ -313,6 +340,8 @@ impl Default for PagerLocalSnapshot {
             auto_mode: false,
             current_model_name: None,
             available_models: Vec::new(),
+            available_providers: Vec::new(),
+            current_provider: None,
             coding_data_sharing_opt_out: true,
             plan_mode_active: false,
             show_tips: None,
@@ -674,6 +703,12 @@ pub fn current_value_for(
         "default_model" => Some(SettingValue::String(
             pager.current_model_name.clone().unwrap_or_default(),
         )),
+        // provider: reads from pager snapshot (derived from the active
+        // model at snapshot-build time). None (no snapshot refresh yet)
+        // → empty string sentinel.
+        "provider" => Some(SettingValue::String(
+            pager.current_provider.clone().unwrap_or_default(),
+        )),
         // max_thoughts_width: `u16` widened to `i64`.
         "max_thoughts_width" => Some(SettingValue::Int(ui.max_thoughts_width as i64)),
         // coding_data_sharing: inverts the `_opt_out` bool.
@@ -916,6 +951,17 @@ mod tests {
                         "default_model registry default must be empty string — \
                          the live default is resolved dynamically from \
                          cfg.models.default at session start",
+                    );
+                }
+                // provider: no UiConfig mirror; the active provider is derived
+                // from the active model at snapshot-build time (registry default
+                // is the empty-string sentinel — see the current_value_for arm).
+                ("provider", SettingKind::DynamicEnum { default, .. }) => {
+                    assert_eq!(
+                        *default, "",
+                        "provider registry default must be empty string — \
+                         the active provider is derived from the current model \
+                         (pager snapshot), not a UiConfig field",
                     );
                 }
                 // max_thoughts_width: `u16` widened to `i64`.

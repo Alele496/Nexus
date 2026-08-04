@@ -938,6 +938,9 @@ pub(super) fn action_for_enum_commit(key: SettingKey, choice: &'static str) -> O
             Some(Action::SetDefaultSelectedPermission(choice.to_string()))
         }
         "default_reasoning_effort" => Some(Action::SetDefaultReasoningEffort(choice.to_string())),
+        // Provider canonicals come straight from `nexus-provider-presets`
+        // (the picker's `dynamic_enum_choices`); junk folds to None.
+        "provider" => Some(Action::SetProvider(choice.to_string())),
         _ => None,
     }
 }
@@ -974,6 +977,11 @@ pub(super) fn action_for_string(
         "proxy_http" => Some(Action::SetProxyHttp(value)),
         "proxy_https" => Some(Action::SetProxyHttps(value)),
         "proxy_no_proxy" => Some(Action::SetProxyNoProxy(value)),
+        // Provider canonicals come straight from the presets catalog — no
+        // model-name resolution needed. An empty canonical (never produced
+        // by the picker, which prepends no "(no override)" sentinel) would
+        // route through the generic `_` arm to None.
+        "provider" => Some(Action::SetProvider(value)),
 
         _ => {
             let _ = value;

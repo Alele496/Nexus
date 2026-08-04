@@ -6408,6 +6408,7 @@ dependencies = [
  "nexus-crash-handler",
  "nexus-pager",
  "nexus-pager-minimal",
+ "nexus-provider-presets",
  "nexus-sandbox",
  "nexus-shell",
  "nexus-telemetry",
@@ -6994,6 +6995,7 @@ dependencies = [
  "nexus-plugin-marketplace",
  "nexus-project",
  "nexus-prompt-queue",
+ "nexus-provider-presets",
  "nexus-ratatui-inline",
  "nexus-ratatui-textarea",
  "nexus-sandbox",
@@ -7202,6 +7204,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "nexus-provider-presets"
+version = "0.1.0"
+
+[[package]]
 name = "nexus-ratatui-inline"
 version = "0.1.0"
 dependencies = [
@@ -7407,6 +7413,7 @@ dependencies = [
  "nexus-paths",
  "nexus-plugin-marketplace",
  "nexus-prompt-queue",
+ "nexus-provider-presets",
  "nexus-sampler",
  "nexus-sampling-types",
  "nexus-sandbox",

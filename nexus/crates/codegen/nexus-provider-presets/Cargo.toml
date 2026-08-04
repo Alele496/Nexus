@@ -1,0 +1,9 @@
+[package]
+license = "Apache-2.0"
+name = "nexus-provider-presets"
+version = "0.1.0"
+edition.workspace = true
+description = "Provider presets (DeepSeek, OpenAI, Anthropic, Custom) shared between the setup wizard and the settings panel."
+
+[lints]
+workspace = true

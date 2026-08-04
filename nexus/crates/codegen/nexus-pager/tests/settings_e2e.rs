@@ -44,6 +44,7 @@ const ALL_SETTINGS_EXERCISED: &[&str] = &[
     "render_mermaid",
     "multiline_mode",
     "permission_mode",
+    "provider",
     "default_model",
     "max_thoughts_width",
     "scroll_speed",
@@ -1824,7 +1825,9 @@ fn registry_kind_membership_through_pr_14() {
     let dynamic_enum_keys = by_kind.remove("DynamicEnum").unwrap_or_default();
     assert_eq!(
         dynamic_enum_keys,
-        vec!["default_model", "fork_secondary_model",],
+        // F2 Providers panel: `provider` (ActiveProviderCatalog DynamicEnum)
+        // registers after the Models-category enums.
+        vec!["default_model", "fork_secondary_model", "provider"],
         "DynamicEnum kind membership drift",
     );
 
@@ -1971,6 +1974,9 @@ fn defaults_round_trip_through_registry() {
             "proxy_no_proxy" => SettingValue::String(String::new()),
             "api_key" => SettingValue::Password(String::new()),
             "default_reasoning_effort" => SettingValue::Enum("high"),
+            // F2 Providers panel: derived from the active model; empty default =
+            // no opinion (current provider resolved live from the session).
+            "provider" => SettingValue::String(String::new()),
             other => panic!("test must list expected default for `{other}`"),
         }
     };
@@ -3546,7 +3552,11 @@ fn pr11_permission_mode_kind_canonical_strings_match_choices_catalog() {
             SettingKind::Enum { choices, .. } => Some(*choices),
             _ => None,
         })
-        .map(|c| c.iter().map(|c| c.canonical).collect())
+        .map(|c| {
+            c.iter()
+                .map(|c| c.canonical)
+                .collect::<std::collections::HashSet<&str>>()
+        })
         .expect("permission_mode must be registered");
 
     for kind in [
@@ -4367,6 +4377,116 @@ fn pr14_mouse_click_on_dynamic_enum_row_opens_picker() {
     );
 }
 
+/// `provider` DynamicEnum picker: Enter opens, preset rows dispatch
+/// `SetProvider(<preset name>)`.
+#[test]
+fn pr14_provider_picker_commits_set_provider() {
+    let snapshot = PagerLocalSnapshot {
+        available_providers: vec![
+            "DeepSeek".to_string(),
+            "OpenAI".to_string(),
+            "Anthropic (Claude)".to_string(),
+        ],
+        current_provider: Some("DeepSeek".to_string()),
+        ..PagerLocalSnapshot::default()
+    };
+    let mut s = SettingsModalState::new(
+        Arc::new(SettingsRegistry::defaults()),
+        UiConfig::default(),
+        snapshot,
+    );
+    navigate_to(&mut s, "provider");
+    let outcome = handle_settings_key(&mut s, &press(KeyCode::Enter));
+    assert!(
+        matches!(outcome, SettingsKeyOutcome::Changed),
+        "Enter on provider row must transition to PickingEnum, got {outcome:?}"
+    );
+    assert!(
+        matches!(s.mode(), SettingsModalMode::PickingEnum { key, .. } if key == "provider"),
+        "Enter must transition to PickingEnum for provider"
+    );
+
+    // Seeded at the current provider (DeepSeek, row 0); Down → OpenAI.
+    let outcome = handle_settings_key(&mut s, &press(KeyCode::Down));
+    assert!(
+        matches!(outcome, SettingsKeyOutcome::Changed),
+        "Down on provider picker must move the focus, got {outcome:?}"
+    );
+
+    // Enter commits the selected provider preset.
+    let outcome = handle_settings_key(&mut s, &press(KeyCode::Enter));
+    match outcome {
+        SettingsKeyOutcome::Action(Action::SetProvider(name)) => {
+            assert_eq!(
+                name, "OpenAI",
+                "committed provider must match the focused row"
+            );
+        }
+        other => panic!("expected SetProvider(name) on commit, got {other:?}"),
+    }
+    assert!(
+        matches!(s.mode(), SettingsModalMode::Browse),
+        "successful commit must return to Browse"
+    );
+}
+
+/// Mouse click on `provider` opens picker (keyboard ↔ mouse parity).
+#[test]
+fn pr14_mouse_click_on_provider_row_opens_picker() {
+    let snapshot = PagerLocalSnapshot {
+        available_providers: vec![
+            "DeepSeek".to_string(),
+            "OpenAI".to_string(),
+            "Anthropic (Claude)".to_string(),
+        ],
+        current_provider: Some("DeepSeek".to_string()),
+        ..PagerLocalSnapshot::default()
+    };
+    let mut s = SettingsModalState::new(
+        Arc::new(SettingsRegistry::defaults()),
+        UiConfig::default(),
+        snapshot,
+    );
+    s.list_area = Rect {
+        x: 0,
+        y: 0,
+        width: 80,
+        height: 80,
+    };
+    s.row_rects.resize(s.rows.len(), Rect::default());
+    let row_idx = row_idx_for(&s, "provider");
+    s.row_rects[row_idx] = Rect {
+        x: 0,
+        y: row_idx as u16,
+        width: 80,
+        height: 1,
+    };
+    // First click: select.
+    let outcome = handle_settings_mouse(
+        &mut s,
+        MouseEventKind::Down(crossterm::event::MouseButton::Left),
+        20,
+        row_idx as u16,
+    );
+    assert!(matches!(outcome, SettingsKeyOutcome::Changed));
+    // Second click on the same row: opens picker.
+    let outcome = handle_settings_mouse(
+        &mut s,
+        MouseEventKind::Down(crossterm::event::MouseButton::Left),
+        20,
+        row_idx as u16,
+    );
+    assert!(
+        matches!(outcome, SettingsKeyOutcome::Changed),
+        "second click on provider row must open picker, got {outcome:?}",
+    );
+    assert!(
+        matches!(s.mode(), SettingsModalMode::PickingEnum { key, .. } if key == "provider"),
+        "second click on provider row must transition to PickingEnum, got {:?}",
+        s.mode(),
+    );
+}
+
 /// Mouse click on `max_thoughts_width` opens the inline editor.
 #[test]
 fn pr8_mouse_click_on_int_row_opens_editor() {
@@ -4733,7 +4853,7 @@ fn pr9_coding_data_sharing_picker_enter_dispatches_set_commit() {
     };
     // Resolve "the other" canonical from the registry rather than
     // hardcoding — robust against future catalog additions.
-    let other_canonical = choices
+    let other_canonical: &'static str = choices
         .iter()
         .map(|c| c.canonical)
         .find(|c| *c != default_canonical)
@@ -5111,7 +5231,7 @@ fn default_selected_permission_picker_enter_dispatches_set_commit() {
     // Picker seeds at the current value ("always_allow_all_sessions"); navigate one row down
     // and resolve that choice's canonical from the registry rather than
     // hardcoding it — robust against future catalog reordering.
-    let seed_idx = choices
+    let seed_idx: usize = choices
         .iter()
         .position(|c| c.canonical == default_canonical)
         .expect("default canonical must exist in choices");

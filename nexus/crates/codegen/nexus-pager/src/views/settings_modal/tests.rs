@@ -436,6 +436,24 @@ fn every_dynamic_enum_setting_has_action_for_string_arm() {
                      SetForkSecondaryModel(_), got {nonempty_action:?}",
                 );
             }
+            "provider" => {
+                // Provider canonicals pass straight through to the typed
+                // action — no model-name resolution. The empty canonical
+                // (never produced by the picker, which prepends no
+                // "(no override)" sentinel) maps to SetProvider("") and is
+                // rejected by the setter's by_name lookup.
+                assert!(
+                    matches!(nonempty_action, Some(Action::SetProvider(_))),
+                    "provider non-empty canonical must produce \
+                     SetProvider(_), got {nonempty_action:?}",
+                );
+                assert!(
+                    matches!(empty_action, Some(Action::SetProvider(_))),
+                    "provider empty canonical must produce SetProvider(_) — \
+                     the picker never produces it, but the mapping must stay \
+                     total, got {empty_action:?}",
+                );
+            }
             other => panic!(
                 "Unknown DynamicEnum key `{other}` — add a discriminating arm in \
                  every_dynamic_enum_setting_has_action_for_string_arm so future \
@@ -588,6 +606,9 @@ fn rows_contain_categories_and_settings_through_pr_14() {
             &SettingCategory::Privacy,
             &SettingCategory::Proxy,
             &SettingCategory::Keys,
+            // F2 Providers panel: `provider` (ActiveProviderCatalog
+            // DynamicEnum) sits before the Models category.
+            &SettingCategory::Providers,
             &SettingCategory::Models,
             // The Session category has no registered settings, so its
             // header is not emitted.
@@ -677,6 +698,9 @@ fn rows_contain_categories_and_settings_through_pr_14() {
             "proxy_no_proxy",
             // Phase 1 — Keys category: masked API key entry.
             "api_key",
+            // F2 Providers panel: `provider` (ActiveProviderCatalog
+            // DynamicEnum, SHELL-owned).
+            "provider",
             // SHELL-owned default_model (Models category).
             "default_model",
             // Models category. `web_search_model` and `session_summary_model`

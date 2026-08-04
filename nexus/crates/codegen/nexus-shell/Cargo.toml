@@ -143,6 +143,7 @@ nexus-subagent-resolution = { path = "../nexus-subagent-resolution" }
 nexus-agent = { path = "../nexus-agent" }
 nexus-config = { workspace = true }
 nexus-config-types = { workspace = true }
+nexus-provider-presets = { path = "../nexus-provider-presets" }
 nexus-memory = { workspace = true }
 nexus-hooks = { path = "../nexus-hooks" }
 nexus-hooks-plugins-types = { path = "../nexus-hooks-plugins-types" }

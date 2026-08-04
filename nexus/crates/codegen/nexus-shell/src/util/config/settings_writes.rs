@@ -1,5 +1,7 @@
-use super::persist::update_config;
+use super::persist::{atomic_write_string, lock_config_writes, read_to_string_or_empty, update_config};
 use anyhow::Result;
+use toml::Value as TomlValue;
+use toml::map::Map as TomlMap;
 
 // ---------------------------------------------------------------------------
 // Settings helpers — typed disk-write wrappers for each setting.
@@ -110,6 +112,89 @@ pub async fn set_default_model(value: String) -> Result<()> {
         None,
     )
     .await
+}
+
+/// Upsert `key` as a table in `table`, replacing a non-table scalar so a
+/// provider write never silently vanishes after the success toast.
+fn upsert_table<'a>(
+    table: &'a mut TomlMap<String, TomlValue>,
+    key: &str,
+) -> &'a mut TomlMap<String, TomlValue> {
+    let v = table
+        .entry(key.to_string())
+        .or_insert_with(|| TomlValue::Table(TomlMap::new()));
+    if !matches!(v, TomlValue::Table(_)) {
+        *v = TomlValue::Table(TomlMap::new());
+    }
+    v.as_table_mut().expect("just set to table")
+}
+
+/// Persist a provider switch in one atomic TOML read-modify-write under the
+/// config save lock:
+///   - every curated `[model."<id>"]` entry for the preset (merged so
+///     hand-added keys like `api_key` survive),
+///   - `[models].default` = the preset's first model,
+///   - `[endpoints].xai_api_base_url` = the preset's endpoint.
+///
+/// Unlike `set_default_model`, `models.default` is written directly instead of
+/// routing through the campaign machinery: a provider switch is an explicit
+/// user action (same as the setup wizard) and the three sections must land
+/// together or not at all.
+pub async fn set_provider(name: String) -> Result<()> {
+    let preset = nexus_provider_presets::ProviderPreset::by_name(&name)
+        .ok_or_else(|| anyhow::anyhow!("unknown provider: {name}"))?;
+    if preset.models.is_empty() {
+        anyhow::bail!("provider {name} has no curated models");
+    }
+
+    let config_path = super::mcp::user_config_path();
+    let _save_guard = lock_config_writes().await;
+    let content = read_to_string_or_empty(&config_path)?;
+    let mut root: TomlValue = if content.trim().is_empty() {
+        TomlValue::Table(TomlMap::new())
+    } else {
+        toml::from_str(&content).map_err(|e| anyhow::anyhow!("invalid config TOML: {e}"))?
+    };
+
+    let models_table = upsert_table(root.as_table_mut().expect("root is a table"), "model");
+    for &(model_id, model_name, context_window) in preset.models {
+        let entry = upsert_table(models_table, model_id);
+        entry.insert("model".to_string(), TomlValue::String(model_id.to_string()));
+        entry.insert("name".to_string(), TomlValue::String(model_name.to_string()));
+        entry.insert(
+            "base_url".to_string(),
+            TomlValue::String(preset.base_url.to_string()),
+        );
+        entry.insert(
+            "api_backend".to_string(),
+            TomlValue::String(preset.api_backend.to_string()),
+        );
+        let ctx = i64::try_from(context_window)
+            .map_err(|_| anyhow::anyhow!("context_window too large: {context_window}"))?;
+        entry.insert("context_window".to_string(), TomlValue::Integer(ctx));
+        if preset.supports_reasoning {
+            entry.insert(
+                "supports_reasoning_effort".to_string(),
+                TomlValue::Boolean(true),
+            );
+        }
+    }
+
+    let (default_id, _, _) = preset.models[0];
+    let models_section = upsert_table(root.as_table_mut().expect("root is a table"), "models");
+    models_section.insert(
+        "default".to_string(),
+        TomlValue::String(default_id.to_string()),
+    );
+
+    let endpoints = upsert_table(root.as_table_mut().expect("root is a table"), "endpoints");
+    endpoints.insert(
+        "xai_api_base_url".to_string(),
+        TomlValue::String(preset.base_url.to_string()),
+    );
+
+    atomic_write_string(&config_path, &root.to_string())?;
+    Ok(())
 }
 
 /// Persist `[ui].fork_secondary_model` via `update_config`.

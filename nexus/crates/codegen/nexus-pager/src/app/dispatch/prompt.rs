@@ -452,6 +452,14 @@ pub(super) fn dispatch_send_prompt_inner(
                         .iter()
                         .map(|(id, info)| (info.name.clone(), id.clone()))
                         .collect(),
+                    available_providers: nexus_provider_presets::PROVIDERS
+                        .iter()
+                        .filter(|p| !p.models.is_empty())
+                        .map(|p| p.name.to_string())
+                        .collect(),
+                    current_provider: crate::app::dispatch::settings::ui::current_provider_for(
+                        &agent.session.models,
+                    ),
                     coding_data_sharing_opt_out: coding_data_sharing_opt_out_from_app,
                     // Prefer optimistic pending over confirmed active.
                     plan_mode_active: agent.plan_mode_pending.unwrap_or(agent.plan_mode_active),
