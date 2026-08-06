@@ -2,6 +2,7 @@
 
 use std::cell::{Ref, RefCell};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use chrono::{DateTime, Local};
 
@@ -39,6 +40,16 @@ type CachedTruncatedHeight = (u16, bool, ThemeKind, Option<PathBuf>, u16);
 /// (e.g., streaming tasks that need to push chunks to a specific block).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EntryId(u64);
+
+/// Minimum interval between full re-parses of a large streaming block. Appends
+/// within the window keep the last parsed output, so text appears in ~80ms
+/// chunks instead of re-parsing the whole (growing) block every frame.
+pub(crate) const STREAM_PARSE_THROTTLE: Duration = Duration::from_millis(80);
+
+/// A streaming block smaller than this is cheap to re-parse, so its appends
+/// always invalidate immediately (no perceptible lag, and short responses /
+/// tests render fresh text every frame).
+pub(crate) const STREAM_PARSE_THROTTLE_MIN_CHARS: usize = 1000;
 
 impl EntryId {
     /// Create a new EntryId with a specific value.
@@ -116,6 +127,14 @@ pub struct ScrollbackEntry {
     /// same-width rebuild reuse the estimate instead of re-cloning the block's
     /// source text. Cleared by `invalidate_cache`.
     cached_estimate_lines: RefCell<Option<(u16, u16)>>,
+
+    /// When this entry's cache was last invalidated by a streaming append
+    /// (monotonic). Drives [`Self::invalidate_for_stream`]'s coalescing window.
+    last_stream_invalidate: std::cell::Cell<Option<std::time::Instant>>,
+
+    /// Coalescing window for streaming re-parses. Defaults to
+    /// [`STREAM_PARSE_THROTTLE`]; tests shrink it to force expiry.
+    stream_parse_throttle: std::cell::Cell<Duration>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -181,6 +200,8 @@ impl ScrollbackEntry {
             cached_output: RefCell::new(None),
             cached_truncated_height: RefCell::new(None),
             cached_estimate_lines: RefCell::new(None),
+            last_stream_invalidate: std::cell::Cell::new(None),
+            stream_parse_throttle: std::cell::Cell::new(STREAM_PARSE_THROTTLE),
         }
     }
 
@@ -212,6 +233,8 @@ impl ScrollbackEntry {
             cached_output: RefCell::new(None),
             cached_truncated_height: RefCell::new(None),
             cached_estimate_lines: RefCell::new(None),
+            last_stream_invalidate: std::cell::Cell::new(None),
+            stream_parse_throttle: std::cell::Cell::new(STREAM_PARSE_THROTTLE),
         }
     }
 
@@ -280,6 +303,30 @@ impl ScrollbackEntry {
         *self.cached_output.borrow_mut() = None;
         *self.cached_truncated_height.borrow_mut() = None;
         *self.cached_estimate_lines.borrow_mut() = None;
+    }
+
+    /// Streaming-append invalidation, coalesced while the block is large and
+    /// running: appends within the throttle window keep the last parsed output
+    /// (the renderer blits it cheaply; text appears in ~[`STREAM_PARSE_THROTTLE`]
+    /// chunks), so a long response stops re-parsing its whole body every frame.
+    ///
+    /// Small blocks (below [`STREAM_PARSE_THROTTLE_MIN_CHARS`]) always
+    /// invalidate immediately — re-parsing them is cheap, so there is no lag
+    /// to pay. Returns `true` when the cache was actually invalidated.
+    pub fn invalidate_for_stream(&mut self) -> bool {
+        let window = self.stream_parse_throttle.get();
+        let now = std::time::Instant::now();
+        let big = self.is_running && self.block.text_len() >= STREAM_PARSE_THROTTLE_MIN_CHARS;
+        let due = !big
+            || self
+                .last_stream_invalidate
+                .get()
+                .is_none_or(|at| now.duration_since(at) >= window);
+        if due {
+            self.last_stream_invalidate.set(Some(now));
+            self.invalidate_cache();
+        }
+        due
     }
 
     /// Drop the heavyweight cached render output (and the block's internal
@@ -829,5 +876,82 @@ mod tests {
             "with_display_mode() should not clear created_at"
         );
         assert_eq!(entry.display_mode, DisplayMode::Collapsed);
+    }
+
+    #[test]
+    fn small_stream_invalidate_is_immediate() {
+        // Sub-threshold blocks never coalesce: re-parse is cheap, so every
+        // append lands on screen with no lag.
+        let mut entry =
+            ScrollbackEntry::running_with_id(EntryId(1), RenderBlock::agent_message("hi"));
+        assert!(entry.invalidate_for_stream());
+        assert!(entry.invalidate_for_stream());
+    }
+
+    #[test]
+    fn large_running_stream_invalidate_coalesces_within_window() {
+        let mut entry = ScrollbackEntry::running_with_id(
+            EntryId(1),
+            RenderBlock::agent_message("x".repeat(STREAM_PARSE_THROTTLE_MIN_CHARS)),
+        );
+        // First append is due immediately.
+        assert!(entry.invalidate_for_stream());
+        // Second append inside the 80ms window is coalesced away.
+        assert!(!entry.invalidate_for_stream());
+    }
+
+    #[test]
+    fn large_stream_invalidate_expires_after_window() {
+        let mut entry = ScrollbackEntry::running_with_id(
+            EntryId(1),
+            RenderBlock::agent_message("x".repeat(STREAM_PARSE_THROTTLE_MIN_CHARS)),
+        );
+        assert!(entry.invalidate_for_stream());
+
+        // Backdate the last invalidate beyond the window → due again.
+        entry
+            .last_stream_invalidate
+            .set(Some(std::time::Instant::now() - Duration::from_secs(1)));
+        assert!(entry.invalidate_for_stream());
+
+        // The window is configurable: a zero window never coalesces.
+        entry.stream_parse_throttle.set(Duration::ZERO);
+        assert!(entry.invalidate_for_stream());
+    }
+
+    #[test]
+    fn large_completed_stream_invalidate_is_immediate() {
+        let mut entry = ScrollbackEntry::running_with_id(
+            EntryId(1),
+            RenderBlock::agent_message("x".repeat(STREAM_PARSE_THROTTLE_MIN_CHARS)),
+        );
+        entry.mark_completed();
+        // Finished blocks always invalidate so the final flush is never lost.
+        assert!(entry.invalidate_for_stream());
+        assert!(entry.invalidate_for_stream());
+    }
+
+    #[test]
+    fn throttled_invalidate_preserves_cached_output() {
+        let mut entry = ScrollbackEntry::running_with_id(
+            EntryId(1),
+            RenderBlock::agent_message("x".repeat(STREAM_PARSE_THROTTLE_MIN_CHARS)),
+        );
+        let appearance = AppearanceConfig::default();
+
+        // Prime the throttle (the first append is always due), re-populate
+        // the cache, then coalesce an append: the cache survives.
+        assert!(entry.invalidate_for_stream());
+        entry.output(80, &appearance, None);
+        assert!(entry.has_cached_output());
+        assert!(!entry.invalidate_for_stream());
+        assert!(entry.has_cached_output());
+
+        // After the window expires the next append clears it.
+        entry
+            .last_stream_invalidate
+            .set(Some(std::time::Instant::now() - Duration::from_secs(1)));
+        assert!(entry.invalidate_for_stream());
+        assert!(!entry.has_cached_output());
     }
 }

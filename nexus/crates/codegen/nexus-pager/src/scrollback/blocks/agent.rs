@@ -72,6 +72,11 @@ impl AgentMessageBlock {
         self.content.is_empty()
     }
 
+    /// Source markdown length in chars (zero-alloc, unlike `text()`).
+    pub fn text_len(&self) -> usize {
+        self.content.text_len()
+    }
+
     /// Finish streaming and do a full re-render for safety.
     pub fn finish(&mut self) {
         self.content.finish();

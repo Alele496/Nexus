@@ -80,6 +80,11 @@ impl ExecuteToolCallBlock {
         }
     }
 
+    /// Accumulated output length in chars (zero-alloc).
+    pub fn output_len(&self) -> usize {
+        self.output.as_ref().map_or(0, String::len)
+    }
+
     /// Finalize elapsed time from `started_at`.
     ///
     /// Idempotent: no-op if `started_at` is `None` (pre-completed block)

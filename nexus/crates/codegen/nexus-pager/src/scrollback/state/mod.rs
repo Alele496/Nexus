@@ -872,8 +872,9 @@ impl ScrollbackState {
             && let RenderBlock::AgentMessage(ref mut msg) = entry.block
         {
             msg.push_chunk(chunk);
-            entry.invalidate_cache();
-            self.dirty_heights.insert(id);
+            if entry.invalidate_for_stream() {
+                self.dirty_heights.insert(id);
+            }
             self.bump_content_generation();
             return true;
         }
@@ -886,8 +887,9 @@ impl ScrollbackState {
             && let RenderBlock::AgentMessage(ref mut msg) = entry.block
         {
             msg.push_chunk_deferred(chunk);
-            entry.invalidate_cache();
-            self.dirty_heights.insert(id);
+            if entry.invalidate_for_stream() {
+                self.dirty_heights.insert(id);
+            }
             self.bump_content_generation();
             return true;
         }
@@ -909,8 +911,9 @@ impl ScrollbackState {
             // The shell now sends clean output (no ANSI codes) when the client sets
             // x.ai/bashOutputNoColor: true, so no stripping is needed.
             exec.output = Some(output.to_string());
-            entry.invalidate_cache();
-            self.dirty_heights.insert(id);
+            if entry.invalidate_for_stream() {
+                self.dirty_heights.insert(id);
+            }
             self.bump_content_generation();
             return true;
         }
@@ -928,8 +931,9 @@ impl ScrollbackState {
             && let RenderBlock::Thinking(ref mut block) = entry.block
         {
             block.push_chunk(chunk);
-            entry.invalidate_cache();
-            self.dirty_heights.insert(id);
+            if entry.invalidate_for_stream() {
+                self.dirty_heights.insert(id);
+            }
             self.bump_content_generation();
             return true;
         }
@@ -942,8 +946,9 @@ impl ScrollbackState {
             && let RenderBlock::Thinking(ref mut block) = entry.block
         {
             block.push_chunk_deferred(chunk);
-            entry.invalidate_cache();
-            self.dirty_heights.insert(id);
+            if entry.invalidate_for_stream() {
+                self.dirty_heights.insert(id);
+            }
             self.bump_content_generation();
             return true;
         }
@@ -971,10 +976,9 @@ impl ScrollbackState {
             && let RenderBlock::ToolCall(ToolCallBlock::Execute(ref mut block)) = entry.block
         {
             block.push_output(chunk);
-            entry.invalidate_cache();
-            // Always mark dirty - word wrap may change line count even for same-line appends.
-            // HashSet dedup makes this cheap when called repeatedly.
-            self.dirty_heights.insert(id);
+            if entry.invalidate_for_stream() {
+                self.dirty_heights.insert(id);
+            }
             self.bump_content_generation();
             return true;
         }

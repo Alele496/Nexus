@@ -194,6 +194,11 @@ impl MarkdownContent {
         self.state.borrow().renderer.source().is_empty()
     }
 
+    /// Source markdown length in chars (zero-alloc, unlike `text()`).
+    pub fn text_len(&self) -> usize {
+        self.state.borrow().renderer.source().len()
+    }
+
     /// Get the rendered text as plain text (styles stripped).
     ///
     /// Returns the styled markdown output with all ratatui styles removed,

@@ -907,6 +907,21 @@ impl RenderBlock {
         matches!(self, RenderBlock::Subagent(_))
     }
 
+    /// Cheap character length of the block's raw text (zero-alloc, unlike
+    /// `text()`). Streaming-capable blocks report their current source length;
+    /// everything else reports 0 (treated as "small").
+    ///
+    /// Used by [`ScrollbackEntry::invalidate_for_stream`] to decide when a
+    /// streaming block's re-parse is worth coalescing.
+    pub fn text_len(&self) -> usize {
+        match self {
+            RenderBlock::AgentMessage(m) => m.text_len(),
+            RenderBlock::Thinking(t) => t.text_len(),
+            RenderBlock::ToolCall(ToolCallBlock::Execute(e)) => e.output_len(),
+            _ => 0,
+        }
+    }
+
     /// Check if this block is an AgentMessage.
     pub fn is_agent_message(&self) -> bool {
         matches!(self, RenderBlock::AgentMessage(_))

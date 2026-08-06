@@ -1014,7 +1014,7 @@ mod tests {
     use crate::render::osc8::{
         LinkPresentation, resolve_link_target, resolve_link_target_for_context,
     };
-    use crate::scrollback::RenderBlock;
+    use crate::scrollback::{EntryId, RenderBlock};
     use crate::scrollback::block::BlockContent;
     use crate::scrollback::types::DisplayMode;
     use crate::scrollback::wrappers::EntryRenderer;
@@ -4525,5 +4525,182 @@ mod tests {
             media.screen_rect.y > rect.y,
             "the image sits below its filepath line",
         );
+    }
+
+    /// Measure the per-frame cost of the production scrollback render path
+    /// ([`render_scrolled_entries_with_selection_boundaries`]) for a 200x50
+    /// viewport, in the regimes behind the "5-16 fps while a session is
+    /// active" report:
+    ///
+    /// - `A` stable content, warm cache: an idle session repainting (mouse
+    ///   move, cursor blink, HUD overlays). Every visible entry is a cache
+    ///   hit, so this is the floor cost of one scrollback paint.
+    /// - `B` throttled streaming (方案1): the live agent entry is one running
+    ///   entry mutated exactly like production — `push_chunk` per frame plus
+    ///   `invalidate_for_stream()`. Once the block crosses the size threshold
+    ///   the throttle coalesces re-parses; this tight loop runs far inside
+    ///   the 80ms window, so after the first (always-due) frame every frame
+    ///   is a cache hit. This is the new steady-state cost of streaming a
+    ///   long response.
+    /// - `C` unthrottled reference (pre-fix): a fresh entry every frame means
+    ///   the cache is always cold and `ensure_cached` regenerates the WHOLE
+    ///   entry — markdown parse + syntax highlight, not just the visible 50
+    ///   rows — the ~7fps the user observed.
+    ///
+    /// Prints per-frame means; no timing assertions (CI-safe). See them with
+    /// `--nocapture`.
+    #[test]
+    fn bench_visible_window_render_cost() {
+        use std::time::Instant;
+
+        let theme = Theme::current();
+        let appearance = AppearanceConfig::default();
+        let viewport = Rect::new(0, 0, 200, 50);
+
+        fn committed_message(i: usize) -> String {
+            match i % 4 {
+                0 => format!("**bold line {i}**\n- item one\n- item two"),
+                1 => format!("```rust\nfn f{i}() -> u32 {{ {i} }}\n```"),
+                2 => format!(
+                    "plain text line {i} with `code` and a longish run of words that wraps"
+                ),
+                _ => format!("## H{i}\n\nbody {i} with **bold** and *italic*."),
+            }
+        }
+        fn streaming_body(i: u64) -> String {
+            format!(
+                "## Streaming response\n\n\
+                 A paragraph explaining step one with **bold** and `inline code`.\n\n\
+                 ```rust\n\
+                 fn compute(n: u32) -> u32 {{\n\
+                     n * 2 + 1\n\
+                 }}\n\
+                 ```\n\n\
+                 - first item of the plan\n\
+                 - second item with **emphasis**\n\
+                 - third item with `code`\n\n\
+                 ### Step {i}\n\n\
+                 More prose here that wraps across a couple of lines at 200 cols."
+            )
+        }
+        /// ~500 lines of markdown with code fences — a long-running answer.
+        fn large_streaming_body(i: u64, size: usize) -> String {
+            let mut s = String::with_capacity(size * 60);
+            s.push_str("## Long streaming response\n\n");
+            for para in 0..size {
+                s.push_str(&format!(
+                    "### Section {para}\n\nText with **bold** and `code`, plus a fence:\n\n\
+                     ```rust\nfn s{para}(x: u32) -> u32 {{ x + {i} }}\n```\n\n"
+                ));
+            }
+            s.push_str(&format!("<!-- churn {i} -->"));
+            s
+        }
+        /// Push a chunk into the live agent entry's block (production path).
+        fn push_chunk(entry: &mut ScrollbackEntry, chunk: &str) {
+            if let RenderBlock::AgentMessage(ref mut m) = entry.block {
+                m.push_chunk(chunk);
+            }
+        }
+
+        let committed: Vec<ScrollbackEntry> =
+            (0..8).map(|i| make_markdown_entry(&committed_message(i))).collect();
+        let mut stream_holder: Vec<ScrollbackEntry> = Vec::new();
+        stream_holder.push(make_markdown_entry(&streaming_body(0)));
+
+        let mut layouts = compute_layouts(&committed, viewport.width, &appearance);
+        layouts.push(compute_layouts(std::slice::from_ref(
+            stream_holder.last().unwrap(),
+        ), viewport.width, &appearance)[0]);
+        let mut buf = Buffer::empty(viewport);
+
+        let render_frame = |buf: &mut Buffer,
+                            refs: &[&ScrollbackEntry],
+                            layouts: &[EntryLayoutInfo],
+                            tick: u64| {
+            render_scrolled_entries_with_selection_boundaries(
+                buf,
+                viewport,
+                refs,
+                0,
+                None,
+                &theme,
+                &appearance,
+                layouts,
+                tick,
+                None,
+                None,
+                None,
+                0,
+                0,
+                &[],
+                None,
+                None,
+            )
+        };
+
+        // Warm the committed + initial stream caches.
+        let mut refs: Vec<&ScrollbackEntry> = committed.iter().collect();
+        refs.push(stream_holder.last().unwrap());
+        render_frame(&mut buf, &refs, &layouts, 0);
+
+        const ITERS: u64 = 100;
+        let t0 = Instant::now();
+        for i in 0..ITERS {
+            render_frame(&mut buf, &refs, &layouts, i);
+        }
+        let idle_ms = t0.elapsed().as_secs_f64() * 1000.0 / ITERS as f64;
+
+        // B: throttled streaming — one live running entry mutated like
+        // production: a SMALL chunk per frame (a few tokens), plus
+        // invalidate_for_stream(). Small pushes are cheap (the streaming
+        // renderer only re-renders the new tail); as the block grows past the
+        // size threshold the throttle coalesces the entry-cache re-parse to
+        // ~once per 80ms instead of every frame. Pushes small chunks for 300
+        // frames so the block grows to a few hundred lines.
+        const B_ITERS: u64 = 300;
+        let mut live =
+            ScrollbackEntry::running_with_id(EntryId::new(900), RenderBlock::agent_message_streaming());
+        let t1 = Instant::now();
+        for i in 0..B_ITERS {
+            push_chunk(
+                &mut live,
+                &format!(
+                    "### Section {i}\n\nText with **bold** and `code`, plus a fence:\n\n\
+                     ```rust\nfn s{i}(x: u32) -> u32 {{ x + {i} }}\n```\n\n"
+                ),
+            );
+            live.invalidate_for_stream();
+            let refs: Vec<&ScrollbackEntry> =
+                committed.iter().chain(std::iter::once(&live)).collect();
+            let mut layouts = compute_layouts(&committed, viewport.width, &appearance);
+            layouts.push(compute_layouts(std::slice::from_ref(&live), viewport.width, &appearance)[0]);
+            render_frame(&mut buf, &refs, &layouts, i);
+        }
+        let throttled_ms = t1.elapsed().as_secs_f64() * 1000.0 / B_ITERS as f64;
+
+        // C: unthrottled reference (pre-fix) — a fresh entry every frame is a
+        // guaranteed cache miss, so the whole growing block re-parses each
+        // frame.
+        const LARGE_ITERS: u64 = 30;
+        let t2 = Instant::now();
+        for i in 0..LARGE_ITERS {
+            stream_holder.push(make_markdown_entry(&large_streaming_body(i, 60)));
+            let live = stream_holder.last().unwrap();
+            let refs: Vec<&ScrollbackEntry> = committed.iter().chain(std::iter::once(live)).collect();
+            let mut layouts = compute_layouts(&committed, viewport.width, &appearance);
+            layouts.push(compute_layouts(std::slice::from_ref(live), viewport.width, &appearance)[0]);
+            render_frame(&mut buf, &refs, &layouts, i);
+        }
+        let unthrottled_ms = t2.elapsed().as_secs_f64() * 1000.0 / LARGE_ITERS as f64;
+
+        println!(
+            "[bench] scrollback 200x50, {} committed + 1 streaming entry",
+            committed.len()
+        );
+        println!("[bench] A idle repaint (cache hit):      {idle_ms:.3} ms/frame");
+        println!("[bench] B stream ~500 lines (throttled): {throttled_ms:.3} ms/frame");
+        println!("[bench] C stream ~500 lines (pre-fix):   {unthrottled_ms:.3} ms/frame");
+        assert_eq!(buf.area.height, viewport.height, "render touched the buffer");
     }
 }

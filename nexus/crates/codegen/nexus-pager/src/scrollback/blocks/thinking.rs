@@ -99,6 +99,11 @@ impl ThinkingBlock {
         self.content.text()
     }
 
+    /// Source markdown length in chars (zero-alloc, unlike `text()`).
+    pub fn text_len(&self) -> usize {
+        self.content.text_len()
+    }
+
     /// Get the elapsed thinking time in milliseconds.
     ///
     /// Returns server-reported time if available, otherwise live elapsed
