@@ -164,7 +164,31 @@ impl nexus_tool_runtime::Tool for SendMessageTool {
             AgentAddress::new(from_session_id)
         };
 
-        let to = AgentAddress::new(&input.to);
+        // Resolve the recipient: `to` may name a registered label (e.g.
+        // "build-agent") instead of a session ID. Deliver to the label's
+        // real session ID so the message lands in the right inbox —
+        // storing the label verbatim in `session_id` (the old behaviour)
+        // made it unreachable via `inbox_for`.
+        //
+        // ID-shaped recipients are always addressed by ID and never look
+        // up the label registry: a (possibly legacy, hostile) label entry
+        // keyed by someone's session ID must not be able to redirect their
+        // mail. Unregistered labels, and any actor failure here (the real
+        // Send below surfaces that anyway), fall through and are treated
+        // as session IDs.
+        let to = if super::types::looks_like_session_id(&input.to) {
+            AgentAddress::new(&input.to)
+        } else {
+            let (reply_tx, reply_rx) = tokio::sync::oneshot::channel();
+            let _ = sender.send(MailboxCommand::ResolveLabel {
+                label: input.to.clone(),
+                reply: reply_tx,
+            });
+            match reply_rx.await.ok().flatten() {
+                Some(session_id) => AgentAddress::with_label(session_id, input.to.clone()),
+                None => AgentAddress::new(&input.to),
+            }
+        };
         let message = MailboxMessage::new(
             from.clone(),
             to.clone(),

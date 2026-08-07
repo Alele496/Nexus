@@ -153,11 +153,37 @@ pub struct MailboxState {
 }
 
 impl MailboxState {
+    /// Upper bounds for the label registry: at most this many labels, each
+    /// at most this many bytes. Keeps the shared mailbox file bounded and
+    /// prevents a runaway agent from growing it without limit.
+    pub const MAX_LABELS: usize = 256;
+    pub const MAX_LABEL_LEN: usize = 64;
+
     /// Messages addressed to a specific session, newest first, unread only.
+    ///
+    /// A message addressed by *label* — its `to.session_id` holds a label
+    /// string, which older sends stored verbatim before send-side label
+    /// resolution existed — is also returned when that label is registered
+    /// to this session. Only label-shaped strings (not session IDs, which
+    /// are UUIDs) are eligible for the reverse lookup, so a label can never
+    /// be used to siphon another session's ID-addressed messages.
     pub fn inbox_for(&self, session_id: &str) -> Vec<&MailboxMessage> {
+        let labels: Vec<&String> = self
+            .labels
+            .iter()
+            .filter(|(_, sid)| sid.as_str() == session_id)
+            .map(|(label, _)| label)
+            .collect();
         self.messages
             .iter()
-            .filter(|m| m.to.session_id == session_id && m.is_unread())
+            .filter(|m| {
+                m.is_unread()
+                    && (m.to.session_id == session_id
+                        || (!looks_like_session_id(&m.to.session_id)
+                            && labels
+                                .iter()
+                                .any(|l| l.as_str() == m.to.session_id)))
+            })
             .collect()
     }
 
@@ -192,8 +218,27 @@ impl MailboxState {
     }
 
     /// Register a label → session_id mapping for human-readable addressing.
-    pub fn register_label(&mut self, session_id: String, label: String) {
+    ///
+    /// Returns `false` (and registers nothing) when the label is invalid:
+    /// empty or overlong, shaped like a session ID (a UUID) — which would
+    /// let the label namespace shadow the session-ID namespace and hijack
+    /// ID-addressed delivery — already owned by a different session, or the
+    /// registry is full.
+    pub fn register_label(&mut self, session_id: String, label: String) -> bool {
+        if label.is_empty()
+            || label.len() > Self::MAX_LABEL_LEN
+            || looks_like_session_id(&label)
+            || self.labels.len() >= Self::MAX_LABELS
+        {
+            return false;
+        }
+        if let Some(owner) = self.labels.get(&label)
+            && owner != &session_id
+        {
+            return false;
+        }
         self.labels.insert(label, session_id);
+        true
     }
 
     /// Resolve a label to its session_id.
@@ -203,6 +248,15 @@ impl MailboxState {
 }
 
 crate::register_resource!("nexus_build", "Mailbox", MailboxState);
+
+/// Whether `s` is shaped like a session ID (a UUID — session IDs are
+/// generated as UUIDv7). The label namespace is forbidden from taking this
+/// shape so a label can never collide with (or shadow) the session-ID
+/// namespace: ID-shaped recipients are always matched by ID, never by
+/// label.
+pub(crate) fn looks_like_session_id(s: &str) -> bool {
+    s.len() == 36 && s.matches('-').count() == 4
+}
 
 /// Ephemeral handle for tools to communicate with the MailboxActor.
 /// Inserted via `resources.insert()`, not persisted.
@@ -321,6 +375,113 @@ mod tests {
         assert_eq!(inbox_b.len(), 1);
         // No messages for unknown session.
         assert!(state.inbox_for("unknown").is_empty());
+    }
+
+    /// Legacy messages whose `to.session_id` holds a *label* (stored
+    /// verbatim before send-side label resolution existed) must still be
+    /// delivered when that label is registered to the session.
+    #[test]
+    fn inbox_for_matches_registered_labels() {
+        let mut state = MailboxState::default();
+        // "alice" is a registered label for session-a.
+        assert!(state.register_label("session-a".into(), "alice".into()));
+        // "bob" is a registered label for session-b — used to prove labels
+        // don't leak across sessions.
+        assert!(state.register_label("session-b".into(), "bob".into()));
+        // Legacy message addressed by label (session_id holds the label).
+        state.insert(MailboxMessage::new(
+            AgentAddress::new("session-b"),
+            AgentAddress::new("alice"),
+            "labelled".into(),
+            "body".into(),
+            "normal".into(),
+        ));
+        // Normal message addressed by real session ID.
+        state.insert(MailboxMessage::new(
+            AgentAddress::new("session-b"),
+            AgentAddress::new("session-a"),
+            "by-id".into(),
+            "body".into(),
+            "normal".into(),
+        ));
+        // A message addressed to bob must NOT land in session-a's inbox.
+        state.insert(MailboxMessage::new(
+            AgentAddress::new("session-a"),
+            AgentAddress::new("bob"),
+            "for-bob".into(),
+            "body".into(),
+            "normal".into(),
+        ));
+
+        let inbox = state.inbox_for("session-a");
+        assert_eq!(
+            inbox.len(),
+            2,
+            "label-addressed and id-addressed messages land in session-a's inbox; bob's does not",
+        );
+        // The bob-addressed message lands in session-b (its label owner),
+        // not in session-a.
+        assert_eq!(
+            state.inbox_for("session-b").len(),
+            1,
+            "bob's message must land in session-b's inbox",
+        );
+    }
+
+    /// Labels must never collide with the session-ID namespace: an
+    /// ID-shaped label is rejected, a label owned by another session is
+    /// rejected, and ID-addressed messages never participate in the label
+    /// reverse lookup (so a label can't siphon another session's mail).
+    #[test]
+    fn register_label_rejects_id_shaped_and_taken_labels() {
+        let mut state = MailboxState::default();
+        let a_uuid = "019fdd48-0000-7000-8000-000000000001";
+
+        // ID-shaped label rejected — can't shadow the session-ID namespace.
+        assert!(
+            !state.register_label("session-a".into(), a_uuid.to_string()),
+            "a UUID-shaped label must be rejected",
+        );
+        // A label already owned by another session is rejected.
+        assert!(state.register_label("session-a".into(), "alice".into()));
+        assert!(
+            !state.register_label("session-b".into(), "alice".into()),
+            "a taken label must be rejected",
+        );
+        // Empty / overlong labels rejected.
+        assert!(!state.register_label("session-a".into(), "".into()));
+        assert!(!state.register_label(
+            "session-a".into(),
+            "x".repeat(MailboxState::MAX_LABEL_LEN + 1),
+        ));
+    }
+
+    /// Even if an ID-shaped label somehow exists in the registry (e.g.
+    /// legacy data written before validation), `inbox_for` must not let it
+    /// siphon another session's ID-addressed messages.
+    #[test]
+    fn inbox_for_never_siphons_id_addressed_messages_via_labels() {
+        let mut state = MailboxState::default();
+        let a_uuid = "019fdd48-0000-7000-8000-000000000001";
+        // Simulate a hostile/broken registry entry: a label equal to
+        // session A's real ID, owned by session B.
+        state.labels.insert(a_uuid.to_string(), "session-b".to_string());
+        // A real message addressed to session A by its ID.
+        state.insert(MailboxMessage::new(
+            AgentAddress::new("session-c"),
+            AgentAddress::new(a_uuid),
+            "to-a".into(),
+            "body".into(),
+            "normal".into(),
+        ));
+
+        // Session A still receives it by ID...
+        assert_eq!(state.inbox_for(a_uuid).len(), 1);
+        // ...and session B (owner of the hostile label) does NOT.
+        assert!(
+            state.inbox_for("session-b").is_empty(),
+            "ID-addressed messages must never be delivered via label lookup",
+        );
     }
 
     #[test]
