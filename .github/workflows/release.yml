@@ -247,7 +247,10 @@ jobs:
 
           ASSETS="nexus-${VERSION}-windows-x86_64.zip nexus-${VERSION}-windows-x86_64.exe nexus-${VERSION}-linux-x86_64 nexus-${VERSION}-macos-aarch64"
           for asset in $ASSETS; do
-            gh release download "${{ github.ref_name }}" -p "$asset" --clobber
+            # -R: this job runs on a fresh runner with no git repo, and gh
+            # falls back to git to auto-detect the repository — which fails
+            # with "failed to run git: not a git repository". Pin the repo.
+            gh release download "${{ github.ref_name }}" -p "$asset" --clobber -R "${GITHUB_REPOSITORY}"
           done
 
           HASH_ROWS=""
