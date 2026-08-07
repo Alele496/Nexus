@@ -100,29 +100,94 @@ fn deserialize_response_event(data: &str) -> Result<rs::ResponseStreamEvent> {
     let mut event = match serde_json::from_str::<rs::ResponseStreamEvent>(data) {
         Ok(event) => event,
         Err(first_err) => {
-            // Try sanitizing: parse as Value, strip unknown tools, retry.
-            if let Ok(mut value) = serde_json::from_str::<serde_json::Value>(data) {
-                // Strip tools that async_openai's rs::Tool can't deserialize
-                // (e.g., xAI-specific "x_search"). Instead of maintaining a
-                // hardcoded allowlist, try deserializing each tool entry —
-                // if it fails, drop it.
-                if let Some(tools) = value
-                    .pointer_mut("/response/tools")
-                    .and_then(|v| v.as_array_mut())
-                {
-                    tools.retain(|t| serde_json::from_value::<rs::Tool>(t.clone()).is_ok());
+            // Try sanitizing: parse as Value, strip entries async_openai
+            // can't model, retry.
+            let Ok(mut value) = serde_json::from_str::<serde_json::Value>(data) else {
+                tracing::error!(
+                    error = %first_err,
+                    raw_data = %data,
+                    "Failed to deserialize ResponseStreamEvent from stream"
+                );
+                return Err(SamplingError::Serialization(first_err));
+            };
+            // Strip tools that async_openai's rs::Tool can't deserialize
+            // (e.g., xAI-specific "x_search"). Instead of maintaining a
+            // hardcoded allowlist, try deserializing each tool entry —
+            // if it fails, drop it.
+            if let Some(tools) = value
+                .pointer_mut("/response/tools")
+                .and_then(|v| v.as_array_mut())
+            {
+                tools.retain(|t| serde_json::from_value::<rs::Tool>(t.clone()).is_ok());
+            }
+            // Same for output items echoed in full-response events
+            // (response.created / response.completed).
+            if let Some(output) = value
+                .pointer_mut("/response/output")
+                .and_then(|v| v.as_array_mut())
+            {
+                output
+                    .retain(|item| serde_json::from_value::<rs::OutputItem>(item.clone()).is_ok());
+            }
+            // Output-item progress events (added / in_progress / done) carry
+            // a single top-level `item`. Some backends (e.g. DeepSeek) don't
+            // fully match async-openai's WebSearchToolCall schema: in_progress
+            // items omit `action` entirely and completed items put the queries
+            // in a plural array while async-openai models a single `query`
+            // string. Remap the known quirk so completed searches still
+            // surface, then neutralize whatever remains undecodable.
+            if let Some(item) = value.get_mut("item") {
+                if let Some(obj) = item.as_object_mut() {
+                    if obj.get("type").and_then(|v| v.as_str()) == Some("web_search_call") {
+                        if let Some(action) = obj.get_mut("action").and_then(|v| v.as_object_mut())
+                        {
+                            if action.get("query").is_none() {
+                                if let Some(q) = action
+                                    .get("queries")
+                                    .and_then(|v| v.as_array())
+                                    .and_then(|arr| arr.iter().find_map(|v| v.as_str()))
+                                {
+                                    action.insert("query".to_owned(), serde_json::json!(q));
+                                }
+                            }
+                        }
+                    }
                 }
-                if let Ok(mut event) = serde_json::from_value::<rs::ResponseStreamEvent>(value) {
+                // Anything still undecodable (unknown future tool types,
+                // action-less in_progress items, ...) is replaced with a
+                // neutral message item — the decoder ignores messages, and a
+                // single unparseable item must not abort the whole turn.
+                if serde_json::from_value::<rs::OutputItem>(item.clone()).is_err() {
+                    if let Some(obj) = item.as_object_mut() {
+                        let id = obj.get("id").cloned();
+                        let status = obj.get("status").cloned();
+                        obj.clear();
+                        obj.insert("type".to_owned(), serde_json::json!("message"));
+                        obj.insert("role".to_owned(), serde_json::json!("assistant"));
+                        obj.insert("content".to_owned(), serde_json::json!([]));
+                        if let Some(id) = id {
+                            obj.insert("id".to_owned(), id);
+                        }
+                        if let Some(status) = status {
+                            obj.insert("status".to_owned(), status);
+                        }
+                    }
+                }
+            }
+            match serde_json::from_value::<rs::ResponseStreamEvent>(value) {
+                Ok(mut event) => {
                     apply_terminal_event_overrides(&mut event, data);
                     return Ok(event);
                 }
+                Err(_) => {
+                    tracing::error!(
+                        error = %first_err,
+                        raw_data = %data,
+                        "Failed to deserialize ResponseStreamEvent from stream"
+                    );
+                    return Err(SamplingError::Serialization(first_err));
+                }
             }
-            tracing::error!(
-                error = %first_err,
-                raw_data = %data,
-                "Failed to deserialize ResponseStreamEvent from stream"
-            );
-            return Err(SamplingError::Serialization(first_err));
         }
     };
     apply_terminal_event_overrides(&mut event, data);
@@ -2646,6 +2711,118 @@ mod tests {
         assert!(matches!(
             event,
             rs::ResponseStreamEvent::ResponseOutputTextDelta(_)
+        ));
+    }
+
+    /// DeepSeek emits `response.output_item.added` for a server-side web
+    /// search with an in_progress item that omits async-openai's required
+    /// `action` field. This used to abort the whole turn with
+    /// "serialization error: missing field `action`". The sanitizer must
+    /// neutralize the item into a message (which the decoder ignores)
+    /// instead of failing the stream.
+    #[test]
+    fn deserialize_response_event_neutralizes_actionless_in_progress_web_search_item() {
+        let sse = r#"{
+            "type": "response.output_item.added",
+            "item": {
+                "type": "web_search_call",
+                "id": "call_00_ZMHuosrnx9VLIvQqpV6r6623",
+                "status": "in_progress"
+            },
+            "output_index": 1,
+            "sequence_number": 120
+        }"#;
+        let event = deserialize_response_event(sse).expect("in_progress web_search_call parses");
+        let rs::ResponseStreamEvent::ResponseOutputItemAdded(added) = event else {
+            panic!("expected ResponseOutputItemAdded");
+        };
+        // The undecodable web_search_call must be replaced by a neutral
+        // message item — never a web_search_call (which has no `action`).
+        match &added.item {
+            rs::OutputItem::Message(_) => {}
+            other => panic!("expected neutral Message item, got {other:?}"),
+        }
+    }
+
+    /// DeepSeek's completed `web_search_call` carries `action.queries` as a
+    /// plural array while async-openai models a single `query` string. The
+    /// sanitizer must remap the first query so the item stays a first-class
+    /// WebSearchCall and the stream decoder can surface the search result.
+    #[test]
+    fn deserialize_response_event_remaps_queries_to_query_on_completed_web_search_item() {
+        let sse = r#"{
+            "type": "response.output_item.done",
+            "item": {
+                "type": "web_search_call",
+                "id": "call_00_ZMHuosrnx9VLIvQqpV6r6623",
+                "status": "completed",
+                "action": {
+                    "type": "search",
+                    "queries": ["2026 Paris Olympics news", "Paris 2026"]
+                }
+            },
+            "output_index": 1,
+            "sequence_number": 121
+        }"#;
+        let event = deserialize_response_event(sse).expect("completed web_search_call parses");
+        let rs::ResponseStreamEvent::ResponseOutputItemDone(done) = event else {
+            panic!("expected ResponseOutputItemDone");
+        };
+        let rs::OutputItem::WebSearchCall(ws) = done.item else {
+            panic!("expected WebSearchCall");
+        };
+        assert_eq!(ws.status, rs::WebSearchToolCallStatus::Completed);
+        let rs::WebSearchToolCallAction::Search(search) = ws.action else {
+            panic!("expected search action");
+        };
+        assert_eq!(search.query, "2026 Paris Olympics news");
+    }
+
+    /// Full-response events echoing an undecodable output item (same missing
+    /// `action` class of bug) must have that item stripped rather than
+    /// failing `response.completed` deserialization.
+    #[test]
+    fn deserialize_response_event_strips_undecodable_output_item_from_completed() {
+        let sse = r#"{
+            "type": "response.completed",
+            "sequence_number": 0,
+            "response": {
+                "id": "resp_1",
+                "object": "response",
+                "created_at": 0,
+                "model": "deepseek-v4-flash",
+                "status": "completed",
+                "output": [
+                    {
+                        "type": "message",
+                        "id": "msg_1",
+                        "role": "assistant",
+                        "content": [],
+                        "status": "completed"
+                    },
+                    {
+                        "type": "web_search_call",
+                        "id": "call_00_ZMHuosrnx9VLIvQqpV6r6623",
+                        "status": "in_progress"
+                    }
+                ],
+                "usage": {
+                    "input_tokens": 10,
+                    "input_tokens_details": { "cached_tokens": 0 },
+                    "output_tokens": 5,
+                    "output_tokens_details": { "reasoning_tokens": 0 },
+                    "total_tokens": 15
+                }
+            }
+        }"#;
+        let event = deserialize_response_event(sse).expect("completed with bad output item parses");
+        let rs::ResponseStreamEvent::ResponseCompleted(completed) = event else {
+            panic!("expected ResponseCompleted");
+        };
+        assert_eq!(completed.response.output.len(), 1);
+        assert!(matches!(
+            &completed.response.output[0],
+            rs::OutputItem::Message(_)
         ));
     }
 }

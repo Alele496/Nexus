@@ -658,6 +658,73 @@ mod tests {
         }
     }
 
+    /// Regression for DeepSeek's `web_search_call` output items: the
+    /// deserializer neutralizes the action-less in_progress item (added
+    /// event becomes a no-op) and remaps the completed item's `queries`
+    /// array to `query`, so the turn streams on, the search result still
+    /// surfaces as `BackendToolCallCompleted`, and the turn completes
+    /// instead of aborting with a serialization error.
+    #[tokio::test]
+    async fn deepseek_web_search_output_items_stream_on_and_complete() {
+        let added = rs::ResponseStreamEvent::ResponseOutputItemAdded(
+            rs_types::ResponseOutputItemAddedEvent {
+                sequence_number: 0,
+                output_index: 0,
+                item: rs::OutputItem::Message(rs::OutputMessage {
+                    content: vec![],
+                    id: "call_00_ZMHuosrnx9VLIvQqpV6r6623".into(),
+                    role: rs::AssistantRole::Assistant,
+                    status: rs::OutputStatus::InProgress,
+                }),
+            },
+        );
+        let done = rs::ResponseStreamEvent::ResponseOutputItemDone(
+            rs_types::ResponseOutputItemDoneEvent {
+                sequence_number: 0,
+                output_index: 0,
+                item: rs::OutputItem::WebSearchCall(rs::WebSearchToolCall {
+                    action: rs::WebSearchToolCallAction::Search(rs::WebSearchActionSearch {
+                        query: "2026 Paris Olympics news".into(),
+                        sources: None,
+                    }),
+                    id: "call_00_ZMHuosrnx9VLIvQqpV6r6623".into(),
+                    status: rs::WebSearchToolCallStatus::Completed,
+                }),
+            },
+        );
+        let raw = stream::iter(vec![
+            Ok(added),
+            Ok(done),
+            Ok(text_delta_event("ok")),
+            Ok(completed_event()),
+        ])
+        .boxed();
+        let events = collect(stream_responses(
+            raw,
+            None,
+            rid(),
+            Duration::from_secs(60),
+            None,
+        ))
+        .await;
+
+        assert!(
+            !events
+                .iter()
+                .any(|e| matches!(e, SamplingEvent::Failed { .. })),
+            "stream must not abort: {events:?}"
+        );
+        let search_completed = events.iter().find_map(|e| match e {
+            SamplingEvent::BackendToolCallCompleted { name, .. } => Some(name.as_str()),
+            _ => None,
+        });
+        assert_eq!(search_completed, Some("web_search"));
+        match events.last().unwrap() {
+            SamplingEvent::Completed { .. } => {}
+            other => panic!("expected Completed, got {other:?}"),
+        }
+    }
+
     #[tokio::test]
     async fn response_failed_yields_failed_500() {
         let failed = rs::ResponseStreamEvent::ResponseFailed(rs_types::ResponseFailedEvent {
