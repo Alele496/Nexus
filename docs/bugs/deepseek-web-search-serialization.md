@@ -1,6 +1,6 @@
 # Bug 报告：DeepSeek responses 流式搜索项反序列化失败，整轮对话中止
 
-> 状态：已修复（代码已改，未发布）｜报告日期：2026-08-06 ｜报告人：agent-dev 会话
+> 状态：已修复并发布（v0.3.4，2026-08-07）｜报告日期：2026-08-06 ｜报告人：agent-dev 会话
 > 复现环境：`F:\Sage-home` 安装版 `nexus 0.2.105 (504be8e)`，flash 模型走 responses 后端 + `supports_backend_search = true`
 
 ## 摘要
