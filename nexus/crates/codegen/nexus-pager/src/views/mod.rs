@@ -14,6 +14,7 @@ pub mod debug_style;
 pub mod extensions_modal;
 pub mod file_search;
 pub mod fps_hud;
+pub mod frame_profiler;
 pub mod goal_detail;
 pub mod history_search;
 pub mod import_claude_modal;

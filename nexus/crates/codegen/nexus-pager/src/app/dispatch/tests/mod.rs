@@ -186,6 +186,7 @@ fn test_app() -> AppView {
         bundle_state: crate::app::bundle::BundleState::default(),
         scroll_debug_hud: crate::views::scroll_debug_hud::ScrollDebugHud::new(),
         fps_hud: crate::views::fps_hud::FpsHud::new(),
+        frame_profiler: crate::views::frame_profiler::FrameProfiler::new(),
         welcome_prompt: crate::views::prompt_widget::PromptWidget::new(),
         slash_mru: std::rc::Rc::new(std::cell::RefCell::new(
             crate::slash::mru::SlashMru::new_in_memory(),

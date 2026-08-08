@@ -670,6 +670,9 @@ pub struct AppView {
     /// Release-safe FPS HUD (`/debug fps`; `NEXUS_FPS` env on release
     /// builds, where the dev overlay is compiled out) — see the module doc.
     pub fps_hud: crate::views::fps_hud::FpsHud,
+    /// Per-segment frame profiler (`NEXUS_FPS=full`) — splits each frame
+    /// into render / flush / agent-draw time on stderr.
+    pub frame_profiler: crate::views::frame_profiler::FrameProfiler,
     pub active_announcements: Vec<nexus_announcements::RemoteAnnouncement>,
     /// Persisted hide keys, filtered at the banner selection gate — hiding one
     /// critical reveals the next unhidden one, and a NEW id re-arms the banner.
@@ -1286,6 +1289,7 @@ impl AppView {
             tracing_rx: None,
             scroll_debug_hud: crate::views::scroll_debug_hud::ScrollDebugHud::new(),
             fps_hud: crate::views::fps_hud::FpsHud::new(),
+            frame_profiler: crate::views::frame_profiler::FrameProfiler::new(),
             active_announcements: Vec::new(),
             hidden_announcement_ids: Default::default(),
             announcements_last_gen: 0,
@@ -4004,7 +4008,21 @@ impl AppView {
                     })
             });
         let fps_frame_started = fps_overlay.as_ref().map(|_| std::time::Instant::now());
+        // Per-segment profiler cells (`NEXUS_FPS=full`): total = draw_frame
+        // wall-clock, render = render-closure body, agent = AgentView::draw
+        // calls inside it, flush = total - render. Cells are shared borrows,
+        // so the FnOnce render closure can accumulate them across its exits.
+        let frame_total_started = std::time::Instant::now();
+        let closure_tick = std::cell::Cell::new(None::<std::time::Instant>);
+        let render_elapsed = std::cell::Cell::new(std::time::Duration::ZERO);
+        let agent_elapsed = std::cell::Cell::new(std::time::Duration::ZERO);
+        let mark_render_exit = || {
+            if let Some(t) = closure_tick.take() {
+                render_elapsed.set(render_elapsed.get() + t.elapsed());
+            }
+        };
         crate::render::draw::draw_frame(terminal, cursor, |f, link_spans| {
+            closure_tick.set(Some(std::time::Instant::now()));
             let full_area = f.area();
             let tracing_height = 0u16;
             #[allow(unused_variables)]
@@ -4238,6 +4256,7 @@ impl AppView {
                             }
                         }
                         self.welcome_on_auth_url = on_url;
+                        mark_render_exit();
                         return (cursor, post_flush);
                     }
                     ActiveView::Agent(id) => {
@@ -4320,6 +4339,7 @@ impl AppView {
                             } else {
                                 0
                             };
+                            let agent_t0 = std::time::Instant::now();
                             let result = agent.draw(
                                 agent_area,
                                 f.buffer_mut(),
@@ -4342,6 +4362,7 @@ impl AppView {
                                 voice_listening,
                                 voice_interim.as_deref(),
                             );
+                            agent_elapsed.set(agent_elapsed.get() + agent_t0.elapsed());
                             if let Some(modal) = self.import_claude_modal.as_mut() {
                                 let theme = crate::theme::Theme::current();
                                 crate::views::import_claude_modal::render_import_claude_modal(
@@ -4364,6 +4385,7 @@ impl AppView {
                                 link_spans.clear();
                             }
                             let cursor = if has_cloud { None } else { cursor_pos };
+                            mark_render_exit();
                             return (cursor, Self::merge_escapes(notif_escapes, post_flush));
                         }
                     }
@@ -4423,6 +4445,7 @@ impl AppView {
                                         .map(crate::views::session_title::entry_title)
                                         .unwrap_or_else(|| "(session)".to_string());
                                     let bundle_state = &self.bundle_state;
+                                    let popup_t0 = std::time::Instant::now();
                                     let (cursor, post_flush, drawn) =
                                         crate::views::dashboard::render_popup_overlay(
                                             f.buffer_mut(),
@@ -4455,6 +4478,7 @@ impl AppView {
                                                 }
                                             },
                                         );
+                                    agent_elapsed.set(agent_elapsed.get() + popup_t0.elapsed());
                                     (cursor, post_flush, drawn.then_some(agent_id))
                                 } else {
                                     (None, None, None)
@@ -4474,6 +4498,7 @@ impl AppView {
                             } else {
                                 dash_cursor
                             };
+                            mark_render_exit();
                             return (cursor, Self::merge_escapes(notif_escapes, popup_post_flush));
                         }
                     }
@@ -4490,6 +4515,7 @@ impl AppView {
                             graph_data,
                             graph_state,
                         );
+                        mark_render_exit();
                         return (None, None);
                     }
                 }
@@ -4500,11 +4526,17 @@ impl AppView {
             if let Some(panel) = &scroll_debug_panel {
                 panel.render(full_area, f.buffer_mut());
             }
+            mark_render_exit();
             (None, Self::merge_escapes(notif_escapes, None))
         });
         if let Some(started) = fps_frame_started {
             self.fps_hud.record(started.elapsed());
         }
+        self.frame_profiler.record(
+            frame_total_started.elapsed(),
+            render_elapsed.get(),
+            agent_elapsed.get(),
+        );
         self.log_announcement_cta_impressions();
         self.maybe_evict_offscreen_caches();
     }
@@ -5478,6 +5510,7 @@ pub(crate) mod tests {
             bundle_state: BundleState::default(),
             scroll_debug_hud: crate::views::scroll_debug_hud::ScrollDebugHud::new(),
             fps_hud: crate::views::fps_hud::FpsHud::new(),
+            frame_profiler: crate::views::frame_profiler::FrameProfiler::new(),
             welcome_prompt: crate::views::prompt_widget::PromptWidget::new(),
             slash_mru: std::rc::Rc::new(std::cell::RefCell::new(
                 crate::slash::mru::SlashMru::new_in_memory(),

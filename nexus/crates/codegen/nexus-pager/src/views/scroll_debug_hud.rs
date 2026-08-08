@@ -14,12 +14,13 @@
 //! all input/tick state updates for the frame, and rendering only paints
 //! buffer cells. Disabled cost is a single bool check per frame.
 //!
-//! Unlike the FPS overlay (`render::frame_metrics`, debug/dev builds only), this
-//! compiles into release builds behind its runtime gate (the hidden-command
-//! precedent, e.g. `/gboom`): dev instrumentation alters the frame pipeline
-//! (phase timings through `draw_frame`), so a dev-only HUD could not probe
-//! the production render path — defeating the zero-fidelity-gap goal — and
-//! the pty e2e suite runs against production-featured binaries.
+//! Unlike the per-segment frame profiler (`views::frame_profiler`,
+//! `NEXUS_FPS=full`), this compiles into release builds behind its runtime
+//! gate (the hidden-command precedent, e.g. `/gboom`): the profiler alters
+//! the frame pipeline (per-segment timings through `draw_frame`), so a
+//! debug-only HUD could not probe the production render path — defeating the
+//! zero-fidelity-gap goal — and the pty e2e suite runs against
+//! production-featured binaries.
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -29,7 +30,7 @@ use crate::input::mouse::ScrollDebugSnapshot;
 /// Panel width in cells; each line is padded/truncated to this.
 const PANEL_WIDTH: u16 = 46;
 
-/// Runtime enablement for the HUD. Mirrors `FrameMetrics`' env machinery:
+/// Runtime enablement for the HUD. Mirrors the FPS HUD's env machinery:
 /// `NEXUS_SCROLL_DEBUG` (nonempty and not `"0"`) enables at startup, and the
 /// hidden `/scroll-debug` command toggles it live. Deliberately NOT a
 /// settings-registry entry: it is a diagnostic, not a preference to persist.

@@ -1,18 +1,17 @@
 //! Release-safe FPS readout — `/debug fps`, `NEXUS_FPS` on release builds.
 //!
-//! The full frame profiler (`render::frame_metrics`, `NEXUS_FPS`) is compiled
-//! only in debug/dev builds because it threads per-phase timings
-//! through `draw_frame`. This HUD measures the one thing that needs no
-//! pipeline change — the wall-clock duration of the whole `draw_frame` call
-//! (render + flush + writer handoff) — so it compiles into release builds
-//! behind a runtime toggle (the scroll-debug HUD precedent) and profiles the
-//! production render path with zero fidelity gap.
+//! The full frame profiler (`views::frame_profiler`, `NEXUS_FPS=full`) splits
+//! the `draw_frame` wall-clock into render / flush / agent-draw segments and
+//! prints a stderr line per second. This HUD measures the one thing that
+//! needs no pipeline change — the wall-clock duration of the whole
+//! `draw_frame` call (render + flush + writer handoff) — so it compiles into
+//! release builds behind a runtime toggle (the scroll-debug HUD precedent)
+//! and profiles the production render path with zero fidelity gap.
 //!
-//! `NEXUS_FPS` ownership: in debug/dev builds the env feeds `FrameMetrics` as
-//! always and this HUD stays toggle-only (no double overlay); on release
-//! binaries — where that overlay does not exist — the same env enables this
-//! HUD from startup, so `NEXUS_FPS=1` is never a silent no-op
-//! ([`HONORS_NEXUS_FPS_ENV`]).
+//! `NEXUS_FPS` ownership: `NEXUS_FPS=full` feeds the per-segment profiler in
+//! addition to this HUD; any other truthy value keeps this HUD as the only
+//! consumer. On release binaries the env enables this HUD from startup, so
+//! `NEXUS_FPS=1` is never a silent no-op ([`HONORS_NEXUS_FPS_ENV`]).
 //!
 //! "fps" here is render throughput (1 / mean frame cost), not paint
 //! frequency: the pager draws on demand, so an idle UI paints nothing and a
@@ -31,9 +30,9 @@ const SAMPLE_CAP: usize = 120;
 const REFRESH: Duration = Duration::from_millis(250);
 /// Panel width in cells; each line is padded/truncated to this.
 const PANEL_WIDTH: u16 = 32;
-/// Whether this HUD owns the `NEXUS_FPS` env gate: only where the dev
-/// `FrameMetrics` overlay is compiled out. In debug/dev builds the env keeps
-/// feeding that overlay alone.
+/// Whether this HUD owns the `NEXUS_FPS` env gate. The per-segment profiler
+/// only claims the exact `full` value; every other truthy value feeds this
+/// HUD alone.
 const HONORS_NEXUS_FPS_ENV: bool = true;
 /// Runtime state for the FPS HUD. `NEXUS_FPS` enables it at startup on
 /// release binaries ([`HONORS_NEXUS_FPS_ENV`]); `/debug fps` toggles it
@@ -56,7 +55,7 @@ impl FpsHud {
         Self::with_env(std::env::var("NEXUS_FPS").ok())
     }
     /// `env` is the raw `NEXUS_FPS` value; the truthiness rule (nonempty and
-    /// not `"0"`) matches `FrameMetrics` and `NEXUS_SCROLL_DEBUG`.
+    /// not `"0"`) matches the profiler gate and `NEXUS_SCROLL_DEBUG`.
     fn with_env(env: Option<String>) -> Self {
         let env_on = HONORS_NEXUS_FPS_ENV && env.is_some_and(|v| !v.is_empty() && v != "0");
         Self {
@@ -176,11 +175,10 @@ mod tests {
         assert!(hud.overlay(0).is_none());
     }
     /// Default test builds compile without dev instrumentation — release-shaped
-    /// for this gate — so a truthy env must construct enabled. A
-    /// debug/dev test build hands the env to `FrameMetrics` instead;
-    /// asserting against [`HONORS_NEXUS_FPS_ENV`] keeps the test true under
-    /// both cfgs (the dev half is pinned by the constant's shape, the same
-    /// limitation as the `/debug` visibility test).
+    /// for this gate — so a truthy env must construct enabled. The per-segment
+    /// profiler claims only the exact `full` value, so the HUD owns every
+    /// other truthy env; asserting against [`HONORS_NEXUS_FPS_ENV`] keeps the
+    /// test true under both shapes.
     #[test]
     fn nexus_fps_env_enables_hud_where_dev_overlay_absent() {
         for truthy in ["1", "full", " "] {
