@@ -98,6 +98,7 @@ fn print_serve_startup_info(bind_addr: SocketAddr, secret: &str) {
         "   WebSocket URL: ws://{}/ws?server-key={}",
         bind_addr, secret
     );
+    eprintln!("   Web UI:       http://{}/?key={}", bind_addr, secret);
     eprintln!();
 }
 /// Entrypoint tag for `sage -p`; keys the quiet stderr default in `init_tracing_simple`.

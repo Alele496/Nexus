@@ -461,13 +461,23 @@ pub async fn run_agent_server(
 ) -> anyhow::Result<()> {
     let state = Arc::new(ServerState {
         agent_config,
-        secret: config.secret,
+        secret: config.secret.clone(),
         agent_conn_tx: tokio::sync::Mutex::new(None),
     });
 
+    // Each sub-router consumes its own state (→ `Router<()>`) before merging,
+    // since axum's `merge` requires both routers to share a state type.
+    // The server's process cwd becomes the default session cwd for the web UI.
+    let server_cwd = std::env::current_dir()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default();
     let app = Router::new()
-        .route("/ws", get(ws_handler))
-        .with_state(state);
+        .merge(
+            Router::new()
+                .route("/ws", get(ws_handler))
+                .with_state(state),
+        )
+        .merge(crate::agent::web_ui::router(config.secret.clone(), server_cwd));
 
     let listener = TcpListener::bind(config.bind_addr).await?;
     info!("Agent server listening on ws://{}/ws", config.bind_addr);
@@ -475,6 +485,10 @@ pub async fn run_agent_server(
         "Clients should connect with: --remote ws://{}:{}/ws --secret <token>",
         config.bind_addr.ip(),
         config.bind_addr.port()
+    );
+    info!(
+        "Web UI: {}",
+        crate::agent::web_ui::web_ui_url(config.bind_addr)
     );
 
     axum::serve(
