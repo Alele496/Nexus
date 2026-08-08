@@ -2133,10 +2133,14 @@ pub(crate) async fn run(
                         // Each new resize resets the timer so we only rebuild layout once.
                         resize_debounce_at = Some(Instant::now() + RESIZE_DEBOUNCE);
                     } else {
-                        // Non-resize change (or a shown tip): draw immediately
-                        // (picks up any pending resize too).
+                        // Non-resize change (or a shown tip): draw now when the
+                        // paint cadence allows; otherwise the deferred-draw arm
+                        // fires the earliest permitted draw. Same throttle the
+                        // ACP path uses, so mouse-motion storms coalesce to one
+                        // draw per `min_draw_interval` instead of one per event.
                         resize_debounce_at = None;
-                        presenter.request(false);
+                        let now = Instant::now();
+                        let _ = presenter.request_throttled(now, min_draw_interval);
                     }
                 }
 
