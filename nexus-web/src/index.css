@@ -17,6 +17,16 @@ body {
   color-scheme: dark;
 }
 
+/* Desktop shell: the header doubles as the titlebar of the frameless window.
+   `app-drag` marks draggable chrome; interactive children opt out with
+   `app-no-drag`. No-ops in a plain browser. */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
 /* Streaming caret (rendered by StreamingText while a message is in flight). */
 @keyframes caret-blink {
   0%,

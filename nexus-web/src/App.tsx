@@ -2,12 +2,14 @@ import { useState } from 'react';
 
 import { useNexusApp } from './acp/hooks';
 import type { ConnectionStatus } from './acp/connection';
+import { useDesktop } from './desktop';
 import ApprovalModal from './components/ApprovalModal';
 import ChatView from './components/ChatView';
 import MailboxView from './components/MailboxView';
 import SessionDetail from './components/SessionDetail';
 import SettingsPanel from './components/SettingsPanel';
 import Sidebar from './components/Sidebar';
+import WindowControls from './components/WindowControls';
 
 const STATUS_LABEL: Record<ConnectionStatus, { text: string; dot: string }> = {
   disconnected: { text: '未连接', dot: 'bg-zinc-500' },
@@ -31,8 +33,18 @@ function StatusBar({
   onOpenSettings: () => void;
 }) {
   const s = STATUS_LABEL[status];
+  const { desktop } = useDesktop();
+  const c = desktop?.windowControls;
   return (
-    <header className="flex items-center gap-3 border-b border-zinc-800 bg-zinc-950/80 px-4 py-2.5">
+    <header
+      onDoubleClick={(e) => {
+        if (!c || (e.target as HTMLElement).closest('button, input, a')) return;
+        c.toggleMaximize();
+      }}
+      className={`flex items-center gap-3 border-b border-zinc-800 bg-zinc-950/80 px-4 py-2.5 ${
+        desktop ? 'app-drag select-none' : ''
+      }`}
+    >
       <span className="flex items-center gap-2">
         <span className={`h-2 w-2 rounded-full ${s.dot}`} />
         <span className="text-[13px] font-medium text-zinc-300">{s.text}</span>
@@ -43,7 +55,7 @@ function StatusBar({
           {sessionId.slice(0, 8)}
         </span>
       )}
-      <div className="ml-auto flex items-center gap-2">
+      <div className="app-no-drag ml-auto flex items-center gap-2">
         <button
           onClick={onOpenMailbox}
           title="信箱"
@@ -77,6 +89,7 @@ function StatusBar({
           </svg>
         </button>
       </div>
+      <WindowControls />
     </header>
   );
 }
