@@ -18,6 +18,8 @@ import {
 import {
   chunkText,
   contentImages,
+  type AuthInfo,
+  type AvailableCommand,
   type MailboxMessage,
   type ModelInfo,
   type RequestPermissionOutcomeResponse,
@@ -333,6 +335,13 @@ export interface NexusApp {
   forkSession: (sessionId: string) => Promise<void>;
   searchSessions: (query: string) => Promise<SessionSearchHit[]>;
   cancelTurn: () => void;
+  loadApiKey: () => Promise<string | null>;
+  saveApiKey: (key: string) => Promise<void>;
+  loadAuthInfo: () => Promise<AuthInfo | null>;
+  logout: () => Promise<void>;
+  loadCommands: () => Promise<AvailableCommand[]>;
+  reloadModels: () => Promise<boolean>;
+  reloadSkills: () => Promise<boolean>;
   switchModel: (modelId: string) => Promise<void>;
 }
 
@@ -643,6 +652,83 @@ export function useNexusApp(): NexusApp {
     conn.cancelTurn(sessionId);
   }, [sessionId]);
 
+  const loadApiKey = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return null;
+    try {
+      const r = await conn.getApiKey();
+      return r.key ?? null;
+    } catch (err) {
+      setError(String(err));
+      return null;
+    }
+  }, []);
+
+  const saveApiKey = useCallback(async (key: string) => {
+    const conn = connRef.current;
+    if (!conn) return;
+    try {
+      await conn.setApiKey(key);
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const loadAuthInfo = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return null;
+    try {
+      return (await conn.getAuthInfo()) ?? null;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const logout = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return;
+    try {
+      await conn.logout();
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const loadCommands = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return [];
+    try {
+      const r = await conn.listCommands();
+      return r.commands ?? [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const reloadModels = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return false;
+    try {
+      const r = await conn.reloadModels();
+      return !!r.ok;
+    } catch (err) {
+      setError(String(err));
+      return false;
+    }
+  }, []);
+
+  const reloadSkills = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return false;
+    try {
+      const r = await conn.reloadSkills();
+      return !!r.ok;
+    } catch (err) {
+      setError(String(err));
+      return false;
+    }
+  }, []);
+
   const switchModel = useCallback(
     async (modelId: string) => {
       const conn = connRef.current;
@@ -742,6 +828,13 @@ export function useNexusApp(): NexusApp {
     forkSession,
     searchSessions,
     cancelTurn,
+    loadApiKey,
+    saveApiKey,
+    loadAuthInfo,
+    logout,
+    loadCommands,
+    reloadModels,
+    reloadSkills,
     switchModel,
   };
 }

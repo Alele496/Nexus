@@ -7,18 +7,23 @@
 // the same session id.
 
 import type {
+  ApiKeyResult,
   AuthenticateParams,
+  AuthInfo,
+  CommandsListResult,
   ForkSessionParams,
   ForkSessionResult,
   InitializeParams,
   JsonRpcNotification,
   JsonRpcResponse,
+  LogoutResult,
   MailboxListResult,
   NewSessionParams,
   NewSessionResult,
   PromptParams,
   RosterListResult,
   SessionSearchResult,
+  SetApiKeyResult,
 } from './types';
 
 export type ConnectionStatus =
@@ -292,6 +297,41 @@ export class AcpConnection {
       sessionId,
       _meta: { cancelSubagents: true },
     });
+  }
+
+  /** Current API key (`x.ai/getApiKey`); null when unset. */
+  getApiKey(): Promise<ApiKeyResult> {
+    return this.ext<ApiKeyResult>('x.ai/getApiKey', {});
+  }
+
+  /** Set or clear (empty string) the API key (`x.ai/setApiKey`). */
+  setApiKey(key: string): Promise<SetApiKeyResult> {
+    return this.ext<SetApiKeyResult>('x.ai/setApiKey', { key });
+  }
+
+  /** Account profile (`x.ai/auth/info`). */
+  getAuthInfo(): Promise<AuthInfo> {
+    return this.ext<AuthInfo>('x.ai/auth/info', {});
+  }
+
+  /** Log out (`x.ai/auth/logout`). */
+  logout(): Promise<LogoutResult> {
+    return this.ext<LogoutResult>('x.ai/auth/logout', {});
+  }
+
+  /** Slash commands for the server cwd (`x.ai/commands/list`). */
+  listCommands(cwd?: string): Promise<CommandsListResult> {
+    return this.ext<CommandsListResult>('x.ai/commands/list', cwd ? { cwd } : {});
+  }
+
+  /** Reload the model catalog (`x.ai/internal/reload_models`). */
+  reloadModels(): Promise<{ ok: boolean }> {
+    return this.ext<{ ok: boolean }>('x.ai/internal/reload_models', {});
+  }
+
+  /** Reload skills/plugins (`x.ai/internal/reload_skills`). */
+  reloadSkills(): Promise<{ ok: boolean }> {
+    return this.ext<{ ok: boolean }>('x.ai/internal/reload_skills', {});
   }
 
   private async runHandshake(): Promise<void> {

@@ -350,6 +350,46 @@ export interface ForkSessionResult {
   planStateCopied: boolean;
 }
 
+// ---- Settings (x.ai/getApiKey|setApiKey|auth/info|auth/logout|commands/list) ----
+
+/** `x.ai/getApiKey` — the key may be unset (null). */
+export interface ApiKeyResult {
+  key: string | null;
+}
+
+export interface SetApiKeyResult {
+  ok: boolean;
+}
+
+/** `x.ai/auth/info` — camelCase profile fields we render (subset). */
+export interface AuthInfo {
+  methodId?: string | null;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  profileImageUrl?: string | null;
+  teamName?: string | null;
+  organizationName?: string | null;
+}
+
+/** `x.ai/auth/logout`. */
+export interface LogoutResult {
+  ok: boolean;
+  wasLoggedIn: boolean;
+  email?: string | null;
+  apiKeyStillSet: boolean;
+}
+
+/** One entry of `x.ai/commands/list` (AvailableCommand, camelCase). */
+export interface AvailableCommand {
+  name: string;
+  description: string;
+}
+
+export interface CommandsListResult {
+  commands: AvailableCommand[];
+}
+
 // ---- Request params (camelCase per serde rename_all) ----
 
 export interface InitializeParams {

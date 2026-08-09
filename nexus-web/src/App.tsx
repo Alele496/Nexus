@@ -1,9 +1,12 @@
+import { useState } from 'react';
+
 import { useNexusApp } from './acp/hooks';
 import type { ConnectionStatus } from './acp/connection';
 import ApprovalModal from './components/ApprovalModal';
 import ChatView from './components/ChatView';
 import MailboxView from './components/MailboxView';
 import SessionDetail from './components/SessionDetail';
+import SettingsPanel from './components/SettingsPanel';
 import Sidebar from './components/Sidebar';
 
 const STATUS_LABEL: Record<ConnectionStatus, { text: string; dot: string }> = {
@@ -19,11 +22,13 @@ function StatusBar({
   sessionId,
   mailboxUnread,
   onOpenMailbox,
+  onOpenSettings,
 }: {
   status: ConnectionStatus;
   sessionId: string | null;
   mailboxUnread: number;
   onOpenMailbox: () => void;
+  onOpenSettings: () => void;
 }) {
   const s = STATUS_LABEL[status];
   return (
@@ -38,24 +43,40 @@ function StatusBar({
           {sessionId.slice(0, 8)}
         </span>
       )}
-      <button
-        onClick={onOpenMailbox}
-        title="信箱"
-        className="relative ml-auto flex h-6 w-6 items-center justify-center rounded-md border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
-      >
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 8l-9 5-9-5V5a2 2 0 012-2h14a2 2 0 012 2v3zM21 8v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8l9 5 9-5z"
-          />
-        </svg>
-        {mailboxUnread > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-zinc-950">
-            {mailboxUnread > 99 ? '99+' : mailboxUnread}
-          </span>
-        )}
-      </button>
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          onClick={onOpenMailbox}
+          title="信箱"
+          className="relative flex h-6 w-6 items-center justify-center rounded-md border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 8l-9 5-9-5V5a2 2 0 012-2h14a2 2 0 012 2v3zM21 8v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8l9 5 9-5z"
+            />
+          </svg>
+          {mailboxUnread > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-zinc-950">
+              {mailboxUnread > 99 ? '99+' : mailboxUnread}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={onOpenSettings}
+          title="设置"
+          className="flex h-6 w-6 items-center justify-center rounded-md border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+            />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
     </header>
   );
 }
@@ -78,6 +99,7 @@ function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => voi
 
 export default function App() {
   const app = useNexusApp();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // Connection-level failure (no key, handshake error): full-screen retry.
   // Operation-level errors (e.g. a failed prompt) render as an inline banner
@@ -103,6 +125,7 @@ export default function App() {
         sessionId={app.sessionId}
         mailboxUnread={mailboxUnread}
         onOpenMailbox={app.toggleMailbox}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
       <ApprovalModal request={app.pendingPermission} onRespond={app.respondPermission} />
       <MailboxView
@@ -113,6 +136,17 @@ export default function App() {
         onClose={app.toggleMailbox}
         onRefresh={() => void app.refreshMailbox()}
         onMarkRead={(id) => void app.markMailboxRead(id)}
+      />
+      <SettingsPanel
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        loadApiKey={app.loadApiKey}
+        saveApiKey={app.saveApiKey}
+        loadAuthInfo={app.loadAuthInfo}
+        logout={app.logout}
+        loadCommands={app.loadCommands}
+        reloadModels={app.reloadModels}
+        reloadSkills={app.reloadSkills}
       />
       {fatal ? (
         <ErrorScreen message={app.error ?? '连接失败'} onRetry={app.retry} />
