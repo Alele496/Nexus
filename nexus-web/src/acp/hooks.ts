@@ -24,6 +24,7 @@ import {
   type RequestPermissionParams,
   type RosterChanged,
   type RosterEntry,
+  type SessionSearchHit,
   type SessionUpdate,
   type ToolCallStatus,
 } from './types';
@@ -319,6 +320,10 @@ export interface NexusApp {
   retry: () => void;
   switchSession: (sessionId: string) => Promise<void>;
   createNewSession: () => Promise<void>;
+  renameSession: (sessionId: string, title: string) => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
+  forkSession: (sessionId: string) => Promise<void>;
+  searchSessions: (query: string) => Promise<SessionSearchHit[]>;
   switchModel: (modelId: string) => Promise<void>;
 }
 
@@ -333,6 +338,49 @@ export function mergeRoster(prev: RosterEntry[], changed: RosterChanged): Roster
     else next = [...next, up];
   }
   return [...next].sort((a, b) => b.lastChangeUnixMs - a.lastChangeUnixMs);
+}
+
+/**
+ * Handle a `sage.local/session_notification` broadcast. The leader relays ext
+ * notifications wrapped as `{method, params}` under a `_`-prefixed method, so
+ * both that and the direct `{sessionId, update}` form are unwrapped here. The
+ * ext `SessionUpdate` uses snake_case field names (unlike the ACP
+ * `session/update` shape), so the title field is read as `session_summary`
+ * with a camelCase fallback.
+ */
+export function applySessionNotification(
+  method: string,
+  payload: unknown,
+  setRoster: (fn: (prev: RosterEntry[]) => RosterEntry[]) => void,
+): void {
+  if (method !== '_sage.local/session_notification' && method !== 'sage.local/session_notification') {
+    return;
+  }
+  let inner: unknown = payload;
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'method' in payload &&
+    (payload as { method?: unknown }).method === 'sage.local/session_notification'
+  ) {
+    inner = (payload as { params?: unknown }).params;
+  }
+  if (!inner || typeof inner !== 'object') return;
+  const notif = inner as { sessionId?: unknown; update?: unknown };
+  if (typeof notif.sessionId !== 'string' || !notif.update || typeof notif.update !== 'object') {
+    return;
+  }
+  const update = notif.update as Record<string, unknown>;
+  if (update.sessionUpdate !== 'session_summary_generated') return;
+  const summary =
+    typeof update.session_summary === 'string'
+      ? update.session_summary
+      : typeof update.sessionSummary === 'string'
+        ? update.sessionSummary
+        : null;
+  if (!summary) return;
+  const sid = notif.sessionId;
+  setRoster((prev) => prev.map((e) => (e.sessionId === sid ? { ...e, title: summary } : e)));
 }
 
 export function useNexusApp(): NexusApp {
@@ -386,6 +434,13 @@ export function useNexusApp(): NexusApp {
           typeof params === 'object'
         ) {
           setRoster((prev) => mergeRoster(prev, params as unknown as RosterChanged));
+        } else if (
+          (method === '_sage.local/session_notification' ||
+            method === 'sage.local/session_notification') &&
+          params &&
+          typeof params === 'object'
+        ) {
+          applySessionNotification(method, params, setRoster);
         }
       },
       onServerRequest: (id, method, params) => {
@@ -506,6 +561,73 @@ export function useNexusApp(): NexusApp {
     }
   }, [refreshRoster, dispatch]);
 
+  const renameSession = useCallback(async (sid: string, title: string) => {
+    const conn = connRef.current;
+    const trimmed = title.trim();
+    if (!conn || !trimmed) return;
+    try {
+      await conn.renameSession(sid, trimmed);
+      setRoster((prev) =>
+        prev.map((e) => (e.sessionId === sid ? { ...e, title: trimmed } : e)),
+      );
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const forkSession = useCallback(
+    async (sid: string) => {
+      const conn = connRef.current;
+      const entry = roster.find((e) => e.sessionId === sid);
+      if (!conn || !entry) return;
+      try {
+        const result = await conn.forkSession({
+          sourceSessionId: sid,
+          sourceCwd: entry.cwd,
+          newCwd: entry.cwd,
+        });
+        await refreshRoster();
+        if (result?.newSessionId) await switchSession(result.newSessionId);
+      } catch (err) {
+        setError(String(err));
+      }
+    },
+    [roster, refreshRoster, switchSession],
+  );
+
+  const deleteSession = useCallback(
+    async (sid: string) => {
+      const conn = connRef.current;
+      if (!conn) return;
+      const wasActive = sid === sessionId;
+      try {
+        await conn.deleteSession(sid);
+        const remaining = roster.filter((e) => e.sessionId !== sid);
+        setRoster(remaining);
+        if (wasActive) {
+          const next = remaining[0];
+          if (next) await switchSession(next.sessionId);
+          else await createNewSession();
+        }
+      } catch (err) {
+        setError(String(err));
+      }
+    },
+    [sessionId, roster, switchSession, createNewSession],
+  );
+
+  const searchSessions = useCallback(async (query: string) => {
+    const conn = connRef.current;
+    const trimmed = query.trim();
+    if (!conn || !trimmed) return [];
+    try {
+      const result = await conn.searchSessions(trimmed, { limit: 10 });
+      return result.results ?? [];
+    } catch {
+      return [];
+    }
+  }, []);
+
   const switchModel = useCallback(
     async (modelId: string) => {
       const conn = connRef.current;
@@ -600,6 +722,10 @@ export function useNexusApp(): NexusApp {
     retry,
     switchSession,
     createNewSession,
+    renameSession,
+    deleteSession,
+    forkSession,
+    searchSessions,
     switchModel,
   };
 }

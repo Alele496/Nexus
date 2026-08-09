@@ -123,6 +123,10 @@ export default function App() {
             activeSessionId={app.sessionId}
             onSwitch={(id) => void app.switchSession(id)}
             onNewSession={() => void app.createNewSession()}
+            onRename={(id, title) => app.renameSession(id, title)}
+            onDelete={(id) => app.deleteSession(id)}
+            onFork={(id) => app.forkSession(id)}
+            onSearch={(q) => app.searchSessions(q)}
           />
           <div className="flex min-w-0 flex-1 flex-col">
             <ChatView

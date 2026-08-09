@@ -305,6 +305,51 @@ export interface MailboxListResult {
   labels: Record<string, string>;
 }
 
+// ---- Session management (sage.local/session/*) ----
+
+/** One hit from `sage.local/session/search` (FTS over past sessions). */
+export interface SessionSearchHit {
+  sessionId: string;
+  cwd: string;
+  summary: string;
+  updatedAt: string;
+  score: number;
+  matchedFields: string[];
+  snippet?: string;
+}
+
+export interface SessionSearchResult {
+  results: SessionSearchHit[];
+  nextOffset: number | null;
+  totalEstimate: number | null;
+  bootstrapping: boolean;
+}
+
+export interface RenameSessionResult {
+  success: boolean;
+}
+
+export interface DeleteSessionResult {
+  success: boolean;
+}
+
+export interface ForkSessionParams {
+  sourceSessionId: string;
+  sourceCwd: string;
+  newCwd: string;
+  newModelId?: string;
+}
+
+export interface ForkSessionResult {
+  newSessionId: string;
+  newCwd: string;
+  parentSessionId: string;
+  newModelId?: string;
+  chatMessagesCopied: number;
+  updatesCopied: number;
+  planStateCopied: boolean;
+}
+
 // ---- Request params (camelCase per serde rename_all) ----
 
 export interface InitializeParams {

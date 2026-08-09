@@ -8,6 +8,8 @@
 
 import type {
   AuthenticateParams,
+  ForkSessionParams,
+  ForkSessionResult,
   InitializeParams,
   JsonRpcNotification,
   JsonRpcResponse,
@@ -16,6 +18,7 @@ import type {
   NewSessionResult,
   PromptParams,
   RosterListResult,
+  SessionSearchResult,
 } from './types';
 
 export type ConnectionStatus =
@@ -234,6 +237,33 @@ export class AcpConnection {
   /** Switch the session to a different model (`session/set_model`). */
   setSessionModel(sessionId: string, modelId: string): Promise<unknown> {
     return this.request('session/set_model', { sessionId, modelId });
+  }
+
+  /** Rename a session (`sage.local/session/rename`). */
+  renameSession(sessionId: string, title: string): Promise<{ success: boolean }> {
+    return this.ext<{ success: boolean }>('sage.local/session/rename', { sessionId, title });
+  }
+
+  /** Delete a session's history (`sage.local/session/delete`). */
+  deleteSession(sessionId: string): Promise<{ success: boolean }> {
+    return this.ext<{ success: boolean }>('sage.local/session/delete', { sessionId });
+  }
+
+  /** Fork a session into a new one (`sage.local/session/fork`). */
+  forkSession(params: ForkSessionParams): Promise<ForkSessionResult> {
+    return this.ext<ForkSessionResult>('sage.local/session/fork', params);
+  }
+
+  /** Full-text search over past sessions (`sage.local/session/search`). */
+  searchSessions(
+    query: string,
+    opts?: { limit?: number; includeContent?: boolean },
+  ): Promise<SessionSearchResult> {
+    return this.ext<SessionSearchResult>('sage.local/session/search', {
+      query,
+      limit: opts?.limit ?? 20,
+      includeContent: opts?.includeContent ?? false,
+    });
   }
 
   /** Shared cross-process mailbox: every message plus the label registry. */
