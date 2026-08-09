@@ -276,5 +276,59 @@ export interface NewSessionResult {
   sessionId: string;
   modes?: JsonValue;
   configOptions?: JsonValue[];
-  [key: string]: JsonValue | undefined;
+  models?: SessionModelState;
+}
+
+// ---- Session roster (sage.local/sessions/list + sage.local/sessions/changed) ----
+
+export type RosterActivity =
+  | 'working'
+  | 'idle'
+  | 'needs_input'
+  | 'dormant'
+  | 'completed'
+  | 'dead'
+  | (string & {});
+
+export interface RosterOrigin {
+  kind: 'local' | 'remote';
+  host?: string;
+}
+
+export interface RosterEntry {
+  sessionId: string;
+  title?: string;
+  cwd: string;
+  isWorktree: boolean;
+  modelId?: string;
+  reasoningEffort?: string;
+  yolo: boolean;
+  activity: RosterActivity;
+  resident: boolean;
+  lastChangeUnixMs: number;
+  origin: RosterOrigin;
+}
+
+export interface RosterListResult {
+  sessions: RosterEntry[];
+}
+
+/** Payload of the `sage.local/sessions/changed` broadcast (wire `_`-prefixed). */
+export interface RosterChanged {
+  upserted: RosterEntry[];
+  removed: string[];
+}
+
+// ---- Models (session/new and session/load `models` field) ----
+
+export interface ModelInfo {
+  modelId: string;
+  name: string;
+  description?: string;
+  _meta?: JsonValue;
+}
+
+export interface SessionModelState {
+  currentModelId: string;
+  availableModels: ModelInfo[];
 }

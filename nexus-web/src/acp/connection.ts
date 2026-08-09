@@ -14,6 +14,7 @@ import type {
   NewSessionParams,
   NewSessionResult,
   PromptParams,
+  RosterListResult,
 } from './types';
 
 export type ConnectionStatus =
@@ -191,17 +192,38 @@ export class AcpConnection {
     await this.request('authenticate', params);
   }
 
-  async createSession(cwd: string, meta?: NewSessionParams['_meta']): Promise<string> {
+  async createSession(cwd: string, meta?: NewSessionParams['_meta']): Promise<NewSessionResult> {
     const params: NewSessionParams = { cwd, mcpServers: [], _meta: meta };
     const result = await this.request<NewSessionResult>('session/new', params);
     if (!result.sessionId) throw new Error('session/new returned no sessionId');
     this.sessionId = result.sessionId;
-    return result.sessionId;
+    return result;
   }
 
-  async loadSession(sessionId: string, cwd: string): Promise<void> {
-    await this.request('session/load', { sessionId, cwd, mcpServers: [] });
+  async loadSession(sessionId: string, cwd: string): Promise<Partial<NewSessionResult>> {
+    const result = await this.request<Partial<NewSessionResult>>('session/load', {
+      sessionId,
+      cwd,
+      mcpServers: [],
+    });
     this.sessionId = sessionId;
+    return result ?? {};
+  }
+
+  /** Call a `sage.local/*` extension method. The wire method carries a `_`
+   *  prefix — the ACP layer strips it before routing to the extension. */
+  ext<T = unknown>(method: string, params?: unknown): Promise<T> {
+    return this.request<T>(`_${method}`, params);
+  }
+
+  /** FleetView roster: every resident session plus recent dormant ones. */
+  listSessions(): Promise<RosterListResult> {
+    return this.ext<RosterListResult>('sage.local/sessions/list', {});
+  }
+
+  /** Switch the session to a different model (`session/set_model`). */
+  setSessionModel(sessionId: string, modelId: string): Promise<unknown> {
+    return this.request('session/set_model', { sessionId, modelId });
   }
 
   /** Send a user prompt to the current session. */

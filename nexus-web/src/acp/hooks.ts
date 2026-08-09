@@ -18,6 +18,9 @@ import {
 import {
   chunkText,
   contentImages,
+  type ModelInfo,
+  type RosterChanged,
+  type RosterEntry,
   type SessionUpdate,
   type ToolCallStatus,
 } from './types';
@@ -63,12 +66,15 @@ interface ChatState {
 }
 
 type ChatAction =
+  | { type: 'session-reset' }
   | { type: 'user-optimistic'; text: string }
+  | { type: 'user-echo'; text: string }
   | { type: 'agent-chunk'; text: string }
   | { type: 'agent-image'; image: ImageBlock }
   | { type: 'thought-chunk'; text: string }
   | { type: 'tool-start'; update: SessionUpdate }
-  | { type: 'tool-update'; update: SessionUpdate };
+  | { type: 'tool-update'; update: SessionUpdate }
+  | { type: 'close-streaming' };
 
 const initialState: ChatState = {
   messages: [],
@@ -79,6 +85,23 @@ const initialState: ChatState = {
 
 function reducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
+    case 'session-reset':
+      // New session or session switch: drop all accumulated messages.
+      return { ...state, messages: [], nextId: 1, agentIndex: null, thoughtIndex: null };
+
+    case 'user-echo':
+      // A user message replayed from session/load history (vs. the optimistic
+      // echo of our own prompt, which arrives as 'user-optimistic').
+      messagesPush(state, {
+        kind: 'text',
+        id: state.nextId,
+        role: 'user',
+        text: action.text,
+        streaming: false,
+        images: [],
+      });
+      return { ...state, nextId: state.nextId + 1 };
+
     case 'user-optimistic': {
       // A new turn starts: close out the previous streaming assistant message.
       const messages = [...state.messages];
@@ -175,6 +198,17 @@ function reducer(state: ChatState, action: ChatAction): ChatState {
       );
       return { ...state, messages };
     }
+
+    case 'close-streaming': {
+      // Turn ended (prompt response / history replay): drop the caret and the
+      // streaming message anchors so the next chunk starts a fresh message.
+      const messages = [...state.messages];
+      if (state.agentIndex !== null && messages[state.agentIndex]?.kind === 'text') {
+        const msg = messages[state.agentIndex] as TextMsg;
+        if (msg.streaming) messages[state.agentIndex] = { ...msg, streaming: false };
+      }
+      return { ...state, messages, agentIndex: null, thoughtIndex: null };
+    }
   }
 }
 
@@ -212,11 +246,22 @@ function useThrottledChat() {
 
 // ---- Notification routing ----
 
-function routeUpdate(update: SessionUpdate, dispatch: (a: ChatAction) => void): void {
+function routeUpdate(
+  update: SessionUpdate,
+  dispatch: (a: ChatAction) => void,
+  replay: boolean,
+): void {
   switch (update.sessionUpdate) {
-    case 'user_message_chunk':
-      // The user's own text is rendered optimistically; ignore the echo.
+    case 'user_message_chunk': {
+      // Live turns render the user's own text optimistically, so the echo is
+      // ignored. During session/load the chunks ARE the history — render them.
+      const u = update as Extract<SessionUpdate, { sessionUpdate: 'user_message_chunk' }>;
+      if (replay) {
+        const text = chunkText(u.content);
+        if (text) dispatch({ type: 'user-echo', text });
+      }
       break;
+    }
     case 'agent_message_chunk': {
       const u = update as Extract<SessionUpdate, { sessionUpdate: 'agent_message_chunk' }>;
       const text = chunkText(u.content);
@@ -249,16 +294,52 @@ export interface NexusApp {
   error: string | null;
   sessionId: string | null;
   messages: ChatMsg[];
+  roster: RosterEntry[];
+  models: ModelInfo[];
+  currentModelId: string | null;
   sendMessage: (text: string) => void;
   retry: () => void;
+  switchSession: (sessionId: string) => Promise<void>;
+  createNewSession: () => Promise<void>;
+  switchModel: (modelId: string) => Promise<void>;
+}
+
+/** Merge a `sage.local/sessions/changed` delta into the current roster. */
+export function mergeRoster(prev: RosterEntry[], changed: RosterChanged): RosterEntry[] {
+  let next = changed.removed.length
+    ? prev.filter((e) => !changed.removed.includes(e.sessionId))
+    : prev;
+  for (const up of changed.upserted) {
+    const i = next.findIndex((e) => e.sessionId === up.sessionId);
+    if (i >= 0) next = next.map((e, j) => (j === i ? up : e));
+    else next = [...next, up];
+  }
+  return [...next].sort((a, b) => b.lastChangeUnixMs - a.lastChangeUnixMs);
 }
 
 export function useNexusApp(): NexusApp {
   const [status, setStatus] = useState<ConnectionStatus>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [models, setModels] = useState<ModelInfo[]>([]);
+  const [currentModelId, setCurrentModelId] = useState<string | null>(null);
   const connRef = useRef<AcpConnection | null>(null);
+  // True while `session/load` history chunks are streaming in, so
+  // `user_message_chunk` is rendered as history instead of ignored as an echo.
+  const replayRef = useRef(false);
   const { state, dispatch } = useThrottledChat();
+
+  const refreshRoster = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return;
+    try {
+      const { sessions } = await conn.listSessions();
+      setRoster(sessions);
+    } catch {
+      // Non-fatal: the next poll or broadcast will retry.
+    }
+  }, []);
 
   // Create the connection once.
   useEffect(() => {
@@ -276,7 +357,13 @@ export function useNexusApp(): NexusApp {
       onNotification: (method, params) => {
         if (method === 'session/update' && params && typeof params === 'object') {
           const update = (params as { update?: SessionUpdate }).update;
-          if (update) routeUpdate(update, dispatch);
+          if (update) routeUpdate(update, dispatch, replayRef.current);
+        } else if (
+          method === '_sage.local/sessions/changed' &&
+          params &&
+          typeof params === 'object'
+        ) {
+          setRoster((prev) => mergeRoster(prev, params as unknown as RosterChanged));
         }
       },
     });
@@ -288,7 +375,8 @@ export function useNexusApp(): NexusApp {
     };
   }, [dispatch]);
 
-  // Once ready: load the existing session (reconnect) or create a new one.
+  // Once ready: load the existing session (reconnect) or create a new one,
+  // then start the roster poll.
   useEffect(() => {
     const conn = connRef.current;
     if (status !== 'ready' || !conn) return;
@@ -297,20 +385,41 @@ export function useNexusApp(): NexusApp {
       try {
         const cwd = resolveServerCwd();
         const knownId = conn.getSessionId() ?? resolveInitialSession();
-        if (knownId) {
-          await conn.loadSession(knownId, cwd);
-        } else {
-          await conn.createSession(cwd);
+        replayRef.current = !!knownId;
+        // A reconnect replays the full history from the server; drop whatever
+        // the previous connection left in the store so it doesn't duplicate.
+        dispatch({ type: 'session-reset' });
+        const result = knownId
+          ? await conn.loadSession(knownId, cwd)
+          : await conn.createSession(cwd);
+        if (!cancelled) {
+          setSessionId(conn.getSessionId());
+          if (result?.models) {
+            setModels(result.models.availableModels);
+            setCurrentModelId(result.models.currentModelId);
+          }
+          void refreshRoster();
         }
-        if (!cancelled) setSessionId(conn.getSessionId());
       } catch (err) {
         if (!cancelled) setError(String(err));
+      } finally {
+        replayRef.current = false;
+        if (!cancelled) dispatch({ type: 'close-streaming' });
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [status]);
+  }, [status, refreshRoster, dispatch]);
+
+  // Slow safety poll for the roster (broadcasts cover turn transitions; the
+  // poll catches anything missed, e.g. an external client's sessions).
+  useEffect(() => {
+    if (status !== 'ready') return;
+    void refreshRoster();
+    const t = window.setInterval(() => void refreshRoster(), 30_000);
+    return () => window.clearInterval(t);
+  }, [status, refreshRoster]);
 
   const sendMessage = useCallback(
     (text: string) => {
@@ -318,9 +427,71 @@ export function useNexusApp(): NexusApp {
       const trimmed = text.trim();
       if (!conn || !trimmed) return;
       dispatch({ type: 'user-optimistic', text: trimmed });
-      void conn.prompt(trimmed).catch((err) => setError(String(err)));
+      void conn
+        .prompt(trimmed)
+        .catch((err) => setError(String(err)))
+        .finally(() => dispatch({ type: 'close-streaming' }));
     },
     [dispatch],
+  );
+
+  const switchSession = useCallback(
+    async (sid: string) => {
+      const conn = connRef.current;
+      if (!conn || sid === sessionId) return;
+      replayRef.current = true;
+      dispatch({ type: 'session-reset' });
+      try {
+        const result = await conn.loadSession(sid, resolveServerCwd());
+        setSessionId(sid);
+        if (result?.models) {
+          setModels(result.models.availableModels);
+          setCurrentModelId(result.models.currentModelId);
+        }
+      } catch (err) {
+        setError(String(err));
+      } finally {
+        replayRef.current = false;
+        dispatch({ type: 'close-streaming' });
+        void refreshRoster();
+      }
+    },
+    [sessionId, refreshRoster, dispatch],
+  );
+
+  const createNewSession = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return;
+    dispatch({ type: 'session-reset' });
+    try {
+      const result = await conn.createSession(resolveServerCwd());
+      setSessionId(result.sessionId);
+      if (result?.models) {
+        setModels(result.models.availableModels);
+        setCurrentModelId(result.models.currentModelId);
+      }
+      void refreshRoster();
+    } catch (err) {
+      setError(String(err));
+    }
+  }, [refreshRoster, dispatch]);
+
+  const switchModel = useCallback(
+    async (modelId: string) => {
+      const conn = connRef.current;
+      if (!conn || !sessionId || modelId === currentModelId) return;
+      try {
+        await conn.setSessionModel(sessionId, modelId);
+        setCurrentModelId(modelId);
+        // The server only broadcasts roster changes on death/spawn/turn
+        // transitions, not on set_model — refresh so the sidebar modelId
+        // updates immediately instead of at the next poll.
+        void refreshRoster();
+      } catch (err) {
+        setError(String(err));
+      }
+    },
+    [sessionId, currentModelId, refreshRoster],
   );
 
   const retry = useCallback(() => {
@@ -329,5 +500,18 @@ export function useNexusApp(): NexusApp {
     connRef.current?.connect();
   }, []);
 
-  return { status, error, sessionId, messages: state.messages, sendMessage, retry };
+  return {
+    status,
+    error,
+    sessionId,
+    messages: state.messages,
+    roster,
+    models,
+    currentModelId,
+    sendMessage,
+    retry,
+    switchSession,
+    createNewSession,
+    switchModel,
+  };
 }

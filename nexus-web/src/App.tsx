@@ -1,6 +1,8 @@
 import { useNexusApp } from './acp/hooks';
 import type { ConnectionStatus } from './acp/connection';
 import ChatView from './components/ChatView';
+import SessionDetail from './components/SessionDetail';
+import Sidebar from './components/Sidebar';
 
 const STATUS_LABEL: Record<ConnectionStatus, { text: string; dot: string }> = {
   disconnected: { text: '未连接', dot: 'bg-zinc-500' },
@@ -57,6 +59,7 @@ export default function App() {
   // Operation-level errors (e.g. a failed prompt) render as an inline banner
   // above the input so the conversation stays visible.
   const fatal = app.status === 'error';
+  const activeSession = app.roster.find((e) => e.sessionId === app.sessionId) ?? null;
 
   return (
     <div className="flex h-full flex-col bg-zinc-950 text-zinc-100">
@@ -64,12 +67,28 @@ export default function App() {
       {fatal ? (
         <ErrorScreen message={app.error ?? '连接失败'} onRetry={app.retry} />
       ) : (
-        <ChatView
-          messages={app.messages}
-          connected={app.status === 'ready' && !!app.sessionId}
-          onSend={app.sendMessage}
-          error={app.error ?? undefined}
-        />
+        <div className="flex min-h-0 flex-1">
+          <Sidebar
+            roster={app.roster}
+            activeSessionId={app.sessionId}
+            onSwitch={(id) => void app.switchSession(id)}
+            onNewSession={() => void app.createNewSession()}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <ChatView
+              messages={app.messages}
+              connected={app.status === 'ready' && !!app.sessionId}
+              onSend={app.sendMessage}
+              error={app.error ?? undefined}
+            />
+          </div>
+          <SessionDetail
+            models={app.models}
+            currentModelId={app.currentModelId}
+            session={activeSession}
+            onSwitchModel={(m) => void app.switchModel(m)}
+          />
+        </div>
       )}
     </div>
   );
