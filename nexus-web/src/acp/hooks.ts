@@ -65,7 +65,15 @@ export interface ToolMsg {
   rawOutput?: JsonValue;
 }
 
-export type ChatMsg = TextMsg | ThoughtMsg | ToolMsg;
+/** A "where was I" recap line, injected from a `session_recap` broadcast. */
+export interface RecapMsg {
+  kind: 'recap';
+  id: number;
+  text: string;
+  auto: boolean;
+}
+
+export type ChatMsg = TextMsg | ThoughtMsg | ToolMsg | RecapMsg;
 
 interface ChatState {
   messages: ChatMsg[];
@@ -83,6 +91,7 @@ type ChatAction =
   | { type: 'thought-chunk'; text: string }
   | { type: 'tool-start'; update: SessionUpdate }
   | { type: 'tool-update'; update: SessionUpdate }
+  | { type: 'recap'; text: string; auto: boolean }
   | { type: 'close-streaming' };
 
 const initialState: ChatState = {
@@ -211,6 +220,13 @@ export function reducer(state: ChatState, action: ChatAction): ChatState {
           : m,
       );
       return { ...state, messages };
+    }
+
+    case 'recap': {
+      // A recap is standalone: it never merges into the streaming message.
+      const id = state.nextId;
+      messagesPush(state, { kind: 'recap', id, text: action.text, auto: action.auto });
+      return { ...state, nextId: id + 1 };
     }
 
     case 'close-streaming': {
@@ -342,6 +358,9 @@ export interface NexusApp {
   loadCommands: () => Promise<AvailableCommand[]>;
   reloadModels: () => Promise<boolean>;
   reloadSkills: () => Promise<boolean>;
+  flushMemory: (sessionId: string) => Promise<void>;
+  rewriteMemoryNote: (sessionId: string, rawText: string, contextSummary: string) => Promise<string>;
+  recap: (sessionId: string) => Promise<void>;
   switchModel: (modelId: string) => Promise<void>;
 }
 
@@ -364,12 +383,15 @@ export function mergeRoster(prev: RosterEntry[], changed: RosterChanged): Roster
  * both that and the direct `{sessionId, update}` form are unwrapped here. The
  * ext `SessionUpdate` uses snake_case field names (unlike the ACP
  * `session/update` shape), so the title field is read as `session_summary`
- * with a camelCase fallback.
+ * with a camelCase fallback. A `session_recap` update is injected into the
+ * active session's chat as a recap line.
  */
 export function applySessionNotification(
   method: string,
   payload: unknown,
+  dispatch: (a: ChatAction) => void,
   setRoster: (fn: (prev: RosterEntry[]) => RosterEntry[]) => void,
+  activeSessionId: string | null,
 ): void {
   if (method !== '_sage.local/session_notification' && method !== 'sage.local/session_notification') {
     return;
@@ -389,16 +411,22 @@ export function applySessionNotification(
     return;
   }
   const update = notif.update as Record<string, unknown>;
-  if (update.sessionUpdate !== 'session_summary_generated') return;
-  const summary =
-    typeof update.session_summary === 'string'
-      ? update.session_summary
-      : typeof update.sessionSummary === 'string'
-        ? update.sessionSummary
-        : null;
-  if (!summary) return;
-  const sid = notif.sessionId;
-  setRoster((prev) => prev.map((e) => (e.sessionId === sid ? { ...e, title: summary } : e)));
+  if (update.sessionUpdate === 'session_summary_generated') {
+    const summary =
+      typeof update.session_summary === 'string'
+        ? update.session_summary
+        : typeof update.sessionSummary === 'string'
+          ? update.sessionSummary
+          : null;
+    if (!summary) return;
+    setRoster((prev) => prev.map((e) => (e.sessionId === notif.sessionId ? { ...e, title: summary } : e)));
+  } else if (update.sessionUpdate === 'session_recap') {
+    // Only surface recaps for the session the user is looking at.
+    if (activeSessionId !== null && notif.sessionId !== activeSessionId) return;
+    const summary = typeof update.summary === 'string' ? update.summary : null;
+    if (!summary) return;
+    dispatch({ type: 'recap', text: summary, auto: update.auto === true });
+  }
 }
 
 export function useNexusApp(): NexusApp {
@@ -458,7 +486,13 @@ export function useNexusApp(): NexusApp {
           params &&
           typeof params === 'object'
         ) {
-          applySessionNotification(method, params, setRoster);
+          applySessionNotification(
+            method,
+            params,
+            dispatch,
+            setRoster,
+            connRef.current?.getSessionId() ?? null,
+          );
         }
       },
       onServerRequest: (id, method, params) => {
@@ -729,6 +763,41 @@ export function useNexusApp(): NexusApp {
     }
   }, []);
 
+  const flushMemory = useCallback(async (sid: string) => {
+    const conn = connRef.current;
+    if (!conn) return;
+    try {
+      await conn.flushMemory(sid);
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
+  const rewriteMemoryNote = useCallback(
+    async (sid: string, rawText: string, contextSummary: string) => {
+      const conn = connRef.current;
+      if (!conn || !rawText.trim()) return '';
+      try {
+        const r = await conn.rewriteMemoryNote({ sessionId: sid, rawText, contextSummary });
+        return r.rewritten ?? '';
+      } catch (err) {
+        setError(String(err));
+        return '';
+      }
+    },
+    [],
+  );
+
+  const recap = useCallback(async (sid: string) => {
+    const conn = connRef.current;
+    if (!conn) return;
+    try {
+      await conn.recap(sid);
+    } catch (err) {
+      setError(String(err));
+    }
+  }, []);
+
   const switchModel = useCallback(
     async (modelId: string) => {
       const conn = connRef.current;
@@ -835,6 +904,9 @@ export function useNexusApp(): NexusApp {
     loadCommands,
     reloadModels,
     reloadSkills,
+    flushMemory,
+    rewriteMemoryNote,
+    recap,
     switchModel,
   };
 }

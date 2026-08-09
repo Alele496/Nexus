@@ -18,9 +18,12 @@ import type {
   JsonRpcResponse,
   LogoutResult,
   MailboxListResult,
+  MemoryRewriteParams,
+  MemoryRewriteResult,
   NewSessionParams,
   NewSessionResult,
   PromptParams,
+  RecapResult,
   RosterListResult,
   SessionSearchResult,
   SetApiKeyResult,
@@ -332,6 +335,25 @@ export class AcpConnection {
   /** Reload skills/plugins (`x.ai/internal/reload_skills`). */
   reloadSkills(): Promise<{ ok: boolean }> {
     return this.ext<{ ok: boolean }>('x.ai/internal/reload_skills', {});
+  }
+
+  /** Trigger an on-demand memory flush (`x.ai/memory/flush`, snake_case param). */
+  flushMemory(sessionId: string): Promise<unknown> {
+    return this.ext('x.ai/memory/flush', { session_id: sessionId });
+  }
+
+  /** Rewrite a raw memory note into structured markdown (`x.ai/memory/rewrite`). */
+  rewriteMemoryNote(params: MemoryRewriteParams): Promise<MemoryRewriteResult> {
+    return this.ext<MemoryRewriteResult>('x.ai/memory/rewrite', {
+      sessionId: params.sessionId,
+      rawText: params.rawText,
+      contextSummary: params.contextSummary,
+    });
+  }
+
+  /** Ask for a "where was I" recap (`x.ai/recap`); text arrives as a broadcast. */
+  recap(sessionId: string): Promise<RecapResult> {
+    return this.ext<RecapResult>('x.ai/recap', { sessionId, auto: false });
   }
 
   private async runHandshake(): Promise<void> {

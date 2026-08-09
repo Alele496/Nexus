@@ -16,6 +16,11 @@ interface Props {
   loadCommands: () => Promise<AvailableCommand[]>;
   reloadModels: () => Promise<boolean>;
   reloadSkills: () => Promise<boolean>;
+  /** Active session id — memory actions target it; disabled when null. */
+  sessionId: string | null;
+  flushMemory: (sessionId: string) => Promise<void>;
+  rewriteMemoryNote: (sessionId: string, rawText: string, contextSummary: string) => Promise<string>;
+  recap: (sessionId: string) => Promise<void>;
 }
 
 function maskKey(key: string): string {
@@ -33,6 +38,10 @@ export default function SettingsPanel({
   loadCommands,
   reloadModels,
   reloadSkills,
+  sessionId,
+  flushMemory,
+  rewriteMemoryNote,
+  recap,
 }: Props) {
   const [authInfo, setAuthInfo] = useState<AuthInfo | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
@@ -45,6 +54,11 @@ export default function SettingsPanel({
   const [cmdBusy, setCmdBusy] = useState(false);
   const [reloadBusy, setReloadBusy] = useState<'models' | 'skills' | null>(null);
   const [reloadMsg, setReloadMsg] = useState<string | null>(null);
+  const [memoryBusy, setMemoryBusy] = useState<'flush' | 'recap' | 'rewrite' | null>(null);
+  const [memoryMsg, setMemoryMsg] = useState<string | null>(null);
+  const [noteInput, setNoteInput] = useState('');
+  const [noteContext, setNoteContext] = useState('');
+  const [rewritten, setRewritten] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -117,6 +131,37 @@ export default function SettingsPanel({
     setReloadBusy(null);
     setReloadMsg(ok ? '已重载' : '重载失败');
     window.setTimeout(() => setReloadMsg(null), 2500);
+  };
+
+  const doMemory = async (kind: 'flush' | 'recap') => {
+    if (!sessionId) return;
+    setMemoryBusy(kind);
+    setMemoryMsg(null);
+    try {
+      if (kind === 'flush') await flushMemory(sessionId);
+      else await recap(sessionId);
+      setMemoryMsg(kind === 'flush' ? '已刷新记忆' : '回览已生成，将在对话中显示');
+    } catch {
+      setMemoryMsg('操作失败');
+    } finally {
+      setMemoryBusy(null);
+      window.setTimeout(() => setMemoryMsg(null), 2500);
+    }
+  };
+
+  const doRewrite = async () => {
+    if (!sessionId || !noteInput.trim()) return;
+    setMemoryBusy('rewrite');
+    setMemoryMsg(null);
+    setRewritten(null);
+    try {
+      const out = await rewriteMemoryNote(sessionId, noteInput, noteContext.trim());
+      setRewritten(out || '（空结果）');
+    } catch {
+      setMemoryMsg('重写失败');
+    } finally {
+      setMemoryBusy(null);
+    }
   };
 
   const sectionTitle = 'mb-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500';
@@ -271,6 +316,82 @@ export default function SettingsPanel({
                   </span>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* 记忆 */}
+          <section>
+            <div className="mb-2 flex items-center gap-2">
+              <h3 className={sectionTitle}>记忆</h3>
+              {!sessionId && <span className="text-[11px] text-zinc-600">（无活动会话）</span>}
+            </div>
+            <div className="space-y-3 rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-zinc-300">刷新记忆</span>
+                <button
+                  onClick={() => void doMemory('flush')}
+                  disabled={memoryBusy !== null || !sessionId}
+                  className="ml-auto rounded-md border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                >
+                  {memoryBusy === 'flush' ? '刷新中…' : '刷新'}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 border-t border-zinc-800/70 pt-2">
+                <span className="text-[12px] text-zinc-300">生成回览</span>
+                <button
+                  onClick={() => void doMemory('recap')}
+                  disabled={memoryBusy !== null || !sessionId}
+                  className="ml-auto rounded-md border border-zinc-700 px-2.5 py-1 text-[11px] text-zinc-300 hover:border-zinc-500 hover:text-zinc-100 disabled:opacity-40"
+                >
+                  {memoryBusy === 'recap' ? '生成中…' : '生成'}
+                </button>
+              </div>
+              {memoryMsg && <p className="text-[11px] text-emerald-400">{memoryMsg}</p>}
+
+              <div className="space-y-1.5 border-t border-zinc-800/70 pt-2">
+                <span className="text-[12px] text-zinc-300">重写记忆笔记</span>
+                <textarea
+                  value={noteInput}
+                  onChange={(e) => setNoteInput(e.target.value)}
+                  placeholder="粘贴原始记忆笔记…"
+                  rows={3}
+                  disabled={!sessionId}
+                  className="w-full resize-y rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[12px] text-zinc-200 placeholder-zinc-600 focus:border-indigo-500/60 focus:outline-none disabled:opacity-40"
+                />
+                <input
+                  value={noteContext}
+                  onChange={(e) => setNoteContext(e.target.value)}
+                  placeholder="上下文摘要（可选）…"
+                  disabled={!sessionId}
+                  className="w-full rounded-md border border-zinc-800 bg-zinc-900 px-2.5 py-1.5 text-[12px] text-zinc-200 placeholder-zinc-600 focus:border-indigo-500/60 focus:outline-none disabled:opacity-40"
+                />
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => void doRewrite()}
+                    disabled={memoryBusy !== null || !sessionId || !noteInput.trim()}
+                    className="rounded-md bg-indigo-600 px-3 py-1 text-[11px] font-medium text-white hover:bg-indigo-500 disabled:opacity-40"
+                  >
+                    {memoryBusy === 'rewrite' ? '重写中…' : '重写'}
+                  </button>
+                  {noteInput && (
+                    <button
+                      onClick={() => {
+                        setNoteInput('');
+                        setNoteContext('');
+                        setRewritten(null);
+                      }}
+                      className="rounded-md border border-zinc-700 px-2 py-1 text-[11px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-200"
+                    >
+                      清空
+                    </button>
+                  )}
+                </div>
+                {rewritten !== null && (
+                  <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-zinc-950/80 p-2 font-mono text-[11px] leading-relaxed text-emerald-200/90">
+                    {rewritten}
+                  </pre>
+                )}
+              </div>
             </div>
           </section>
 

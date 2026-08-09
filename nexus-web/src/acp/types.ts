@@ -390,6 +390,42 @@ export interface CommandsListResult {
   commands: AvailableCommand[];
 }
 
+// ---- Memory & recap (x.ai/memory/* + x.ai/recap) ----
+
+/** `x.ai/memory/flush` — snake_case `session_id` on the wire (no rename attr). */
+export interface MemoryFlushParams {
+  session_id: string;
+}
+
+/** `x.ai/memory/rewrite` — camelCase fields; response carries `{ rewritten }`. */
+export interface MemoryRewriteParams {
+  sessionId: string;
+  rawText: string;
+  contextSummary: string;
+}
+
+export interface MemoryRewriteResult {
+  rewritten: string;
+}
+
+/** `x.ai/recap` — camelCase; ack only, the recap text arrives as a broadcast. */
+export interface RecapParams {
+  sessionId: string;
+  auto?: boolean;
+}
+
+export interface RecapResult {
+  ok: boolean;
+  disabled?: boolean;
+}
+
+/** Ext-broadcast `SessionRecap` update (snake_case tag, `summary`/`auto` fields). */
+export interface SessionRecapUpdate {
+  sessionUpdate: 'session_recap';
+  summary: string;
+  auto?: boolean;
+}
+
 // ---- Request params (camelCase per serde rename_all) ----
 
 export interface InitializeParams {

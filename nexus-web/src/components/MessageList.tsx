@@ -144,6 +144,20 @@ function ToolCard({
   );
 }
 
+function RecapLine({ text, auto }: { text: string; auto: boolean }) {
+  return (
+    <div className="my-1 flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2">
+      <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+        回览
+      </span>
+      <p className="min-w-0 flex-1 text-[12.5px] italic leading-relaxed text-amber-200/80">
+        {text}
+        {auto && <span className="ml-1.5 text-[10px] not-italic text-amber-400/60">（自动）</span>}
+      </p>
+    </div>
+  );
+}
+
 function ThoughtBlock({ text }: { text: string }) {
   return (
     <details className="my-1 rounded-lg border border-zinc-800/80 bg-zinc-900/40">
@@ -215,6 +229,8 @@ function MessageItem({ msg }: { msg: ChatMsg }) {
           rawOutput={msg.rawOutput}
         />
       );
+    case 'recap':
+      return <RecapLine text={msg.text} auto={msg.auto} />;
   }
 }
 

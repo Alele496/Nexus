@@ -147,6 +147,12 @@ export default function App() {
         loadCommands={app.loadCommands}
         reloadModels={app.reloadModels}
         reloadSkills={app.reloadSkills}
+        sessionId={app.sessionId}
+        flushMemory={(sid) => app.flushMemory(sid)}
+        rewriteMemoryNote={(sid, rawText, contextSummary) =>
+          app.rewriteMemoryNote(sid, rawText, contextSummary)
+        }
+        recap={(sid) => app.recap(sid)}
       />
       {fatal ? (
         <ErrorScreen message={app.error ?? '连接失败'} onRetry={app.retry} />
