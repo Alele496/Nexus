@@ -232,9 +232,26 @@ export class AcpConnection {
   }
 
   /** Call a `sage.local/*` extension method. The wire method carries a `_`
-   *  prefix — the ACP layer strips it before routing to the extension. */
+   *  prefix — the ACP layer strips it before routing to the extension.
+   *
+   *  Ext method responses are inconsistently enveloped server-side: some come
+   *  back as `{result: <payload>}` (sessions/list, getApiKey, reload_models)
+   *  while others return the payload directly (rename → `{success}`, auth/info
+   *  profile fields, commands/list). A single-key `result` envelope is
+   *  unwrapped so callers always receive the bare payload. */
   ext<T = unknown>(method: string, params?: unknown): Promise<T> {
-    return this.request<T>(`_${method}`, params);
+    return this.request<unknown>(`_${method}`, params).then((r) => {
+      if (
+        r &&
+        typeof r === 'object' &&
+        !Array.isArray(r) &&
+        Object.keys(r).length === 1 &&
+        'result' in (r as Record<string, unknown>)
+      ) {
+        return (r as { result: T }).result;
+      }
+      return r as T;
+    });
   }
 
   /** FleetView roster: every resident session plus recent dormant ones. */
