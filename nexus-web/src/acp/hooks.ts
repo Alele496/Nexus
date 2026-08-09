@@ -18,7 +18,10 @@ import {
 import {
   chunkText,
   contentImages,
+  type MailboxMessage,
   type ModelInfo,
+  type RequestPermissionOutcomeResponse,
+  type RequestPermissionParams,
   type RosterChanged,
   type RosterEntry,
   type SessionUpdate,
@@ -289,6 +292,12 @@ function routeUpdate(
 
 // ---- Top-level hook ----
 
+/** A pending `session/request_permission` awaiting the user's decision. */
+export interface PendingPermission {
+  requestId: number;
+  params: RequestPermissionParams;
+}
+
 export interface NexusApp {
   status: ConnectionStatus;
   error: string | null;
@@ -297,6 +306,15 @@ export interface NexusApp {
   roster: RosterEntry[];
   models: ModelInfo[];
   currentModelId: string | null;
+  /** Oldest pending permission request, or null. */
+  pendingPermission: PendingPermission | null;
+  respondPermission: (optionId: string | null) => void;
+  mailboxOpen: boolean;
+  mailboxMessages: MailboxMessage[];
+  mailboxLabels: Record<string, string>;
+  toggleMailbox: () => void;
+  refreshMailbox: () => Promise<void>;
+  markMailboxRead: (messageId: string) => Promise<void>;
   sendMessage: (text: string) => void;
   retry: () => void;
   switchSession: (sessionId: string) => Promise<void>;
@@ -324,6 +342,10 @@ export function useNexusApp(): NexusApp {
   const [roster, setRoster] = useState<RosterEntry[]>([]);
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [currentModelId, setCurrentModelId] = useState<string | null>(null);
+  const [permissionQueue, setPermissionQueue] = useState<PendingPermission[]>([]);
+  const [mailboxOpen, setMailboxOpen] = useState(false);
+  const [mailboxMessages, setMailboxMessages] = useState<MailboxMessage[]>([]);
+  const [mailboxLabels, setMailboxLabels] = useState<Record<string, string>>({});
   const connRef = useRef<AcpConnection | null>(null);
   // True while `session/load` history chunks are streaming in, so
   // `user_message_chunk` is rendered as history instead of ignored as an echo.
@@ -364,6 +386,14 @@ export function useNexusApp(): NexusApp {
           typeof params === 'object'
         ) {
           setRoster((prev) => mergeRoster(prev, params as unknown as RosterChanged));
+        }
+      },
+      onServerRequest: (id, method, params) => {
+        if (method === 'session/request_permission' && params && typeof params === 'object') {
+          setPermissionQueue((q) => [
+            ...q,
+            { requestId: id, params: params as unknown as RequestPermissionParams },
+          ]);
         }
       },
     });
@@ -494,6 +524,56 @@ export function useNexusApp(): NexusApp {
     [sessionId, currentModelId, refreshRoster],
   );
 
+  const respondPermission = useCallback(
+    (optionId: string | null) => {
+      const conn = connRef.current;
+      if (!conn || permissionQueue.length === 0) return;
+      const [first, ...rest] = permissionQueue;
+      setPermissionQueue(rest);
+      const result: RequestPermissionOutcomeResponse = optionId
+        ? { outcome: { outcome: 'selected', optionId } }
+        : { outcome: { outcome: 'cancelled' } };
+      conn.respond(first.requestId, result);
+    },
+    [permissionQueue],
+  );
+
+  const refreshMailbox = useCallback(async () => {
+    const conn = connRef.current;
+    if (!conn) return;
+    try {
+      const { messages, labels } = await conn.listMailbox();
+      setMailboxMessages(messages);
+      setMailboxLabels(labels);
+    } catch {
+      // Non-fatal: stale list until the next refresh.
+    }
+  }, []);
+
+  const toggleMailbox = useCallback(() => {
+    setMailboxOpen((open) => {
+      if (!open) void refreshMailbox();
+      return !open;
+    });
+  }, [refreshMailbox]);
+
+  const markMailboxRead = useCallback(async (messageId: string) => {
+    const conn = connRef.current;
+    if (!conn) return;
+    try {
+      await conn.markMailboxRead(messageId);
+      setMailboxMessages((msgs) =>
+        msgs.map((m) =>
+          m.id === messageId
+            ? { ...m, status: 'read', readAt: new Date().toISOString() }
+            : m,
+        ),
+      );
+    } catch {
+      // Non-fatal: unread badge stays until the next refresh.
+    }
+  }, []);
+
   const retry = useCallback(() => {
     setError(null);
     connRef.current?.close();
@@ -508,6 +588,14 @@ export function useNexusApp(): NexusApp {
     roster,
     models,
     currentModelId,
+    pendingPermission: permissionQueue[0] ?? null,
+    respondPermission,
+    mailboxOpen,
+    mailboxMessages,
+    mailboxLabels,
+    toggleMailbox,
+    refreshMailbox,
+    markMailboxRead,
     sendMessage,
     retry,
     switchSession,

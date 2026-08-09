@@ -11,6 +11,7 @@ import type {
   InitializeParams,
   JsonRpcNotification,
   JsonRpcResponse,
+  MailboxListResult,
   NewSessionParams,
   NewSessionResult,
   PromptParams,
@@ -70,6 +71,9 @@ export interface AcpConnectionOptions {
   clientVersion?: string;
   /** Called with a raw parsed notification (method + params). */
   onNotification?: (method: string, params: JsonRpcNotification['params']) => void;
+  /** Called with a server→client JSON-RPC request (has both id and method).
+   *  Answer it via `respond(id, result)`. */
+  onServerRequest?: (id: number, method: string, params: unknown) => void;
   onStatusChange?: (status: ConnectionStatus) => void;
 }
 
@@ -168,6 +172,12 @@ export class AcpConnection {
     this.ws.send(JSON.stringify({ jsonrpc: '2.0', method, params }));
   }
 
+  /** Answer a server→client JSON-RPC request with a result payload. */
+  respond(id: number, result: unknown): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    this.ws.send(JSON.stringify({ jsonrpc: '2.0', id, result }));
+  }
+
   async initialize(): Promise<void> {
     const params: InitializeParams = {
       protocolVersion: PROTOCOL_VERSION,
@@ -226,6 +236,16 @@ export class AcpConnection {
     return this.request('session/set_model', { sessionId, modelId });
   }
 
+  /** Shared cross-process mailbox: every message plus the label registry. */
+  listMailbox(): Promise<MailboxListResult> {
+    return this.ext<MailboxListResult>('sage.local/mailbox/list', {});
+  }
+
+  /** Mark one mailbox message as read in the shared store. */
+  markMailboxRead(messageId: string): Promise<{ ok: boolean }> {
+    return this.ext<{ ok: boolean }>('sage.local/mailbox/mark_read', { messageId });
+  }
+
   /** Send a user prompt to the current session. */
   prompt(text: string): Promise<unknown> {
     if (!this.sessionId) return Promise.reject(new Error('no session'));
@@ -258,6 +278,17 @@ export class AcpConnection {
     if (!msg) return;
 
     if ('id' in msg && typeof msg.id === 'number') {
+      // A JSON-RPC request carries BOTH id and method — the server asking us
+      // for something (e.g. `session/request_permission`). Respond via
+      // `respond(id, result)`; do not treat it as a reply to one of our calls.
+      if ('method' in msg && typeof msg.method === 'string') {
+        this.options.onServerRequest?.(
+          msg.id,
+          msg.method,
+          (msg as JsonRpcNotification).params,
+        );
+        return;
+      }
       const resp = msg as JsonRpcResponse;
       const entry = this.pending.get(resp.id);
       if (entry) {

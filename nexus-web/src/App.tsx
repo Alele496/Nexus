@@ -1,6 +1,8 @@
 import { useNexusApp } from './acp/hooks';
 import type { ConnectionStatus } from './acp/connection';
+import ApprovalModal from './components/ApprovalModal';
 import ChatView from './components/ChatView';
+import MailboxView from './components/MailboxView';
 import SessionDetail from './components/SessionDetail';
 import Sidebar from './components/Sidebar';
 
@@ -15,9 +17,13 @@ const STATUS_LABEL: Record<ConnectionStatus, { text: string; dot: string }> = {
 function StatusBar({
   status,
   sessionId,
+  mailboxUnread,
+  onOpenMailbox,
 }: {
   status: ConnectionStatus;
   sessionId: string | null;
+  mailboxUnread: number;
+  onOpenMailbox: () => void;
 }) {
   const s = STATUS_LABEL[status];
   return (
@@ -28,10 +34,28 @@ function StatusBar({
       </span>
       <span className="text-[13px] font-semibold text-zinc-100">Nexus</span>
       {sessionId && (
-        <span className="ml-auto hidden truncate font-mono text-[11px] text-zinc-600 sm:block">
+        <span className="hidden truncate font-mono text-[11px] text-zinc-600 sm:block">
           {sessionId.slice(0, 8)}
         </span>
       )}
+      <button
+        onClick={onOpenMailbox}
+        title="信箱"
+        className="relative ml-auto flex h-6 w-6 items-center justify-center rounded-md border border-zinc-700 text-zinc-300 hover:border-zinc-500 hover:text-zinc-100"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M21 8l-9 5-9-5V5a2 2 0 012-2h14a2 2 0 012 2v3zM21 8v9a2 2 0 01-2 2H5a2 2 0 01-2-2V8l9 5 9-5z"
+          />
+        </svg>
+        {mailboxUnread > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-semibold text-zinc-950">
+            {mailboxUnread > 99 ? '99+' : mailboxUnread}
+          </span>
+        )}
+      </button>
     </header>
   );
 }
@@ -61,9 +85,35 @@ export default function App() {
   const fatal = app.status === 'error';
   const activeSession = app.roster.find((e) => e.sessionId === app.sessionId) ?? null;
 
+  // Unread mail addressed to the active session (by id or by a label the
+  // session owns), shown as the mailbox button's badge.
+  const myLabels = Object.entries(app.mailboxLabels)
+    .filter(([, sid]) => sid === app.sessionId)
+    .map(([label]) => label);
+  const mailboxUnread = app.mailboxMessages.filter(
+    (m) =>
+      (m.status === 'pending' || m.status === 'delivered') &&
+      (m.to.sessionId === app.sessionId || myLabels.includes(m.to.sessionId)),
+  ).length;
+
   return (
     <div className="flex h-full flex-col bg-zinc-950 text-zinc-100">
-      <StatusBar status={fatal ? 'error' : app.status} sessionId={app.sessionId} />
+      <StatusBar
+        status={fatal ? 'error' : app.status}
+        sessionId={app.sessionId}
+        mailboxUnread={mailboxUnread}
+        onOpenMailbox={app.toggleMailbox}
+      />
+      <ApprovalModal request={app.pendingPermission} onRespond={app.respondPermission} />
+      <MailboxView
+        open={app.mailboxOpen}
+        messages={app.mailboxMessages}
+        labels={app.mailboxLabels}
+        sessionId={app.sessionId}
+        onClose={app.toggleMailbox}
+        onRefresh={() => void app.refreshMailbox()}
+        onMarkRead={(id) => void app.markMailboxRead(id)}
+      />
       {fatal ? (
         <ErrorScreen message={app.error ?? '连接失败'} onRetry={app.retry} />
       ) : (

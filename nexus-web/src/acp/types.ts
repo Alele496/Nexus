@@ -230,17 +230,79 @@ export interface SessionUpdateNotification {
   };
 }
 
-// ---- Permission requests (Phase 3; shape defined loosely) ----
+// ---- Permission requests (session/request_permission, server→client) ----
 
-export interface PermissionRequestNotification {
-  jsonrpc: '2.0';
-  method: 'session/request_permission';
-  params: {
-    permissionId: string;
-    toolCallId?: string;
-    title?: string;
-    [key: string]: JsonValue | undefined;
-  };
+export type PermissionOptionKind =
+  | 'allow_once'
+  | 'allow_always'
+  | 'reject_once'
+  | 'reject_always'
+  | (string & {});
+
+export interface PermissionOption {
+  optionId: string;
+  name: string;
+  kind: PermissionOptionKind;
+  _meta?: JsonValue;
+}
+
+export interface RequestPermissionToolCall {
+  toolCallId: string;
+  status?: ToolCallStatus;
+  title?: string;
+  kind?: string;
+  content?: ContentBlock[];
+  rawInput?: JsonValue;
+  rawOutput?: JsonValue;
+  _meta?: JsonValue;
+}
+
+/** Params of the `session/request_permission` request the server sends us. */
+export interface RequestPermissionParams {
+  sessionId: string;
+  toolCall: RequestPermissionToolCall;
+  options: PermissionOption[];
+  _meta?: JsonValue;
+}
+
+/** Result payload we reply with (outcome internally tagged by `outcome`). */
+export interface RequestPermissionOutcomeResponse {
+  outcome:
+    | { outcome: 'selected'; optionId: string }
+    | { outcome: 'cancelled' };
+}
+
+// ---- Mailbox (sage.local/mailbox/list + mark_read) ----
+
+export interface MailboxAddress {
+  sessionId: string;
+  label?: string;
+}
+
+export type MailboxMessageStatus =
+  | 'pending'
+  | 'delivered'
+  | 'read'
+  | 'archived'
+  | (string & {});
+
+export interface MailboxMessage {
+  id: string;
+  from: MailboxAddress;
+  to: MailboxAddress;
+  subject: string;
+  body: string;
+  priority: string;
+  status: MailboxMessageStatus;
+  sentAt: string;
+  readAt?: string;
+  inReplyTo?: string;
+  expiresAt?: string;
+}
+
+export interface MailboxListResult {
+  messages: MailboxMessage[];
+  labels: Record<string, string>;
 }
 
 // ---- Request params (camelCase per serde rename_all) ----

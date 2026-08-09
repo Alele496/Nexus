@@ -3194,6 +3194,9 @@ impl acp::Agent for MvpAgent {
             "x.ai/workspaces/list" => {
                 crate::agent::handlers::workspaces::handle(self, &args).await
             }
+            "sage.local/mailbox/list" | "sage.local/mailbox/mark_read" => {
+                crate::extensions::mailbox::handle(&args).await
+            }
             "sage.local/session/updates" => {
                 crate::extensions::session_updates::handle(&args, &self.gateway).await
             }

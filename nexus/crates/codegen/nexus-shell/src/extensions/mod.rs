@@ -12,6 +12,7 @@ pub mod hooks;
 pub mod hunk_tracker;
 pub mod interject;
 pub mod jj;
+pub mod mailbox;
 pub mod marketplace;
 pub mod mcp;
 pub mod memory;
