@@ -220,6 +220,10 @@ function SearchBox({
   const [results, setResults] = useState<SessionSearchHit[]>([]);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<number | null>(null);
+  // Bumped on every input change and on jump-to, so a stale in-flight search
+  // (older query resolving after a newer one, or after the box was cleared)
+  // can't overwrite the current results.
+  const seqRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -229,6 +233,7 @@ function SearchBox({
 
   const handleChange = (value: string) => {
     setQuery(value);
+    const seq = ++seqRef.current;
     if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
     const trimmed = value.trim();
     if (!trimmed) {
@@ -239,12 +244,16 @@ function SearchBox({
     setSearching(true);
     debounceRef.current = window.setTimeout(async () => {
       const hits = await onSearch(trimmed);
-      setResults(hits);
-      setSearching(false);
+      if (seqRef.current === seq) {
+        setResults(hits);
+        setSearching(false);
+      }
     }, 300);
   };
 
   const jumpTo = (hit: SessionSearchHit) => {
+    seqRef.current++;
+    if (debounceRef.current !== null) window.clearTimeout(debounceRef.current);
     onSwitch(hit.sessionId);
     setQuery('');
     setResults([]);
