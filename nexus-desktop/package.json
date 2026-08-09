@@ -9,7 +9,7 @@
     "build:web": "npm --prefix ../nexus-web run build",
     "start": "npm run build && electron .",
     "dev": "npm run build && npm run build:web && electron .",
-    "dev:hud": "npm run build && electron . --dev-url=http://127.0.0.1:5173",
+    "dev:hud": "npm run build && electron . --dev-url=http://localhost:5173",
     "smoke": "npm run build && electron . --smoke",
     "dist": "npm run build && npm run build:web && electron-builder --win",
     "dist:dir": "npm run build && npm run build:web && electron-builder --dir"

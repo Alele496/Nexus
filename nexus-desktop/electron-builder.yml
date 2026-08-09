@@ -1,6 +1,9 @@
 # electron-builder config for the Nexus desktop shell.
 appId: com.nexus.desktop
 productName: Nexus
+# Use the electron already installed in node_modules (npm downloads it through
+# the user's proxy; electron-builder's own downloader ignores npm proxy config).
+electronDist: node_modules/electron/dist
 directories:
   output: release
   buildResources: resources
