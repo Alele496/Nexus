@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useNexusApp } from './acp/hooks';
 import type { ConnectionStatus } from './acp/connection';
@@ -113,12 +113,45 @@ function ErrorScreen({ message, onRetry }: { message: string; onRetry: () => voi
 export default function App() {
   const app = useNexusApp();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { desktop } = useDesktop();
 
   // Connection-level failure (no key, handshake error): full-screen retry.
   // Operation-level errors (e.g. a failed prompt) render as an inline banner
   // above the input so the conversation stays visible.
   const fatal = app.status === 'error';
   const activeSession = app.roster.find((e) => e.sessionId === app.sessionId) ?? null;
+
+  const streaming = app.messages.some(
+    (m) =>
+      (m.kind === 'text' && m.streaming) ||
+      (m.kind === 'tool' &&
+        (m.status === 'in_progress' || m.status === 'running')),
+  );
+
+  // Native notifications while the window is hidden to the tray: the agent
+  // blocked on an approval, or a turn finishing. No-ops in a plain browser.
+  const prevPermIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const req = app.pendingPermission;
+    if (!desktop || !document.hidden) return;
+    if (req && req.requestId !== prevPermIdRef.current) {
+      const call = req.params.toolCall;
+      desktop.notify(
+        'Nexus 需要审批',
+        call?.title ?? call?.kind ?? '代理请求执行工具',
+      );
+    }
+    prevPermIdRef.current = req?.requestId ?? null;
+  }, [desktop, app.pendingPermission]);
+
+  const prevStreamingRef = useRef(false);
+  useEffect(() => {
+    const was = prevStreamingRef.current;
+    prevStreamingRef.current = streaming;
+    if (desktop && document.hidden && !streaming && was) {
+      desktop.notify('Nexus 回复完成', '回复已生成，可返回查看。');
+    }
+  }, [desktop, streaming]);
 
   // Unread mail addressed to the active session (by id or by a label the
   // session owns), shown as the mailbox button's badge.
@@ -185,12 +218,7 @@ export default function App() {
             <ChatView
               messages={app.messages}
               connected={app.status === 'ready' && !!app.sessionId}
-              streaming={app.messages.some(
-                (m) =>
-                  (m.kind === 'text' && m.streaming) ||
-                  (m.kind === 'tool' &&
-                    (m.status === 'in_progress' || m.status === 'running')),
-              )}
+              streaming={streaming}
               onSend={app.sendMessage}
               onStop={app.cancelTurn}
               error={app.error ?? undefined}

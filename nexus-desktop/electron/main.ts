@@ -4,9 +4,11 @@
 import {
   app,
   BrowserWindow,
+  globalShortcut,
   ipcMain,
   Menu,
   nativeImage,
+  Notification,
   shell,
   Tray,
   dialog,
@@ -281,6 +283,14 @@ function registerIpc(): void {
     }
     return Promise.resolve();
   });
+  ipcMain.handle(
+    'notifications:show',
+    (_event, payload: unknown) => {
+      const { title, body } = (payload ?? {}) as { title?: string; body?: string };
+      if (!title) return;
+      new Notification({ title, body: body ?? '' }).show();
+    },
+  );
 }
 
 // ---- smoke mode -----------------------------------------------------------
@@ -321,6 +331,7 @@ async function runSmoke(): Promise<void> {
       const dom = (await wc.executeJavaScript(`(() => {
         const header = document.querySelector('header');
         const q = (s) => !!document.querySelector(s);
+        const nd = window.nexusDesktop;
         return {
           headerDrag: header ? header.className.includes('app-drag') : false,
           minBtn: q('[title="最小化"]'),
@@ -328,6 +339,11 @@ async function runSmoke(): Promise<void> {
           closeBtn: q('[title="关闭"]'),
           mailboxBtn: q('[title="信箱"]'),
           sidebar: q('aside'),
+          desktopBridge:
+            typeof nd === 'object' &&
+            typeof nd?.notify === 'function' &&
+            typeof nd?.getPathForFile === 'function' &&
+            typeof nd?.openExternal === 'function',
           bodyText: (document.body.innerText || '').slice(0, 200),
           stacks: window.__errs || [],
         };
@@ -339,7 +355,8 @@ async function runSmoke(): Promise<void> {
         dom.maxBtn === true &&
         dom.closeBtn === true &&
         dom.mailboxBtn === true &&
-        dom.sidebar === true;
+        dom.sidebar === true &&
+        dom.desktopBridge === true;
       const info: Record<string, unknown> = {
         title,
         url,
@@ -384,6 +401,16 @@ async function bootstrap(): Promise<void> {
   registerIpc();
   createTray();
   createWindow();
+  // Global toggle for the window regardless of focus. Registered best-effort:
+  // the accelerator may already be taken by another app, which is fine.
+  try {
+    globalShortcut.register('CommandOrControl+Alt+N', () => {
+      if (mainWindow?.isVisible()) mainWindow.hide();
+      else showWindow();
+    });
+  } catch {
+    /* shortcut unavailable — non-fatal */
+  }
   if (process.argv.includes('--smoke')) void runSmoke();
 }
 
@@ -396,6 +423,7 @@ if (!gotLock) {
     isQuitting = true;
   });
   app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
     server?.stop();
   });
   app.on('window-all-closed', () => {

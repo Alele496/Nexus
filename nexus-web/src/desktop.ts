@@ -19,6 +19,10 @@ export interface NexusDesktop {
   platform: string;
   windowControls: DesktopWindowControls;
   openExternal(url: string): Promise<void>;
+  /** Real filesystem path of a dropped File (Electron 32+ has no File.path). */
+  getPathForFile(file: File): string;
+  /** Native OS notification via the main process. */
+  notify(title: string, body: string): void;
 }
 
 declare global {
