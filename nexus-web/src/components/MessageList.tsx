@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import type { ChatMsg } from '../acp/hooks';
 import type { ToolCallStatus } from '../acp/types';
+import Markdown from './Markdown';
 import StreamingText from './StreamingText';
 
 interface Props {
@@ -72,7 +73,25 @@ function Bubble({ msg }: { msg: Extract<ChatMsg, { kind: 'text' }> }) {
             : 'bg-zinc-900 border border-zinc-800 text-zinc-100'
         }`}
       >
-        <StreamingText text={msg.text} streaming={msg.streaming} />
+        {isUser ? (
+          <StreamingText text={msg.text} streaming={msg.streaming} />
+        ) : (
+          <>
+            <Markdown text={msg.text} streaming={msg.streaming} />
+            {msg.images.length > 0 && (
+              <div className="mt-2 flex flex-col gap-2">
+                {msg.images.map((img, i) => (
+                  <img
+                    key={i}
+                    src={img.src}
+                    alt=""
+                    className="max-w-full rounded-lg border border-zinc-800"
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   );

@@ -91,6 +91,18 @@ export function chunkText(chunk: ContentChunk | ContentBlock | undefined | null)
   return '';
 }
 
+/** Extract images from a chunk or raw content block, as base64 data URLs. */
+export function contentImages(
+  chunk: ContentChunk | ContentBlock | undefined | null,
+): { src: string; mimeType?: string }[] {
+  if (!chunk) return [];
+  const block: ContentBlock | undefined =
+    'content' in chunk && chunk.content ? chunk.content : (chunk as ContentBlock);
+  if (!block || block.type !== 'image' || !block.source?.data) return [];
+  const { data, mimeType } = block.source;
+  return [{ src: `data:${mimeType ?? 'image/png'};base64,${data}`, mimeType }];
+}
+
 // ---- Tool calls (camelCase fields, snake_case status values) ----
 
 export type ToolCallStatus =

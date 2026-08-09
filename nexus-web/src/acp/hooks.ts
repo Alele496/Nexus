@@ -17,11 +17,18 @@ import {
 } from './connection';
 import {
   chunkText,
+  contentImages,
   type SessionUpdate,
   type ToolCallStatus,
 } from './types';
 
 // ---- Message model ----
+
+/** An image embedded in a message, as a base64 data URL. */
+export interface ImageBlock {
+  src: string;
+  mimeType?: string;
+}
 
 export interface TextMsg {
   kind: 'text';
@@ -29,6 +36,7 @@ export interface TextMsg {
   role: 'user' | 'assistant';
   text: string;
   streaming: boolean;
+  images: ImageBlock[];
 }
 
 export interface ThoughtMsg {
@@ -57,6 +65,7 @@ interface ChatState {
 type ChatAction =
   | { type: 'user-optimistic'; text: string }
   | { type: 'agent-chunk'; text: string }
+  | { type: 'agent-image'; image: ImageBlock }
   | { type: 'thought-chunk'; text: string }
   | { type: 'tool-start'; update: SessionUpdate }
   | { type: 'tool-update'; update: SessionUpdate };
@@ -78,7 +87,7 @@ function reducer(state: ChatState, action: ChatAction): ChatState {
         messages[state.agentIndex] = { ...prev, streaming: false };
       }
       const id = state.nextId;
-      messages.push({ kind: 'text', id, role: 'user', text: action.text, streaming: false });
+      messages.push({ kind: 'text', id, role: 'user', text: action.text, streaming: false, images: [] });
       return { ...state, messages, nextId: id + 1, agentIndex: null, thoughtIndex: null };
     }
 
@@ -94,13 +103,35 @@ function reducer(state: ChatState, action: ChatAction): ChatState {
         !current.streaming
       ) {
         const id = state.nextId;
-        messages.push({ kind: 'text', id, role: 'assistant', text: '', streaming: true });
+        messages.push({ kind: 'text', id, role: 'assistant', text: '', streaming: true, images: [] });
         agentIndex = messages.length - 1;
       } else {
         agentIndex = state.agentIndex;
       }
       const msg = messages[agentIndex] as TextMsg;
       messages[agentIndex] = { ...msg, text: msg.text + action.text };
+      return { ...state, messages, nextId: state.nextId, agentIndex };
+    }
+
+    case 'agent-image': {
+      const messages = [...state.messages];
+      const current =
+        state.agentIndex !== null ? messages[state.agentIndex] : undefined;
+      let agentIndex: number;
+      if (
+        state.agentIndex === null ||
+        current?.kind !== 'text' ||
+        current.role !== 'assistant' ||
+        !current.streaming
+      ) {
+        const id = state.nextId;
+        messages.push({ kind: 'text', id, role: 'assistant', text: '', streaming: true, images: [action.image] });
+        agentIndex = messages.length - 1;
+      } else {
+        agentIndex = state.agentIndex;
+        const msg = messages[agentIndex] as TextMsg;
+        messages[agentIndex] = { ...msg, images: [...msg.images, action.image] };
+      }
       return { ...state, messages, nextId: state.nextId, agentIndex };
     }
 
@@ -188,7 +219,11 @@ function routeUpdate(update: SessionUpdate, dispatch: (a: ChatAction) => void): 
       break;
     case 'agent_message_chunk': {
       const u = update as Extract<SessionUpdate, { sessionUpdate: 'agent_message_chunk' }>;
-      dispatch({ type: 'agent-chunk', text: chunkText(u.content) });
+      const text = chunkText(u.content);
+      if (text) dispatch({ type: 'agent-chunk', text });
+      for (const image of contentImages(u.content)) {
+        dispatch({ type: 'agent-image', image });
+      }
       break;
     }
     case 'agent_thought_chunk': {
