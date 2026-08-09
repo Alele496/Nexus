@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { ChatMsg } from '../acp/hooks';
-import type { ToolCallStatus } from '../acp/types';
+import type { JsonValue, ToolCallStatus } from '../acp/types';
 import Markdown from './Markdown';
 import StreamingText from './StreamingText';
 
@@ -17,6 +17,8 @@ const TOOL_STATUS_STYLE: Record<string, string> = {
   cancelled: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
 };
 
+const MAX_DETAIL_CHARS = 4000;
+
 function ToolBadge({ status }: { status: ToolCallStatus }) {
   return (
     <span
@@ -27,24 +29,117 @@ function ToolBadge({ status }: { status: ToolCallStatus }) {
   );
 }
 
-function ToolCard({ name, status }: { name: string; status: ToolCallStatus }) {
+function formatJson(v: JsonValue): string {
+  try {
+    return JSON.stringify(v, null, 2);
+  } catch {
+    return String(v);
+  }
+}
+
+function CopyButton({ text, className }: { text: string; className?: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // Clipboard unavailable (e.g. non-secure context) — ignore.
+    }
+  };
   return (
-    <div className="my-1 flex items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/60 px-3 py-2">
-      <svg
-        className="h-4 w-4 shrink-0 text-zinc-400"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
+    <button
+      onClick={copy}
+      title="复制"
+      className={`flex items-center gap-1 rounded-md border border-zinc-700/80 px-1.5 py-0.5 text-[10px] text-zinc-400 hover:border-zinc-500 hover:text-zinc-100 ${className ?? ''}`}
+    >
+      {copied ? (
+        <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M8 7V5a2 2 0 012-2h9a2 2 0 012 2v9a2 2 0 01-2 2h-2M6 7h9a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2z"
+          />
+        </svg>
+      )}
+      {copied ? '已复制' : '复制'}
+    </button>
+  );
+}
+
+function DetailBlock({ label, value }: { label: string; value: JsonValue }) {
+  const text = formatJson(value);
+  const truncated = text.length > MAX_DETAIL_CHARS;
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[11px] font-medium text-zinc-500">{label}</span>
+        <CopyButton text={truncated ? text.slice(0, MAX_DETAIL_CHARS) : text} />
+      </div>
+      <pre className="max-h-64 overflow-auto rounded-md bg-zinc-950/80 p-2 font-mono text-[11px] leading-relaxed text-zinc-300">
+        {truncated ? `${text.slice(0, MAX_DETAIL_CHARS)}\n… (已截断)` : text}
+      </pre>
+    </div>
+  );
+}
+
+function ToolCard({
+  name,
+  status,
+  rawInput,
+  rawOutput,
+}: {
+  name: string;
+  status: ToolCallStatus;
+  rawInput?: JsonValue;
+  rawOutput?: JsonValue;
+}) {
+  const [open, setOpen] = useState(false);
+  const hasDetails = rawInput !== undefined || rawOutput !== undefined;
+  return (
+    <div className="my-1 rounded-lg border border-zinc-800 bg-zinc-900/60">
+      <button
+        onClick={() => hasDetails && setOpen((v) => !v)}
+        className={`flex w-full items-center gap-2 px-3 py-2 text-left ${hasDetails ? 'cursor-pointer hover:bg-zinc-900' : 'cursor-default'}`}
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10.34 15.66a5.5 5.5 0 10-1.42-5.82M17.66 8.34a5.5 5.5 0 11-1.42 5.82M12 3v3M12 18v3M3 12h3M18 12h3"
-        />
-      </svg>
-      <span className="truncate font-mono text-[13px] text-zinc-200">{name}</span>
-      <ToolBadge status={status} />
+        <svg
+          className="h-4 w-4 shrink-0 text-zinc-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M10.34 15.66a5.5 5.5 0 10-1.42-5.82M17.66 8.34a5.5 5.5 0 11-1.42 5.82M12 3v3M12 18v3M3 12h3M18 12h3"
+          />
+        </svg>
+        <span className="truncate font-mono text-[13px] text-zinc-200">{name}</span>
+        <ToolBadge status={status} />
+        {hasDetails && (
+          <svg
+            className={`ml-auto h-3.5 w-3.5 shrink-0 text-zinc-500 transition-transform ${open ? 'rotate-90' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        )}
+      </button>
+      {open && (
+        <div className="space-y-2 border-t border-zinc-800/70 px-3 py-2">
+          {rawInput !== undefined && <DetailBlock label="参数" value={rawInput} />}
+          {rawOutput !== undefined && <DetailBlock label="结果" value={rawOutput} />}
+        </div>
+      )}
     </div>
   );
 }
@@ -65,9 +160,9 @@ function ThoughtBlock({ text }: { text: string }) {
 function Bubble({ msg }: { msg: Extract<ChatMsg, { kind: 'text' }> }) {
   const isUser = msg.role === 'user';
   return (
-    <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <div className={`group relative flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        className={`max-w-[85%] rounded-xl px-4 py-2.5 ${
+        className={`relative max-w-[85%] rounded-xl px-4 py-2.5 ${
           isUser
             ? 'bg-indigo-600/90 text-white'
             : 'bg-zinc-900 border border-zinc-800 text-zinc-100'
@@ -92,6 +187,14 @@ function Bubble({ msg }: { msg: Extract<ChatMsg, { kind: 'text' }> }) {
             )}
           </>
         )}
+        {!msg.streaming && (
+          <div className="absolute -top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100">
+            <CopyButton
+              text={msg.text}
+              className="border-zinc-700 bg-zinc-950/90 backdrop-blur"
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -104,7 +207,14 @@ function MessageItem({ msg }: { msg: ChatMsg }) {
     case 'thought':
       return <ThoughtBlock text={msg.text} />;
     case 'tool':
-      return <ToolCard name={msg.name} status={msg.status} />;
+      return (
+        <ToolCard
+          name={msg.name}
+          status={msg.status}
+          rawInput={msg.rawInput}
+          rawOutput={msg.rawOutput}
+        />
+      );
   }
 }
 

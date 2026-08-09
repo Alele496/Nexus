@@ -22,6 +22,7 @@ import {
   type ModelInfo,
   type RequestPermissionOutcomeResponse,
   type RequestPermissionParams,
+  type JsonValue,
   type RosterChanged,
   type RosterEntry,
   type SessionSearchHit,
@@ -58,6 +59,8 @@ export interface ToolMsg {
   toolCallId: string;
   name: string;
   status: ToolCallStatus;
+  rawInput?: JsonValue;
+  rawOutput?: JsonValue;
 }
 
 export type ChatMsg = TextMsg | ThoughtMsg | ToolMsg;
@@ -87,7 +90,7 @@ const initialState: ChatState = {
   thoughtIndex: null,
 };
 
-function reducer(state: ChatState, action: ChatAction): ChatState {
+export function reducer(state: ChatState, action: ChatAction): ChatState {
   switch (action.type) {
     case 'session-reset':
       // New session or session switch: drop all accumulated messages.
@@ -188,6 +191,7 @@ function reducer(state: ChatState, action: ChatAction): ChatState {
         toolCallId: u.toolCallId,
         name: u.name ?? u.title ?? 'tool',
         status: u.status ?? 'running',
+        ...(u.rawInput !== undefined ? { rawInput: u.rawInput } : {}),
       });
       // Text after a tool call renders as a fresh assistant message.
       return { ...state, nextId: id + 1, agentIndex: null };
@@ -197,7 +201,11 @@ function reducer(state: ChatState, action: ChatAction): ChatState {
       const u = action.update as Extract<SessionUpdate, { sessionUpdate: 'tool_call_update' }>;
       const messages = state.messages.map((m) =>
         m.kind === 'tool' && m.toolCallId === u.toolCallId
-          ? { ...m, status: u.status ?? m.status }
+          ? {
+              ...m,
+              status: u.status ?? m.status,
+              ...(u.rawOutput !== undefined ? { rawOutput: u.rawOutput } : {}),
+            }
           : m,
       );
       return { ...state, messages };
@@ -324,6 +332,7 @@ export interface NexusApp {
   deleteSession: (sessionId: string) => Promise<void>;
   forkSession: (sessionId: string) => Promise<void>;
   searchSessions: (query: string) => Promise<SessionSearchHit[]>;
+  cancelTurn: () => void;
   switchModel: (modelId: string) => Promise<void>;
 }
 
@@ -628,6 +637,12 @@ export function useNexusApp(): NexusApp {
     }
   }, []);
 
+  const cancelTurn = useCallback(() => {
+    const conn = connRef.current;
+    if (!conn || !sessionId) return;
+    conn.cancelTurn(sessionId);
+  }, [sessionId]);
+
   const switchModel = useCallback(
     async (modelId: string) => {
       const conn = connRef.current;
@@ -726,6 +741,7 @@ export function useNexusApp(): NexusApp {
     deleteSession,
     forkSession,
     searchSessions,
+    cancelTurn,
     switchModel,
   };
 }

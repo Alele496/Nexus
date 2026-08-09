@@ -286,6 +286,14 @@ export class AcpConnection {
     return this.request('session/prompt', params);
   }
 
+  /** Abort the running turn (`session/cancel`, fire-and-forget). */
+  cancelTurn(sessionId: string): void {
+    this.notify('session/cancel', {
+      sessionId,
+      _meta: { cancelSubagents: true },
+    });
+  }
+
   private async runHandshake(): Promise<void> {
     try {
       await this.initialize();

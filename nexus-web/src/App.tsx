@@ -132,7 +132,14 @@ export default function App() {
             <ChatView
               messages={app.messages}
               connected={app.status === 'ready' && !!app.sessionId}
+              streaming={app.messages.some(
+                (m) =>
+                  (m.kind === 'text' && m.streaming) ||
+                  (m.kind === 'tool' &&
+                    (m.status === 'in_progress' || m.status === 'running')),
+              )}
               onSend={app.sendMessage}
+              onStop={app.cancelTurn}
               error={app.error ?? undefined}
             />
           </div>
