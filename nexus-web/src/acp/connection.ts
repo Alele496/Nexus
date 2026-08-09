@@ -327,14 +327,14 @@ export class AcpConnection {
     return this.ext<CommandsListResult>('x.ai/commands/list', cwd ? { cwd } : {});
   }
 
-  /** Reload the model catalog (`x.ai/internal/reload_models`). */
-  reloadModels(): Promise<{ ok: boolean }> {
-    return this.ext<{ ok: boolean }>('x.ai/internal/reload_models', {});
+  /** Reload the model catalog (`x.ai/internal/reload_models` → `{models: n}`). */
+  reloadModels(): Promise<{ models?: number }> {
+    return this.ext<{ models?: number }>('x.ai/internal/reload_models', {});
   }
 
-  /** Reload skills/plugins (`x.ai/internal/reload_skills`). */
-  reloadSkills(): Promise<{ ok: boolean }> {
-    return this.ext<{ ok: boolean }>('x.ai/internal/reload_skills', {});
+  /** Reload skills/plugins (`x.ai/internal/reload_skills` → `{reloaded: n}`). */
+  reloadSkills(): Promise<{ reloaded?: number }> {
+    return this.ext<{ reloaded?: number }>('x.ai/internal/reload_skills', {});
   }
 
   /** Trigger an on-demand memory flush (`x.ai/memory/flush`, snake_case param). */

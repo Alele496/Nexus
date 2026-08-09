@@ -743,8 +743,10 @@ export function useNexusApp(): NexusApp {
     const conn = connRef.current;
     if (!conn) return false;
     try {
-      const r = await conn.reloadModels();
-      return !!r.ok;
+      // The server acks a successful reload with a resolved response
+      // (`{models: n}`); failures surface as JSON-RPC errors instead.
+      await conn.reloadModels();
+      return true;
     } catch (err) {
       setError(String(err));
       return false;
@@ -755,8 +757,9 @@ export function useNexusApp(): NexusApp {
     const conn = connRef.current;
     if (!conn) return false;
     try {
-      const r = await conn.reloadSkills();
-      return !!r.ok;
+      // Successful reloads resolve with `{reloaded: n}`; failures reject.
+      await conn.reloadSkills();
+      return true;
     } catch (err) {
       setError(String(err));
       return false;
