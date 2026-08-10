@@ -14,7 +14,7 @@ files:
 # The agent server binary + the built web UI travel as resources; main.ts
 # spawns the binary with NEXUS_WEB_DIR pointed at <resourcesPath>/web.
 extraResources:
-  - from: ../nexus/target/debug/nexus.exe
+  - from: ../nexus/target/release/nexus.exe
     to: bin/nexus.exe
   - from: ../nexus-web/dist
     to: web
