@@ -457,6 +457,27 @@ export function useNexusApp(): NexusApp {
     }
   }, []);
 
+  // Resolve the on-disk cwd for a session. The server computes a session's
+  // directory from the cwd in the load request, so loading with the wrong cwd
+  // fails with FS_NOT_FOUND ("Path not found"). Prefer the roster's record;
+  // fall back to a fresh roster fetch (roster may be stale/empty at
+  // reconnect), then to the server's cwd.
+  const resolveSessionCwd = useCallback(
+    async (conn: AcpConnection, sid: string): Promise<string> => {
+      const known = roster.find((e) => e.sessionId === sid);
+      if (known?.cwd) return known.cwd;
+      try {
+        const { sessions } = await conn.listSessions();
+        const fresh = sessions.find((e) => e.sessionId === sid);
+        if (fresh?.cwd) return fresh.cwd;
+      } catch {
+        // Ignore; fall back below.
+      }
+      return resolveServerCwd();
+    },
+    [roster],
+  );
+
   // Create the connection once.
   useEffect(() => {
     const key = resolveServerKey();
@@ -520,15 +541,14 @@ export function useNexusApp(): NexusApp {
     let cancelled = false;
     (async () => {
       try {
-        const cwd = resolveServerCwd();
         const knownId = conn.getSessionId() ?? resolveInitialSession();
         replayRef.current = !!knownId;
         // A reconnect replays the full history from the server; drop whatever
         // the previous connection left in the store so it doesn't duplicate.
         dispatch({ type: 'session-reset' });
         const result = knownId
-          ? await conn.loadSession(knownId, cwd)
-          : await conn.createSession(cwd);
+          ? await conn.loadSession(knownId, await resolveSessionCwd(conn, knownId))
+          : await conn.createSession(resolveServerCwd());
         if (!cancelled) {
           setSessionId(conn.getSessionId());
           if (result?.models) {
@@ -547,7 +567,7 @@ export function useNexusApp(): NexusApp {
     return () => {
       cancelled = true;
     };
-  }, [status, refreshRoster, dispatch]);
+  }, [status, refreshRoster, resolveSessionCwd, dispatch]);
 
   // Slow safety poll for the roster (broadcasts cover turn transitions; the
   // poll catches anything missed, e.g. an external client's sessions).
@@ -579,7 +599,7 @@ export function useNexusApp(): NexusApp {
       replayRef.current = true;
       dispatch({ type: 'session-reset' });
       try {
-        const result = await conn.loadSession(sid, resolveServerCwd());
+        const result = await conn.loadSession(sid, await resolveSessionCwd(conn, sid));
         setSessionId(sid);
         if (result?.models) {
           setModels(result.models.availableModels);
@@ -593,7 +613,7 @@ export function useNexusApp(): NexusApp {
         void refreshRoster();
       }
     },
-    [sessionId, refreshRoster, dispatch],
+    [sessionId, refreshRoster, resolveSessionCwd, dispatch],
   );
 
   const createNewSession = useCallback(async () => {
