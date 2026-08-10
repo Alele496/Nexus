@@ -804,22 +804,27 @@ mod tests {
     #[test]
     fn watcher_debounces_rapid_writes() {
         let tmp = TempDir::new().unwrap();
+        // Seed the file before the watcher starts so the burst below is all
+        // `Modify` events (no `Create`), keeping the event stream uniform.
+        fs::write(tmp.path().join("config.toml"), "version = 0").unwrap();
 
-        // Use a long debounce (500ms) so all rapid writes (50ms total)
-        // land in a single debounce window regardless of platform.
+        // Use a long debounce (2s) so all rapid writes land in a single
+        // debounce window even when the CI runner is heavily loaded and the
+        // write loop stretches by 10x+. A 500ms window proved too tight here
+        // (flaky: "expected coalesced events (<=3), got 4").
         let (_w, mut rx) =
-            ConfigFileWatcher::start(tmp.path(), &[], None, Some(Duration::from_millis(500)))
+            ConfigFileWatcher::start(tmp.path(), &[], None, Some(Duration::from_millis(2000)))
                 .expect("watcher should start");
 
         wait_ms(200);
 
-        // 5 rapid writes — total ~50ms, well within the 500ms debounce window
-        for i in 0..5 {
+        // 5 rapid writes — a ~50ms burst, far inside the 2s debounce window
+        for i in 1..=5 {
             fs::write(tmp.path().join("config.toml"), format!("version = {i}")).unwrap();
             wait_ms(10);
         }
-        // Wait for the single debounce tick to fire
-        wait_ms(800);
+        // Wait for the single debounce tick to fire after the burst settles
+        wait_ms(2600);
 
         let mut count = 0;
         while rx.try_recv().is_ok() {
